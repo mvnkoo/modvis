@@ -165,7 +165,7 @@ export class IliParserService {
       }
 
       // Parse enum value
-      const valueMatch = line.match(/(\w+)\s*(?:,|$)/);
+      const valueMatch = line.match(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
       if (valueMatch) {
         const value = valueMatch[1].trim();
         const comment = this.extractComment(line) || currentComment;
@@ -317,7 +317,7 @@ export class IliParserService {
           };
         }
       } else if (collectingEnum && currentAttribute) {
-        const enumValueMatch = line.match(/(\w+)\s*(?:,|$)/);
+        const enumValueMatch = line.match(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
         if (enumValueMatch) {
           const value = enumValueMatch[1].trim();
           const comment = this.extractComment(line, previousLine);
@@ -717,7 +717,7 @@ export class IliParserService {
       }
 
       // Parse regular value
-      const valueMatch = line.match(/(\w+)\s*(?:,|$)/);
+      const valueMatch = line.match(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
       if (valueMatch) {
         const value = valueMatch[1].trim();
         const comment = this.extractComment(line) || currentComment;
