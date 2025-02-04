@@ -200,7 +200,7 @@ function App() {
                     opacity: 0.8
                   }}
                 >
-                  V0.7.5 (NICHT FÜR DEN PRODUKTIVEN EINSATZ!)
+                  V0.7.6 (NICHT FÜR DEN PRODUKTIVEN EINSATZ!)
                 </Typography>
                 <Settings />
               </Box>

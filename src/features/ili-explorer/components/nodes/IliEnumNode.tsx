@@ -9,7 +9,7 @@ import {
   Divider,
   Tooltip
 } from '@mui/material';
-import { ExpandMore, ExpandLess } from '@mui/icons-material';
+import { ExpandMore, ExpandLess, ChevronRight } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 import { ResizeHandle } from './ResizeHandle';
 
@@ -17,6 +17,7 @@ interface IliEnumValue {
   value: string;
   id?: string;
   comment?: string;
+  subValues?: IliEnumValue[];
 }
 
 interface IliEnumNodeProps {
@@ -37,10 +38,13 @@ interface IliEnumNodeProps {
 
 interface EnumValueRowProps { 
   value: IliEnumValue;
+  level?: number;
 }
 
-const EnumValueRow: React.FC<{ value: IliEnumValue }> = memo(({ value }) => {
+const EnumValueRow: React.FC<EnumValueRowProps> = memo(({ value, level = 0 }) => {
   const { colors } = useTheme();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hasSubValues = value.subValues && value.subValues.length > 0;
   
   const tooltipContent = value.comment && (
     <Box sx={{ p: 1, maxWidth: 400 }}>
@@ -55,60 +59,84 @@ const EnumValueRow: React.FC<{ value: IliEnumValue }> = memo(({ value }) => {
   );
   
   return (
-    <Box sx={{ 
-      display: 'grid', 
-      gridTemplateColumns: '24px minmax(100px, 1fr)',
-      gap: 1,
-      alignItems: 'start',
-      py: 0.5,
-      px: 1,
-      '&:hover': {
-        bgcolor: 'action.hover'
-      }
-    }}>
+    <>
       <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        height: '100%',
-        pt: 0.3
+        display: 'grid', 
+        gridTemplateColumns: '24px minmax(100px, 1fr)',
+        gap: 1,
+        alignItems: 'start',
+        py: 0.5,
+        px: 1,
+        ml: level * 2,
+        '&:hover': {
+          bgcolor: 'action.hover'
+        }
       }}>
         <Box sx={{ 
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          bgcolor: 'text.primary'
-        }} />
-      </Box>
-      <Tooltip 
-        title={tooltipContent}
-        placement="right"
-        componentsProps={{
-          tooltip: {
-            sx: {
-              bgcolor: colors.paper,
-              color: colors.text,
-              boxShadow: colors.shadow,
-              '& .MuiTooltip-arrow': {
-                color: colors.paper
+          display: 'flex', 
+          alignItems: 'center', 
+          height: '100%',
+          pt: 0.3
+        }}>
+          {hasSubValues ? (
+            <IconButton
+              size="small"
+              onClick={() => setIsExpanded(!isExpanded)}
+              sx={{ p: 0 }}
+            >
+              {isExpanded ? <ExpandMore /> : <ChevronRight />}
+            </IconButton>
+          ) : (
+            <Box sx={{ 
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              bgcolor: 'text.primary'
+            }} />
+          )}
+        </Box>
+        <Tooltip 
+          title={tooltipContent}
+          placement="right"
+          componentsProps={{
+            tooltip: {
+              sx: {
+                bgcolor: colors.paper,
+                color: colors.text,
+                boxShadow: colors.shadow,
+                '& .MuiTooltip-arrow': {
+                  color: colors.paper
+                }
               }
             }
-          }
-        }}
-      >
-        <Typography 
-          sx={{ 
-            fontFamily: 'monospace',
-            fontSize: '0.75rem',
-            lineHeight: 1.4,
-            cursor: value.comment ? 'help' : 'default',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word'
           }}
         >
-          {value.value}
-        </Typography>
-      </Tooltip>
-    </Box>
+          <Typography 
+            sx={{ 
+              fontFamily: 'monospace',
+              fontSize: '0.75rem',
+              lineHeight: 1.4,
+              cursor: value.comment ? 'help' : 'default',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word'
+            }}
+          >
+            {value.value}
+          </Typography>
+        </Tooltip>
+      </Box>
+      {hasSubValues && isExpanded && (
+        <Box>
+          {value.subValues!.map((subValue, index) => (
+            <EnumValueRow
+              key={`${subValue.value}-${index}`}
+              value={subValue}
+              level={level + 1}
+            />
+          ))}
+        </Box>
+      )}
+    </>
   );
 });
 

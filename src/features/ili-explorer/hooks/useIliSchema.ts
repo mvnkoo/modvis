@@ -3,7 +3,7 @@ import { Node, Edge, Connection, MarkerType, FitViewOptions } from 'reactflow';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { IliSchemaService } from '../services/iliSchemaService';
 import { IliLayoutService } from '../services/IliLayoutService';
-import { IliBaseNode, IliRelation } from '../services/types/IliBaseTypes';
+import { IliBaseNode, IliRelation, IliClassNode } from '../services/types/IliBaseTypes';
 
 // Define IliNode type that extends ReactFlow Node with additional properties
 interface IliNode extends Node {
@@ -121,8 +121,18 @@ export const useIliSchema = (
 
   // Generate search options from ILI nodes, sorted by category and label
   const generateSearchOptions = useCallback((nodes: IliBaseNode[]): SearchOption[] => {
-    return nodes
-      .map(node => ({
+    const options: SearchOption[] = [];
+
+    // Add nodes as search options
+    nodes.forEach(node => {
+      // Skip MODEL nodes and other unwanted types
+      if (node.type === 'MODEL') return;
+      
+      // Only include specific node types
+      const validTypes = ['CLASS', 'STRUCTURE', 'TOPIC', 'ENUMERATION'];
+      if (!validTypes.includes(node.type)) return;
+
+      options.push({
         id: node.id,
         label: node.name,
         type: node.type,
@@ -130,17 +140,36 @@ export const useIliSchema = (
         category: node.type === 'CLASS' ? 'Classes' : 
                  node.type === 'STRUCTURE' ? 'Structures' : 
                  node.type === 'TOPIC' ? 'Topics' : 
-                 node.type === 'ENUMERATION' ? 'Enumerations' : 'Models'
-      }))
-      .sort((a, b) => {
-        // Sort first by category
-        const categoryOrder = ['Models', 'Topics', 'Classes', 'Structures', 'Enumerations'];
-        const categoryDiff = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
-        if (categoryDiff !== 0) return categoryDiff;
-        
-        // Then sort by label
-        return a.label.localeCompare(b.label);
+                 'Enumerations'
       });
+
+      // Add attributes as search options for CLASS nodes
+      if (node.type === 'CLASS') {
+        const classNode = node as IliClassNode;
+        if (classNode.attributes) {
+          classNode.attributes.forEach(attr => {
+            options.push({
+              id: `${node.id}.${attr.name}`,
+              label: `${attr.name} (${node.name})`,
+              type: 'ATTRIBUTE',
+              description: `${attr.type}${attr.mandatory ? ', Mandatory' : ''}`,
+              category: 'Attributes'
+            });
+          });
+        }
+      }
+    });
+
+    // Sort options by category and label
+    return options.sort((a, b) => {
+      // Sort first by category
+      const categoryOrder = ['Classes', 'Topics', 'Structures', 'Enumerations', 'Attributes'];
+      const categoryDiff = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+      if (categoryDiff !== 0) return categoryDiff;
+      
+      // Then sort by label
+      return a.label.localeCompare(b.label);
+    });
   }, []);
 
   // Filter and layout nodes and edges based on selected node
@@ -332,9 +361,15 @@ export const useIliSchema = (
   const handleSearchChange = useCallback((option: SearchOption | null) => {
     setSearchValue(option);
     if (option) {
+      // Bei Attributen die Klassen-ID extrahieren
+      const nodeId = option.type === 'ATTRIBUTE' 
+        ? option.id.split('.')[0]  // Format ist "klassenId.attributName"
+        : option.id;
+
       const processedNode = {
         ...option,
-        type: option.type === 'ENUMERATION' ? 'enumNode' : option.type,
+        id: nodeId,  // Verwende die Klassen-ID für Attribute
+        type: option.type === 'ENUMERATION' ? 'enumNode' : 'CLASS',  // Bei Attributen immer 'CLASS' verwenden
         position: { x: 0, y: 0 },
         data: {
           ...option,
@@ -358,7 +393,12 @@ export const useIliSchema = (
 
       setNodes(relatedNodes.nodes);
       setEdges(relatedNodes.edges);
-      setActiveNodeId(option.id);
+      setActiveNodeId(nodeId);
+      
+      // Fit view to show all nodes
+      setTimeout(() => {
+        fitView({ duration: 500, padding: 0.2 });
+      }, 50);
       
       // Suchfeld nach kurzer Verzögerung zurücksetzen
       setTimeout(() => {
@@ -368,7 +408,7 @@ export const useIliSchema = (
       // Wenn keine Option ausgewählt ist, zeige initiale Ansicht
       filterNodesAndEdges(null);
     }
-  }, [filterNodesAndEdges, showAssociations]);
+  }, [filterNodesAndEdges, showAssociations, allNodes, allEdges, colors, showFullHierarchy, useCurvedLines, showEnums, maxSubTypesPerRow, fitView]);
 
   const handleConnect = useCallback((params: Connection) => {
     if (params.source && params.target) {

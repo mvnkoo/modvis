@@ -257,6 +257,7 @@ export class IliParserService {
     let collectingEnum = false;
     let currentAttribute: Partial<IliAttribute> | null = null;
     let enumValues: IliEnumValue[] = [];
+    let currentParent = '';
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -317,12 +318,44 @@ export class IliParserService {
           };
         }
       } else if (collectingEnum && currentAttribute) {
-        const enumValueMatch = line.match(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
+        // Skip comment lines completely
+        if (line.trim().startsWith('!!@')) {
+          continue;
+        }
+
+        // Check if this is a parent enum value (has parentheses)
+        const parentMatch = line.match(/^\s*([a-zA-ZäöüÄÖÜß\w]+)\s*\(/);
+        if (parentMatch) {
+          const parentValue = parentMatch[1].trim();
+          currentParent = parentValue;
+          continue;
+        }
+
+        // Handle closing parenthesis
+        if (line.includes(')')) {
+          if (line === ');') {
+            collectingEnum = false;
+            currentParent = '';
+            if (currentAttribute) {
+              attributes.push(currentAttribute as IliAttribute);
+              currentAttribute = null;
+            }
+          }
+          continue;
+        }
+
+        // Parse regular enum value - only if the line starts with an actual value
+        // (not a comment or empty space)
+        const enumValueMatch = line.match(/^\s*([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
         if (enumValueMatch) {
           const value = enumValueMatch[1].trim();
           const comment = this.extractComment(line, previousLine);
+          
+          // Add parent prefix if we're inside a parent block
+          const fullValue = currentParent ? `${currentParent}.${value}` : value;
+          
           const enumValue: IliEnumValue = { 
-            value, 
+            value: fullValue,
             comment: comment || undefined 
           };
           
@@ -330,14 +363,6 @@ export class IliParserService {
             currentAttribute.enumValues = [];
           }
           currentAttribute.enumValues.push(enumValue);
-        }
-        
-        if (line.includes(');')) {
-          collectingEnum = false;
-          if (currentAttribute) {
-            attributes.push(currentAttribute as IliAttribute);
-            currentAttribute = null;
-          }
         }
       }
     }

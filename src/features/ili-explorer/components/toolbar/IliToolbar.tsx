@@ -97,7 +97,8 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
   // Sortiere die Optionen nach Kategorie und Label
   const sortedOptions = [...searchOptions].sort((a, b) => {
     if (a.category !== b.category) {
-      return a.category.localeCompare(b.category);
+      const categoryOrder = ['Classes', 'Topics', 'Structures', 'Enumerations', 'Attributes'];
+      return categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
     }
     return a.label.localeCompare(b.label);
   });
@@ -253,10 +254,27 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
           renderOption={(props: React.HTMLAttributes<HTMLLIElement>, option) => {
             // Extrahiere key aus props und entferne es aus restProps
             const { key, ...restProps } = props;
+
+            // Für Attribute den Label in zwei Teile aufteilen
+            let mainLabel = option.label;
+            let classLabel = '';
+            if (option.type === 'ATTRIBUTE') {
+              const parts = option.label.match(/^(.*?)\s*\((.*?)\)$/);
+              if (parts) {
+                mainLabel = parts[1];
+                classLabel = parts[2];
+              }
+            }
+
             return (
               <li key={option.id} {...restProps}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div>{option.label}</div>
+                  <div>
+                    {mainLabel}
+                    {classLabel && (
+                      <span style={{ color: '#2196f3' }}> ({classLabel})</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: '0.8em', color: 'gray' }}>{option.description}</div>
                 </div>
               </li>
