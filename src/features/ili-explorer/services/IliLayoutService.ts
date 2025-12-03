@@ -53,7 +53,7 @@ export class IliLayoutService {
     }
   } as const;
 
-  // Calculate bounds for a set of nodes
+ 
   private static calculateBounds(nodes: IliNode[]): {minX: number; maxX: number; minY: number; maxY: number} {
     return nodes.reduce((acc, node) => ({
       minX: Math.min(acc.minX, node.position.x),
@@ -68,17 +68,17 @@ export class IliLayoutService {
     });
   }
 
-  // Type guard to check if a node is an IliNode
+ 
   private static isIliNode(node: Node | null): node is IliNode {
     return node !== null && typeof node.type === 'string';
   }
 
-  // Type guard to check if all nodes in array are valid IliNodes
+ 
   private static areValidNodes(nodes: (Node | null)[]): nodes is IliNode[] {
     return nodes.every(node => this.isIliNode(node));
   }
 
-  // Recursively collect all super types for a given node
+ 
   private static collectAllSuperTypes(
     currentId: string, 
     allEdges: Edge[], 
@@ -114,7 +114,7 @@ export class IliLayoutService {
     });
   }
 
-  // Calculate position for a subtype node based on index and layout parameters
+ 
   private static calculateSubtypePosition(
     index: number, 
     totalSubTypes: number,
@@ -123,32 +123,32 @@ export class IliLayoutService {
     subTypes: string[],
     useMagicLayout: boolean = false
   ): { x: number; y: number } {
-    // Single row case
+   
     if (maxSubTypesPerRow === 0 || maxSubTypesPerRow >= totalSubTypes) {
-      // Einzelne Reihe
+     
       const totalWidth = (totalSubTypes - 1) * this.LAYOUT_CONFIG.SPACING.HORIZONTAL;
       const startX = 0 - (totalWidth / 2);
       return {
         x: startX + (index * this.LAYOUT_CONFIG.SPACING.HORIZONTAL),
-        y: this.LAYOUT_CONFIG.SPACING.VERTICAL * (useMagicLayout ? 2 : 1)  // Magic Layout
+        y: this.LAYOUT_CONFIG.SPACING.VERTICAL * (useMagicLayout ? 2 : 1) 
       };
     }
 
-    // Multiple rows case
+   
     const row = Math.floor(index / maxSubTypesPerRow);
     const col = index % maxSubTypesPerRow;
     
-    // Calculate items in last row
+   
     const itemsInLastRow = totalSubTypes - (row * maxSubTypesPerRow);
     const currentRowCount = row === Math.floor((totalSubTypes - 1) / maxSubTypesPerRow)
       ? Math.min(itemsInLastRow, maxSubTypesPerRow)
       : maxSubTypesPerRow;
     
-    // Calculate row width and starting position
+   
     const rowWidth = (currentRowCount - 1) * this.LAYOUT_CONFIG.SPACING.HORIZONTAL;
     const startX = 0 - (rowWidth / 2);
     
-    // Apply magic layout multiplier if enabled
+   
     const verticalSpacing = useMagicLayout ? 
       this.LAYOUT_CONFIG.SPACING.VERTICAL * 2 : 
       this.LAYOUT_CONFIG.SPACING.VERTICAL;
@@ -165,7 +165,7 @@ export class IliLayoutService {
     };
   }
 
-  // Calculate position for a supertype node based on level and index
+ 
   private static calculateSuperTypePosition(
     index: number,
     level: number,
@@ -175,11 +175,11 @@ export class IliLayoutService {
     const startX = 0 - (totalWidth / 2);
     return {
       x: startX + (index * this.LAYOUT_CONFIG.SPACING.HORIZONTAL),
-      y: this.LAYOUT_CONFIG.SPACING.SUPERTYPE * (level + 1) // Multipliziere mit Level für gestaffelte Abstände
+      y: this.LAYOUT_CONFIG.SPACING.SUPERTYPE * (level + 1)
     };
   }
 
-  // Main method to get direct relations for a given entity
+ 
   public static getDirectRelations(
     entity: IliNode,
     allNodes: IliNode[],
@@ -193,7 +193,7 @@ export class IliLayoutService {
     showAssociations = true,
     useMagicLayout = false,
   ): { nodes: IliNode[]; edges: Edge[] } {
-    // Input validation logging
+   
     console.log('getDirectRelations input entity:', {
       id: entity.id,
       type: entity.type,
@@ -201,10 +201,10 @@ export class IliLayoutService {
       showAssociations
     });
 
-    // Early return for invalid input
+   
     if (!entity || !allNodes || !allEdges) return { nodes: [], edges: [] };
 
-    // Initialize data structures
+   
     const nodeMap = new Map(allNodes.map(node => [node.id, node]));
     const relatedNodeIds = new Set([entity.id]);
     const superTypeChain = new Set<string>();
@@ -214,10 +214,10 @@ export class IliLayoutService {
     let enhancedNodes: IliNode[] = [];
     let allEdgesResult: Edge[] = [];
 
-    // Create height map from nodeHeights array
+   
     const heightMap = new Map(nodeHeights);
 
-    // Modify the position calculation to consider actual heights
+   
     const calculateVerticalOffset = (nodeId: string, baseOffset: number): number => {
       const previousNodes = Array.from(relatedNodeIds)
         .filter(id => {
@@ -233,15 +233,15 @@ export class IliLayoutService {
       return offset;
     };
 
-    // Handle active enum node and find related classes
+   
     if (entity.type === 'enumNode' || entity.type === 'ENUMERATION' || entity.type === 'domainEnumNode') {
       console.log('Processing enum node:', entity);
       
-      // Find all classes that use this enum
+     
       const relatedClasses = allNodes.filter(node => {
         if (node.type !== 'classNode') return false;
         
-        // Check class attributes for both regular and domain enums
+       
         return node.data.attributes?.some((attr: IliAttribute) => {
           if (attr.isEnum || attr.isDomainEnum) {
             const enumNodeId = attr.isDomainEnum 
@@ -257,7 +257,7 @@ export class IliLayoutService {
 
       console.log('Found related classes:', relatedClasses);
 
-      // Position related classes to the left of the enum
+     
       const classNodes = relatedClasses.map((classNode, index) => ({
         ...classNode,
         position: {
@@ -272,7 +272,7 @@ export class IliLayoutService {
         }
       }));
 
-      // Create edges from classes to enum with proper styling
+     
       const edges = relatedClasses.map(classNode => ({
         id: `${classNode.id}-${entity.id}-enum`,
         source: classNode.id,
@@ -294,10 +294,10 @@ export class IliLayoutService {
         }
       }));
 
-      // Return active enum and related classes
+     
       return {
         nodes: [
-          // Active enum in center
+         
           {
             ...entity,
             position: { x: 0, y: 0 },
@@ -307,26 +307,26 @@ export class IliLayoutService {
               isActive: true
             }
           },
-          // Related classes on left
+         
           ...classNodes
         ],
         edges
       };
     }
-    // Process class nodes
+   
     else if (entity.type === 'classNode' && showEnums) {
       
       entity.data.attributes?.forEach((attr: IliAttribute, index: number) => {
-        // Handle both regular and domain enums
+       
         if (attr.isEnum || attr.isDomainEnum) {
-          // Create unique ID for enum node
+         
           const enumNodeId = attr.isDomainEnum 
-            ? `domain_${attr.type}` // For domain enums, use the type (e.g., 'Status')
+            ? `domain_${attr.type}`
             : attr.isInlineEnum 
-              ? `enum_${entity.id}_${attr.name}` // For inline enums
-              : `enum_${attr.type}`; // For regular enums
+              ? `enum_${entity.id}_${attr.name}`
+              : `enum_${attr.type}`;
 
-          // Create enum node if it doesn't exist
+         
           const enumNode: IliNode = nodeMap.get(enumNodeId) || {
             id: enumNodeId,
             type: attr.isDomainEnum ? 'domainEnumNode' : 'enumNode',
@@ -343,7 +343,7 @@ export class IliLayoutService {
             }
           };
 
-          // Calculate total enums for positioning
+         
           const totalEnums = entity.data.attributes?.filter((a: IliAttribute) => 
             a.isEnum || a.isDomainEnum
           ).length || 0;
@@ -360,20 +360,20 @@ export class IliLayoutService {
             y: startY + (index * spacingY)
           };
 
-          // Add enum node and create edge
+         
           enumTypes.add(enumNodeId);
           nodeMap.set(enumNodeId, enumNode);
           relatedNodeIds.add(enumNodeId);
 
-          // Create edge from class to enum with proper handles
+         
           enumEdges.push({
             id: `${entity.id}-${enumNodeId}-enum`,
             source: entity.id,
             target: enumNodeId,
             type: useCurvedLines ? 'default' : 'step',
             animated: false,
-            sourceHandle: 'right-source',  // Use right handle from class
-            targetHandle: 'left',          // Use left handle from domain enum
+            sourceHandle: 'right-source', 
+            targetHandle: 'left',         
             style: { 
               stroke: colors.typeReference,
               strokeWidth: 2,
@@ -390,15 +390,15 @@ export class IliLayoutService {
       });
     }
 
-    // Process associations if enabled
+   
     if (!showAssociations) {
       console.log('Skipping associations because showAssociations is false');
     } else if (entity.type === 'classNode') {
       console.log('Processing associations for class:', entity.data.label);
-      console.log('Associations data:', entity.data.associations); // Debug log
+      console.log('Associations data:', entity.data.associations);
       
       if (entity.data.associations && entity.data.associations.length > 0) {
-        // Calculate bounds of current node positions
+       
         const placedNodes = Array.from(relatedNodeIds)
           .map(nid => nodeMap.get(nid))
           .filter((n): n is IliNode => {
@@ -411,19 +411,19 @@ export class IliLayoutService {
         
         const bounds = this.calculateBounds(placedNodes);
         
-        // Sort associations by source/target role
+       
         const sortedAssociations = [...entity.data.associations].sort((a, b) => {
           const aIsSource = a.sourceClass === entity.data.label;
           const bIsSource = b.sourceClass === entity.data.label;
           return Number(aIsSource) - Number(bIsSource);
         });
 
-        console.log('Sorted associations:', sortedAssociations); // Debug log
+        console.log('Sorted associations:', sortedAssociations);
 
-        // Calculate positions for associations
+       
         sortedAssociations.forEach((assoc, index) => {
           const baseX = this.LAYOUT_CONFIG.ASSOCIATION.OFFSET_X;
-          // Berechne die vertikale Position relativ zur aktiven Komponente
+         
           const activeNodeY = entity.position.y;
           const totalAssociations = sortedAssociations.length;
           const spacingY = useMagicLayout ? 
@@ -437,7 +437,7 @@ export class IliLayoutService {
             y: startY + (index * spacingY)
           };
 
-          // Determine if active class is source or target
+         
           const isSource = assoc.sourceClass === entity.data.label;
           const associationNodeId = `assoc_${assoc.name}_${entity.id}`;
 
@@ -452,7 +452,7 @@ export class IliLayoutService {
               isActive: false,
               isSource,
               expanded: false,
-              // Füge Pfeil-Indikator hinzu
+             
               showArrow: true,
               arrowDirection: isSource ? 'left' : 'right'
             }
@@ -464,7 +464,7 @@ export class IliLayoutService {
           relatedNodeIds.add(associationNodeId);
           enhancedNodes.push(associationNode);
 
-          // Create edge from active class to association with arrow
+         
           enumEdges.push({
             id: `${entity.id}-${associationNodeId}-assoc`,
             source: isSource ? entity.id : associationNodeId,
@@ -489,23 +489,23 @@ export class IliLayoutService {
       }
     }
 
-    // Handle association nodes
+   
     if (entity.type === 'associationNode') {
-      // Return empty arrays if associations are disabled
+     
       if (!showAssociations) {
         return { nodes: [], edges: [] };
       }
 
       console.log('Processing active association node:', entity.data.label);
       
-      // Debug output for error analysis
+     
       console.log('All available nodes:', allNodes.map(n => ({
         label: n.data.label,
         type: n.type,
         id: n.id
       })));
       
-      // Find source and target classes
+     
       const sourceClass = allNodes.find(n => 
         n.data.label === entity.data.association.sourceClass ||
         n.data.label === entity.data.association.sourceClass.split('.').pop()
@@ -516,7 +516,7 @@ export class IliLayoutService {
         n.data.label === entity.data.association.targetClass.split('.').pop()
       );
 
-      // Create placeholder for unloaded source class
+     
       const unloadedSourceNode = !sourceClass ? {
         id: `unloaded_${entity.data.association.sourceClass}`,
         type: 'unloadedClassNode',
@@ -529,12 +529,12 @@ export class IliLayoutService {
         }
       } : null;
 
-      // Display association with available target class and optional source placeholder
+     
       if (targetClass || sourceClass) {
         const nodes: IliNode[] = [];
         const edges: Edge[] = [];
 
-        // Add source node (real class or placeholder)
+       
         if (sourceClass) {
           nodes.push({
             ...sourceClass,
@@ -545,14 +545,14 @@ export class IliLayoutService {
           nodes.push(unloadedSourceNode);
         }
 
-        // Add association node
+       
         nodes.push({
           ...entity,
           position: { x: 0, y: 0 },
           data: { ...entity.data, isHighlighted: true, isActive: true }
         });
 
-        // Add target node
+       
         if (targetClass) {
           nodes.push({
             ...targetClass,
@@ -561,7 +561,7 @@ export class IliLayoutService {
           });
         }
 
-        // Create edges
+       
         if (sourceClass || unloadedSourceNode) {
           edges.push({
             id: `${sourceClass?.id || unloadedSourceNode?.id || 'unknown'}-${entity.id}-source`,
@@ -600,7 +600,7 @@ export class IliLayoutService {
       }
     }
 
-    // Collect all supertypes
+   
     this.collectAllSuperTypes(
       entity.id,
       allEdges,
@@ -610,7 +610,7 @@ export class IliLayoutService {
       showFullHierarchy
     );
 
-    // Find all subtypes by checking edges targeting the current entity
+   
     allEdges.forEach(edge => {
       if (edge.target === entity.id) {
         const sourceNode = nodeMap.get(edge.source);
@@ -621,7 +621,7 @@ export class IliLayoutService {
       }
     });
 
-    // Remove association nodes and edges if associations are disabled
+   
     if (!showAssociations) {
       console.log('Removing all association nodes and edges');
       enhancedNodes = enhancedNodes.filter(node => node.type !== 'associationNode');
@@ -637,11 +637,11 @@ export class IliLayoutService {
       enumEdges.push(...filteredEdges);
     }
 
-    // Organize supertypes into hierarchical levels
+   
     const superTypeLevels = new Map<string, number>();
     const superTypesByLevel = new Map<number, string[]>();
     
-    // Recursively calculate level for each supertype
+   
     const calculateSuperTypeLevel = (nodeId: string, level = 0, visited = new Set<string>()) => {
       if (visited.has(nodeId)) return;
       visited.add(nodeId);
@@ -665,7 +665,7 @@ export class IliLayoutService {
       }
     });
 
-    // Calculate bounding box for current node positions
+   
     const calculateBounds = (nodes: IliNode[]): {minX: number; maxX: number; minY: number; maxY: number} => {
       return nodes.reduce((acc, node) => ({
         minX: Math.min(acc.minX, node.position.x),
@@ -680,7 +680,7 @@ export class IliLayoutService {
       });
     };
 
-    // Store original expanded states before modifying nodes
+   
     const originalExpandedStates = new Map(
       allNodes.map(node => [node.id, {
         expanded: node.data?.expanded,
@@ -689,20 +689,20 @@ export class IliLayoutService {
       }])
     );
 
-    // Calculate positions for all related nodes
+   
     enhancedNodes = Array.from(relatedNodeIds)
       .map(id => {
         const originalNode = nodeMap.get(id);
         if (!originalNode || !this.isIliNode(originalNode)) return null;
 
-        // Preserve original node data while updating highlight state
+       
         const nodeData: NodeData = {
           ...originalNode.data,
           isHighlighted: id === entity.id,
           isActive: id === entity.id,
         };
 
-        // Preserve expansion state from original node
+       
         if (originalNode.data.expanded !== undefined) {
           nodeData.expanded = originalNode.data.expanded;
         }
@@ -713,17 +713,17 @@ export class IliLayoutService {
           nodeData.onExpandChange = originalNode.data.onExpandChange;
         }
 
-        // Normalize node type for enumerations
+       
         let nodeType = originalNode.type;
         if (nodeType === 'ENUMERATION') {
           nodeType = 'enumNode';
         }
 
-        // Check if node represents an association
+       
         const isAssociation = nodeType === 'associationNode' || 
                              originalNode.id.startsWith('assoc_');
         
-        // Preserve original position for association nodes
+       
         if (isAssociation) {
           return {
             ...originalNode,
@@ -732,7 +732,7 @@ export class IliLayoutService {
           };
         }  
 
-        // Calculate positions based on node type and relationships
+       
         const isSuperType = superTypeChain.has(id);
         const isSubType = subTypeChain.has(id);
         const isEnum = enumTypes.has(id);
@@ -742,7 +742,7 @@ export class IliLayoutService {
         let position = { x: 0, y: 0 };
 
         if (isClassUsingEnum) {
-          // Position classes to the left of their enumeration
+         
           const classArray = Array.from(relatedNodeIds).filter(nid => {
             const node = nodeMap.get(nid);
             return node && node.type === 'classNode';
@@ -758,10 +758,10 @@ export class IliLayoutService {
           };
         } else if (isEnum) {
           if (entity.type === 'enumNode') {
-            // Center active enum with related classes to the left
+           
             position = { x: 0, y: 0 };
           } else {
-            // Position inactive enums relative to active node
+           
             const enumArray = Array.from(enumTypes);
             const index = enumArray.indexOf(id);
             const totalEnums = enumArray.length;
@@ -769,10 +769,10 @@ export class IliLayoutService {
               this.LAYOUT_CONFIG.ENUM.SPACING_Y * this.LAYOUT_CONFIG.MAGIC.MULTIPLIER : 
               this.LAYOUT_CONFIG.ENUM.SPACING_Y;
             
-            // Berechne die Gesamthöhe der Enum-Gruppe
+           
             const totalHeight = (totalEnums - 1) * spacingY;
             
-            // Zentriere die Enum-Gruppe vertikal relativ zur aktiven Node
+           
             const startY = -(totalHeight / 2);
             
             position = {
@@ -802,7 +802,7 @@ export class IliLayoutService {
           );
         }
 
-        // Log expanded state for debugging
+       
         console.log('Processing node:', {
           id: originalNode.id,
           type: originalNode.type,
@@ -819,9 +819,9 @@ export class IliLayoutService {
       })
       .filter((node): node is IliNode => node !== null);
 
-    // Create edges for inheritance and other relationships
+   
     allEdgesResult = [
-      // Inheritance edges
+     
       ...allEdges
         .filter(edge => relatedNodeIds.has(edge.source) && relatedNodeIds.has(edge.target))
         .map(edge => ({
@@ -837,7 +837,7 @@ export class IliLayoutService {
           }
         })),
 
-      // Enumeration reference edges
+     
       ...enumEdges.filter(edge => edge.id.includes('enum_')).map(edge => ({
         ...edge,
         sourceHandle: 'right-source',
@@ -855,10 +855,10 @@ export class IliLayoutService {
         }
       })),
 
-      // Association edges (ohne Pfeile)
+     
       ...(showAssociations ? enumEdges.filter(edge => edge.id.includes('assoc_')).map(edge => ({
         ...edge,
-        // Keine zusätzlichen Pfeil-Marker hier
+       
       })) : [])
     ];
 
@@ -867,7 +867,7 @@ export class IliLayoutService {
       edges: allEdgesResult
     };
 
-    // Log final state for debugging
+   
     console.log('Final result:', {
       nodeCount: result.nodes.length,
       edgeCount: result.edges.length,
@@ -889,8 +889,8 @@ export class IliLayoutService {
     })));
 
     if (!showEnums) {
-      // Filtere Enum-Nodes und deren Kanten heraus, aber behalte die Positionen
-      // der anderen Nodes unverändert
+     
+     
       const filteredNodes = enhancedNodes.filter(node => 
         node.type !== 'enumNode' && !node.id.startsWith('enum_')
       );
@@ -916,7 +916,7 @@ export class IliLayoutService {
     };
   }
 
-  // Calculate inheritance level for a given type
+ 
   private static calculateSuperTypeLevel(
     typeId: string,
     startId: string,
@@ -944,7 +944,7 @@ export class IliLayoutService {
     return level;
   }
 
-  // Type guard to validate node structure
+ 
   private static isValidNode(node: any): node is IliNode {
     return (
       node &&
@@ -958,7 +958,7 @@ export class IliLayoutService {
     );
   }
 
-  // Filter array to include only nodes that pass validation
+ 
   private static filterValidNodes(nodes: any[]): IliNode[] {
     return nodes.filter(this.isValidNode);
   }

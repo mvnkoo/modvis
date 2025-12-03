@@ -5,7 +5,7 @@ export interface IliModelNode extends IliBaseNode {
   version: string;
   language?: string;
   uri: string;
-  topics: string[]; // References to topic IDs
+  topics: string[];
 }
 
 export interface IliTopicNode extends IliBaseNode {

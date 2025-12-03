@@ -18,17 +18,17 @@ export class ExpSchemaService {
     BASE_X: 1000
   };
 
-  // Schema Parsing
+ 
   public static parseExpressSchema(schemaContent: string | null): SchemaData {
     if (!schemaContent) return { nodes: [], edges: [] };
 
     const nodes = new Map<string, SchemaNode>();
     const normalizedContent = this.normalizeContent(schemaContent);
 
-    // Parse TYPE definitions
+   
     this.parseTypeDefinitions(normalizedContent, nodes);
     
-    // Parse ENTITY definitions
+   
     this.parseEntityDefinitions(normalizedContent, nodes);
 
     return { 
@@ -52,10 +52,10 @@ export class ExpSchemaService {
       const [, typeName, typeContent] = match;
       const isEnum = typeContent.includes('ENUMERATION OF');
       
-      // Parse Enum-Werte
+     
       const enumValues = isEnum ? this.parseEnumValues(typeContent) : null;
       
-      console.log(`Parsing enum ${typeName}:`, { isEnum, enumValues }); // Debug-Log
+      console.log(`Parsing enum ${typeName}:`, { isEnum, enumValues });
       
       const node: SchemaNode = {
         id: typeName,
@@ -76,31 +76,31 @@ export class ExpSchemaService {
   }
 
   private static parseEntityDefinitions(content: string, nodes: Map<string, SchemaNode>): void {
-    // Teile den Content in Blöcke auf
+   
     const entityBlocks = content.split('ENTITY');
     
     entityBlocks.forEach(block => {
       if (!block.trim().startsWith('ENTITY')) {
         try {
-          // Extrahiere den Entity-Namen
+         
           const nameMatch = block.match(/^\s*(\w+)/);
           if (!nameMatch) return;
           
           const entityName = nameMatch[1];
           
-          // Prüfe auf ABSTRACT
+         
           const isAbstract = block.includes('ABSTRACT');
           
-          // Extrahiere Supertypen
+         
           const superTypeMatch = block.match(/SUBTYPE\s+OF\s*\(([^)]+)\)/);
           const superTypes = superTypeMatch 
             ? superTypeMatch[1].split(',').map(t => t.trim()) 
             : [];
 
-          // Parse Attribute
+         
           const attributes = this.parseAttributes(block);
 
-          // Parse WHERE-Klausel
+         
           const whereClause = this.parseWhereClause(block);
 
           console.log('Found Entity:', {
@@ -110,7 +110,7 @@ export class ExpSchemaService {
             attributeCount: attributes.length
           });
 
-          // Erstelle Node
+         
           const node: SchemaNode = {
             id: entityName,
             type: 'entityNode',
@@ -134,11 +134,11 @@ export class ExpSchemaService {
       }
     });
 
-    // Debug-Ausgabe
+   
     console.log('Total Entities found:', nodes.size);
     console.log('Entity Names:', Array.from(nodes.keys()));
 
-    // Nachbearbeitung: Setze Subtypen
+   
     for (const node of Array.from(nodes.values())) {
       if (node.data.superTypes) {
         for (const superType of node.data.superTypes) {
@@ -156,7 +156,7 @@ export class ExpSchemaService {
 
   private static parseAttributes(entityContent: string): AttributeData[] {
     const attributes: AttributeData[] = [];
-    // Regex für Attribute
+   
     const attrRegex = /^\s*(\w+)\s*:\s*(OPTIONAL\s+)?([^;]+);/gm;
     
     let match;
@@ -178,11 +178,11 @@ export class ExpSchemaService {
   }
 
   private static parseEnumValues(typeContent: string): string[] {
-    // Suche nach dem ENUMERATION OF Block
+   
     const enumMatch = typeContent.match(/ENUMERATION\s+OF\s*\(([\s\S]*?)\)/i);
     if (!enumMatch) return [];
 
-    // Extrahiere die Werte und bereinige sie
+   
     const enumValuesString = enumMatch[1];
     return enumValuesString
         .split(',')
@@ -195,7 +195,7 @@ export class ExpSchemaService {
     return whereMatch ? whereMatch[1].trim() : null;
   }
 
-  // Edge Creation
+ 
   public static createInheritanceEdge(
     sourceId: string,
     targetId: string,
@@ -249,7 +249,7 @@ export class ExpSchemaService {
     };
   }
 
-  // Layout & Visualization
+ 
   public static getDirectRelations(
     entity: SchemaNode,
     allNodes: SchemaNode[],
@@ -268,7 +268,7 @@ export class ExpSchemaService {
     const enumTypes = new Set<string>();
     const enumUsers = new Set<string>();
 
-    // Wenn der zentrale Node ein Enum ist, finde alle Entities die es verwenden
+   
     if (entity.data.isEnum) {
       allNodes.forEach(node => {
         if (node.type === 'entityNode') {
@@ -281,7 +281,7 @@ export class ExpSchemaService {
         }
       });
     } else {
-      // Sammle Enums aus den Attributen wie bisher
+     
       entity.data.attributes?.forEach(attr => {
         const referencedNode = allNodes.find(n => n.id === attr.type);
         if (referencedNode && referencedNode.data.isEnum) {
@@ -331,12 +331,12 @@ export class ExpSchemaService {
 
     collectDirectSubTypes(entity.id);
 
-    // Berechne die Breite der Subtypen-Gruppe
+   
     const subTypesWidth = subTypeChain.size > 0 
         ? (this.CONSTANTS.HORIZONTAL_SPACING * (subTypeChain.size - 1)) / 2
         : 0;
 
-    // Position für Enums
+   
     const enumOffset = this.CONSTANTS.BASE_X + subTypesWidth + this.CONSTANTS.HORIZONTAL_SPACING * 1.5;
 
     const enhancedNodes = Array.from(relatedNodeIds)
@@ -365,7 +365,7 @@ export class ExpSchemaService {
                     y: startY + index * this.CONSTANTS.VERTICAL_SPACING / 2
                 };
             } else if (isEnumUser) {
-                // Positioniere Enum-Benutzer weiter links vom Enum
+               
                 const userArray = Array.from(enumUsers);
                 const totalUsers = userArray.length;
                 const index = userArray.indexOf(id);
@@ -405,15 +405,15 @@ export class ExpSchemaService {
         })
         .filter((node): node is SchemaNode => node !== null);
 
-    // Erstelle Kanten für Enum-Benutzer
+   
     const edges = [
         ...this.createEdges(enhancedNodes, entity, relatedNodeIds, colors, useCurvedLines),
-        // Füge Kanten für Enum-Benutzer hinzu
+       
         ...Array.from(enumUsers).map(userId => {
             const userNode = nodeMap.get(userId);
             if (!userNode) return null;
             
-            // Finde das entsprechende Attribut, das das Enum verwendet
+           
             const attribute = userNode.data.attributes?.find(attr => attr.type === entity.id);
             if (!attribute) return null;
 
@@ -474,15 +474,15 @@ export class ExpSchemaService {
     };
   }
 
-  // Domain Classification
+ 
   public static getDomainFromEntity(entityName: string): string {
     if (!entityName) return 'Other';
     
-    // Generische Domänen-Erkennung basierend auf Präfix
+   
     const match = entityName.match(/^([A-Z][a-z]+)/);
     if (match) {
         const prefix = match[1];
-        // Gruppiere Entitäten nach ihrem Präfix
+       
         return `${prefix} Domain`;
     }
     
@@ -542,27 +542,27 @@ export class ExpSchemaService {
     return edges;
   }
 
-  // Füge eine Hilfsfunktion hinzu um Beziehungen zu identifizieren
+ 
   private static isRelationshipEntity(node: SchemaNode): boolean {
-    // Ignoriere Enums
+   
     if (node.data.isEnum) return false;
 
-    // 1. Prüfe auf spezifische IFC Relationship Patterns
+   
     if (
         node.id.startsWith('IfcRel') ||
         node.id.includes('Relationship')
     ) return true;
 
-    // 2. Prüfe die Attribute auf typische Beziehungsmuster
+   
     if (node.data.attributes) {
-        // Relating/Related Paare
+       
         const hasRelatingPair = node.data.attributes.some(attr => 
             attr.name.startsWith('Relating')
         ) && node.data.attributes.some(attr =>
             attr.name.startsWith('Related')
         );
 
-        // Collections von Referenzen
+       
         const hasCollectionReferences = node.data.attributes.some(attr => {
             const isCollection = 
                 attr.type.includes('SET OF') || 
@@ -572,7 +572,7 @@ export class ExpSchemaService {
             return isCollection && isReference;
         });
 
-        // Inverse Attribute
+       
         const hasInverseReferences = node.data.attributes.some(attr =>
             attr.name.includes('INVERSE') ||
             attr.type.includes('INVERSE')

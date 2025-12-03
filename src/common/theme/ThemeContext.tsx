@@ -115,7 +115,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     nodeHeaderText: '#FFFFFF',
   },
   highContrast: {
-    // Schema Explorer Farben (default)
+    // Schema Explorer Farben
     entity: '#2196f3',          
     abstractEntity: '#1565c0',  
     selectedEntity: '#9c27b0',   
@@ -174,7 +174,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     nodeHeaderText: '#FFFFFF',
   },
   purple: {
-    // Schema Explorer Farben (default)
+    // Schema Explorer Farben
     entity: '#2196f3',          
     abstractEntity: '#1565c0',  
     selectedEntity: '#9c27b0',   

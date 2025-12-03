@@ -38,7 +38,7 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
   const [autoCollapseEnabled, setAutoCollapseEnabled] = useState(true);
   const [isContentVisible, setIsContentVisible] = useState(true);
 
-  // Auto-collapse filename after 5 seconds only if autoCollapse is enabled
+ 
   useEffect(() => {
     if (currentFileName && isFileNameExpanded && autoCollapseEnabled) {
       const timer = setTimeout(() => {
@@ -53,14 +53,14 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
     setIsContentVisible(false);
     setTimeout(() => {
       setIsFileNameExpanded(false);
-    }, 300); // Warte auf das Ausblenden der Inhalte
+    }, 300);
   };
 
   const handleExpand = () => {
     setIsFileNameExpanded(true);
     setTimeout(() => {
       setIsContentVisible(true);
-    }, 50); // Kurze Verzögerung für den Slide-Effekt
+    }, 50);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,12 +89,12 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
     }
   };
 
-  // Truncate filename to 35 characters
+ 
   const truncateFileName = (name: string) => {
     return name.length > 32 ? `${name.substring(0, 29)}...` : name;
   };
 
-  // Sortiere die Optionen nach Kategorie und Label
+ 
   const sortedOptions = [...searchOptions].sort((a, b) => {
     if (a.category !== b.category) {
       const categoryOrder = ['Classes', 'Topics', 'Structures', 'Enumerations', 'Attributes'];
@@ -252,10 +252,10 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
           groupBy={(option) => option.category}
           getOptionLabel={(option) => option.label}
           renderOption={(props: React.HTMLAttributes<HTMLLIElement>, option) => {
-            // Extrahiere key aus props und entferne es aus restProps
+           
             const { key, ...restProps } = props;
 
-            // Für Attribute den Label in zwei Teile aufteilen
+           
             let mainLabel = option.label;
             let classLabel = '';
             if (option.type === 'ATTRIBUTE') {

@@ -40,11 +40,11 @@ export class IliParserService {
   private parseDomainEnums(content: string): Map<string, IliEnumValue[]> {
     const domainEnums = new Map<string, IliEnumValue[]>();
     
-    // Parse domain sections
+   
     const domainSections = content.match(/DOMAIN\s*\n([\s\S]*?)(?=\s*(?:TOPIC|CLASS|END))/g) || [];
     
     domainSections.forEach(section => {
-      // First handle EXTENDS definitions
+     
       const extendsRegex = /(\w+)\s+EXTENDS\s+([\w\.]+)\s*=\s*\(([\s\S]*?)\);/g;
       let match;
 
@@ -52,13 +52,13 @@ export class IliParserService {
         const [_, enumName, baseEnum, enumContent] = match;
         const enumComment = this.extractComment(section, enumName);
         
-        // Parse nested enum values
+       
         const enumValues = this.parseNestedEnumValues(enumContent);
         
         if (enumValues.length > 0) {
           domainEnums.set(enumName, enumValues);
           
-          // Create domain enum node
+         
           const nodeId = `domain_${enumName}`;
           const enumNode: IliBaseNode = {
             id: nodeId,
@@ -81,7 +81,7 @@ export class IliParserService {
         }
       }
 
-      // Handle ALL OF definitions
+     
       const allOfRegex = /(\w+)\s*=\s*ALL\s+OF\s+(\w+)\s*;/g;
       while ((match = allOfRegex.exec(section)) !== null) {
         const [_, enumName, baseEnumName] = match;
@@ -132,13 +132,13 @@ export class IliParserService {
       
       if (!line) continue;
 
-      // Handle comments
+     
       if (line.startsWith('!!')) {
         currentComment = this.extractComment(line) || '';
         continue;
       }
 
-      // Check for opening parenthesis - start of sub-values
+     
       if (line.includes('(')) {
         nestingLevel++;
         const valueMatch = line.match(/(\w+)\s*\(/);
@@ -155,7 +155,7 @@ export class IliParserService {
         continue;
       }
 
-      // Check for closing parenthesis - end of sub-values
+     
       if (line.includes(')')) {
         nestingLevel--;
         if (nestingLevel === 0) {
@@ -164,7 +164,7 @@ export class IliParserService {
         continue;
       }
 
-      // Parse enum value
+     
       const valueMatch = line.match(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
       if (valueMatch) {
         const value = valueMatch[1].trim();
@@ -195,21 +195,21 @@ export class IliParserService {
    * @returns Extracted comment or undefined
    */
   private extractComment(content: string, context?: string): string | undefined {
-    // Single line comment extraction
+   
     if (!content.includes('\n')) {
-      // Check for !!@ comment in current line
+     
       const inlineAtComment = content.match(/!!@\s*comment\s*=\s*"([^"]*)"/);
       if (inlineAtComment) {
         return inlineAtComment[1].trim();
       }
 
-      // Check for simple !! comment in current line
+     
       const inlineComment = content.match(/!!\s*([^@][^;\n]*)/);
       if (inlineComment) {
         return inlineComment[1].trim();
       }
 
-      // If context is provided as previous line, check it
+     
       if (context && !context.includes('\n')) {
         const previousAtComment = context.match(/!!@\s*comment\s*=\s*"([^"]*)"/);
         if (previousAtComment) {
@@ -222,14 +222,14 @@ export class IliParserService {
         }
       }
     } 
-    // Multi-line comment extraction
+   
     else {
       const lines = content.split('\n');
-      // If context is provided as identifier, search for it
+     
       if (context) {
         for (let i = 0; i < lines.length; i++) {
           if (lines[i].includes(context)) {
-            // Search previous lines for comments
+           
             for (let j = i - 1; j >= 0; j--) {
               const commentMatch = lines[j].match(/!!@\s*comment\s*=\s*"([^"]*)"|\s*!!\s*(.+)/);
               if (commentMatch) {
@@ -283,7 +283,7 @@ export class IliParserService {
         let mandatory = resolvedType.includes('MANDATORY');
         resolvedType = resolvedType.replace('MANDATORY', '').trim();
 
-        // Check if it's a domain enum reference
+       
         const domainEnum = this.domainEnums.get(resolvedType);
         if (domainEnum) {
           currentAttribute = {
@@ -297,7 +297,7 @@ export class IliParserService {
             comment: this.extractComment(line, previousLine)
           };
         } else if (resolvedType.includes('(') && !resolvedType.includes('..')) {
-          // Inline enumeration
+         
           collectingEnum = true;
           currentAttribute = {
             name,
@@ -309,7 +309,7 @@ export class IliParserService {
             comment: this.extractComment(line, previousLine)
           };
         } else {
-          // Regular attribute
+         
           currentAttribute = {
             name,
             type: resolvedType,
@@ -318,12 +318,12 @@ export class IliParserService {
           };
         }
       } else if (collectingEnum && currentAttribute) {
-        // Skip comment lines completely
+       
         if (line.trim().startsWith('!!@')) {
           continue;
         }
 
-        // Check if this is a parent enum value (has parentheses)
+       
         const parentMatch = line.match(/^\s*([a-zA-ZäöüÄÖÜß\w]+)\s*\(/);
         if (parentMatch) {
           const parentValue = parentMatch[1].trim();
@@ -331,7 +331,7 @@ export class IliParserService {
           continue;
         }
 
-        // Handle closing parenthesis
+       
         if (line.includes(')')) {
           if (line === ');') {
             collectingEnum = false;
@@ -344,14 +344,14 @@ export class IliParserService {
           continue;
         }
 
-        // Parse regular enum value - only if the line starts with an actual value
-        // (not a comment or empty space)
+       
+       
         const enumValueMatch = line.match(/^\s*([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
         if (enumValueMatch) {
           const value = enumValueMatch[1].trim();
           const comment = this.extractComment(line, previousLine);
           
-          // Add parent prefix if we're inside a parent block
+         
           const fullValue = currentParent ? `${currentParent}.${value}` : value;
           
           const enumValue: IliEnumValue = { 
@@ -389,7 +389,7 @@ export class IliParserService {
     const inherited: { className: string; attributes: IliAttribute[] }[] = [];
     console.log(`Collecting inherited attributes for ${className}`);
 
-    // Find direct superclass
+   
     const classRegex = new RegExp(`CLASS\\s+${className}\\s*(?:\\(ABSTRACT\\))?\\s*EXTENDS\\s+(\\\w+)\\s*=`, 'i');
     const match = classRegex.exec(content);
     
@@ -397,14 +397,14 @@ export class IliParserService {
       const superClassName = match[1];
       console.log(`Found superclass: ${superClassName}`);
 
-      // Prevent infinite loops
+     
       if (visited.has(superClassName)) {
         console.log(`Already visited ${superClassName}, skipping`);
         return inherited;
       }
       visited.add(superClassName);
       
-      // Find superclass definition
+     
       const superClassRegex = new RegExp(
         `CLASS\\s+${superClassName}\\s*(?:\\(ABSTRACT\\))?\\s*(?:EXTENDS\\s+[\\w\\.]+)?\\s*=\\s*([\\s\\S]*?)END\\s+${superClassName};`, 'i'
       );
@@ -416,14 +416,14 @@ export class IliParserService {
         console.log(`Found ${attributes.length} attributes in superclass ${superClassName}`);
         
         if (attributes.length > 0) {
-          // Add superclass attributes
+         
           inherited.push({
             className: superClassName,
             attributes
           });
         }
         
-        // Recursively traverse inheritance hierarchy upwards
+       
         const parentInherited = this.collectInheritedAttributes(superClassName, content, visited);
         inherited.push(...parentInherited);
       }
@@ -440,7 +440,7 @@ export class IliParserService {
   private parseAssociations(content: string): Map<string, IliAssociation[]> {
     const associations = new Map<string, IliAssociation[]>();
     
-    // Regex for ASSOCIATION definitions
+   
     const assocRegex = /ASSOCIATION\s+(\w+)\s*=\s*([\s\S]*?)END\s+\1;/g;
     
     let match;
@@ -448,7 +448,7 @@ export class IliParserService {
       const [_, assocName, assocContent] = match;
       console.log('Found association:', assocName);
       
-      // Enhanced regex for references that correctly extracts target class
+     
       const refRegex = /(\w+)Ref\s*(?:\(EXTERNAL\))?\s*--\s*\{(\d+|\*|\d+\.\.\d+|\d+\.\.\*)\}\s*([\w\.]+);/g;
       let refs: { role: string; card: string; class: string }[] = [];
       
@@ -458,7 +458,7 @@ export class IliParserService {
         refs.push({
           role,
           card,
-          // Extract only class name without qualification
+         
           class: className.includes('.') ? className.split('.').pop()! : className
         });
       }
@@ -479,7 +479,7 @@ export class IliParserService {
         
         console.log('Created association:', association);
         
-        // Add association to both classes
+       
         this.addAssociationToClass(associations, source.class, association);
         this.addAssociationToClass(associations, target.class, association);
       }
@@ -526,28 +526,28 @@ export class IliParserService {
       this.nodes.clear();
       this.relations.clear();
       
-      // First parse domain enums
+     
       this.domainEnums = this.parseDomainEnums(content);
       
       console.log('Starting to parse content...');
 
-      // First parse enums and add as nodes
+     
       const enumRegex = /ENUMERATION\s+(\w+)\s*=\s*\(([\s\S]*?)\);/g;
       let match;
 
-      // Collect all enums
+     
       while ((match = enumRegex.exec(content)) !== null) {
         const [_, enumName, enumContent] = match;
         const enumValues = this.parseEnumValues(enumContent);
         
         const nodeId = enumName;
-        // Create enum node directly
+       
         const node: IliBaseNode = {
           id: nodeId,
-          type: 'enumNode',  // Create as enumNode directly
+          type: 'enumNode', 
           name: enumName,
           position: { x: 0, y: 0 },
-          data: {  // data is now part of IliBaseNode
+          data: { 
             label: enumName,
             enumValues,
             comment: undefined,
@@ -560,7 +560,7 @@ export class IliParserService {
         console.log(`Created enum node:`, node);
       }
 
-      // Add predefined enums as nodes
+     
       const predefinedEnums = {
         'Art': [
           'andere',
@@ -574,10 +574,10 @@ export class IliParserService {
 
       Object.entries(predefinedEnums).forEach(([enumName, values]) => {
         const nodeId = enumName;
-        // Create as enumNode directly here as well
+       
         const node: IliBaseNode = {
           id: nodeId,
-          type: 'enumNode',  // Create as enumNode directly
+          type: 'enumNode', 
           name: enumName,
           position: { x: 0, y: 0 },
           data: {
@@ -593,58 +593,58 @@ export class IliParserService {
         console.log(`Created predefined enum node:`, node);
       });
 
-      // Parse classes
+     
       const classRegex = /CLASS\s+(\w+)\s*(?:\(ABSTRACT\))?\s*(?:EXTENDS\s+([\w\.]+))?\s*=\s*([\s\S]*?)(?=END\s+\1;)/g;
       
-      // Parse associations before parsing classes
+     
       const associations = this.parseAssociations(content);
       console.log('Parsed associations:', associations);
       console.log('Association count:', associations.size);
       
-      // Extract topic name from content
+     
       const topicMatch = content.match(/TOPIC\s+(\w+)\s*=/);
       const topicName = topicMatch ? topicMatch[1] : '';
 
-      // Parse classes
+     
       while ((match = classRegex.exec(content)) !== null) {
         const [fullMatch, className, superType, classContent] = match;
         const isAbstract = fullMatch.includes('(ABSTRACT)');
         const nodeId = `${className}`;
         
-        // Verbesserte Suche nach Kommentaren vor der Klassendeklaration
+       
         const beforeClass = content.substring(0, match.index);
         const lines = beforeClass.split('\n');
         let classComment: string | undefined;
         
-        // Gehe die Zeilen rückwärts durch, bis wir eine nicht-leere Zeile finden
+       
         for (let i = lines.length - 1; i >= 0; i--) {
           const line = lines[i].trim();
           if (line === '') continue;
           
-          // Suche zuerst nach !!@ comment = "xyz" Format
+         
           const quotedCommentMatch = line.match(/!!@\s*comment\s*=\s*"([^"]*)"/);
           if (quotedCommentMatch) {
             classComment = quotedCommentMatch[1].trim();
             break;
           }
           
-          // Dann nach einfachem !! Format
+         
           const simpleCommentMatch = line.match(/!!\s*(.+)/);
           if (simpleCommentMatch) {
             classComment = simpleCommentMatch[1].trim();
             break;
           }
           
-          // Wenn wir eine Zeile finden, die kein Kommentar ist, brechen wir ab
+         
           if (!line.startsWith('!!')) {
             break;
           }
         }
 
-        // Parse attributes for this class
+       
         const attributes = this.parseAttributes(classContent);
         
-        // Get associations for this class
+       
         const classAssociations = associations.get(className) || [];
         
         const node: IliClassNode = {
@@ -657,7 +657,7 @@ export class IliParserService {
           associations: classAssociations,
           inheritedAttributes: superType ? this.collectInheritedAttributes(className, content) : [],
           topicId: topicName,
-          comment: classComment, // Wichtig: Setze den Kommentar auch auf der obersten Ebene
+          comment: classComment,
           data: {
             label: className,
             isAbstract,
@@ -675,7 +675,7 @@ export class IliParserService {
         if (superType) {
           const targetId = superType.includes('.') 
             ? superType 
-            : superType; // Remove hardcoded path
+            : superType;
           
           const relation: IliRelation = {
             id: `${nodeId}-${targetId}`,
@@ -708,13 +708,13 @@ export class IliParserService {
       const line = lines[i].trim();
       if (!line) continue;
 
-      // Handle comments
+     
       if (line.startsWith('!!')) {
         currentComment = this.extractComment(line) || '';
         continue;
       }
 
-      // Check for opening parenthesis - start of sub-values
+     
       if (line.includes('(')) {
         nestingLevel++;
         const valueMatch = line.match(/(\w+)\s*\(/);
@@ -732,7 +732,7 @@ export class IliParserService {
         continue;
       }
 
-      // Check for closing parenthesis - end of sub-values
+     
       if (line.includes(')')) {
         nestingLevel--;
         if (nestingLevel === 0) {
@@ -741,7 +741,7 @@ export class IliParserService {
         continue;
       }
 
-      // Parse regular value
+     
       const valueMatch = line.match(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
       if (valueMatch) {
         const value = valueMatch[1].trim();

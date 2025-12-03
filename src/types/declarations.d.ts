@@ -8,7 +8,7 @@ declare module '*.wasm' {
   export default content;
 }
 
-// Für andere Assets 
+
 declare module '*.css';
 declare module '*.svg';
 declare module '*.png';
@@ -56,7 +56,7 @@ declare module '@thatopen/components' {
   }
 }
 
-// WebGPU Deklarationen
+
 interface Navigator {
   gpu: GPU;
 }
@@ -82,7 +82,7 @@ interface HTMLCanvasElement {
   getContext(contextId: 'webgpu'): GPUCanvasContext | null;
 }
 
-// WebGPU Types
+
 type GPUDeviceDescriptor = {
   requiredFeatures?: GPUFeatureName[];
   requiredLimits?: Record<string, number>;
@@ -169,7 +169,7 @@ interface GPUColor {
 interface GPUCommandBuffer {}
 interface GPUTextureView {}
 
-// Enums und Konstanten
+
 type GPUVertexFormat = 'uint8x2' | 'uint8x4' | 'sint8x2' | 'sint8x4' | 'unorm8x2' | 'unorm8x4' | 
   'snorm8x2' | 'snorm8x4' | 'uint16x2' | 'uint16x4' | 'sint16x2' | 'sint16x4' | 'unorm16x2' | 
   'unorm16x4' | 'snorm16x2' | 'snorm16x4' | 'float16x2' | 'float16x4' | 'float32' | 'float32x2' | 

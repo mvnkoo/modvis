@@ -29,7 +29,7 @@ export class IliSchemaService {
 
       const { nodes, relations } = this.parser.parseContent(content);
       
-      // Find the first abstract class instead of VSA_BaseClass
+     
       const firstAbstractClass = nodes.find(node => 
         node.type === 'CLASS' && node.isAbstract
       );
@@ -39,7 +39,7 @@ export class IliSchemaService {
         this.addNode(firstAbstractClass);
       }
 
-      // Add remaining nodes
+     
       nodes.forEach(node => {
         if (node.id !== firstAbstractClass?.id) {
           console.log('Adding node:', node);
@@ -47,7 +47,7 @@ export class IliSchemaService {
         }
       });
 
-      // Add inheritance relationships
+     
       relations.forEach(relation => {
         const id = `${relation.sourceId}-${relation.targetId}`;
         console.log('Adding relation:', { id, relation });
@@ -68,7 +68,7 @@ export class IliSchemaService {
     while ((match = extendsRegex.exec(content)) !== null) {
       const [_, subType, superType] = match;
       
-      // Use simple IDs without paths
+     
       const sourceId = subType;
       const targetId = superType.includes('.') 
         ? superType.split('.').pop() || superType
@@ -124,7 +124,7 @@ export class IliSchemaService {
     );
   }
 
-  // Helper methods for the parser
+ 
   private addNode(node: IliBaseNode): void {
     this.nodes.set(node.id, node);
   }

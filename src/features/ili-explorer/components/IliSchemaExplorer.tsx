@@ -45,7 +45,7 @@ import { debounce, throttle } from 'lodash';
 import { toPng, toSvg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
-// Define a custom Node type that includes the properties we need
+
 interface CustomNode extends ReactFlowNode {
   id: string;
   type: 'modelNode' | 'topicNode' | 'classNode' | 'structureNode' | 'enumNode' | 'associationNode' | 'unloadedClassNode' | 'domainEnumNode';
@@ -68,7 +68,7 @@ const nodeTypes: NodeTypes = {
   unloadedClassNode: IliUnloadedClassNode
 };
 
-// Definiere die Edge-Typen
+
 const edgeTypes: EdgeTypes = {
   default: BezierEdge,
   step: StepEdge
@@ -82,7 +82,7 @@ const DEFAULT_FIT_VIEW_OPTIONS = {
   includeHiddenNodes: false
 } as const;
 
-// Füge diese neue Interface-Definition hinzu
+
 interface SelectionRect {
   startX: number;
   startY: number;
@@ -90,7 +90,7 @@ interface SelectionRect {
   height: number;
 }
 
-// Definiere einen strikteren Node-Typ
+
 interface IliNode extends ReactFlowNode {
   id: string;
   type: string;
@@ -177,13 +177,13 @@ const Flow: React.FC = () => {
   const handleLineTypeToggle = useCallback(() => {
     const newCurvedLines = !useCurvedLines;
     
-    // Erst Edges updaten
+   
     setEdges(currentEdges => currentEdges.map(edge => ({
       ...edge,
       type: newCurvedLines ? 'default' : 'step'
     })));
     
-    // Dann State ändern
+   
     setUseCurvedLines(newCurvedLines);
   }, [useCurvedLines]);
 
@@ -192,22 +192,22 @@ const Flow: React.FC = () => {
   const handleNodeClick = useCallback((event: React.MouseEvent, node: ReactFlowNode) => {
     if (node.id === activeNodeId) return;
     
-    // Extrahiere den korrekten Typ und Titel aus den Node-Daten
+   
     const nodeType = node.type || 'classNode';
     const nodeTitle = node.data?.label || node.data?.title || node.id;
     const isAbstract = node.data?.isAbstract || false;
     
-    // Aktualisiere die History mit allen relevanten Informationen
+   
     setNavigationHistory(prev => {
       const newEntry: HistoryEntry = {
         id: node.id,
-        label: nodeTitle,  // Verwende den Titel der Komponente
-        type: nodeType,    // Verwende den tatsächlichen Typ
+        label: nodeTitle, 
+        type: nodeType,   
         isAbstract: isAbstract,
         timestamp: Date.now()
       };
       
-      // Entferne Duplikate und behalte nur die letzten 7 Einträge
+     
       const filteredHistory = prev.filter(entry => entry.id !== node.id);
       return [newEntry, ...filteredHistory].slice(0, 7);
     });
@@ -261,7 +261,7 @@ const Flow: React.FC = () => {
     setMaxSubTypesPerRow(4);
     setUseCurvedLines(true);
     
-    // Initialisiere mit korrektem NavigationState
+   
     const initialState: NavigationState = {
       nodeId: 'VSA_BaseClass',
       showEnums: true,
@@ -295,10 +295,10 @@ const Flow: React.FC = () => {
         }, 50);
       }
 
-      // Aktualisiere auch die History
+     
       setNavigationHistory(prev => {
         const newHistory = [...prev];
-        // Verschiebe den letzten Eintrag ans Ende
+       
         if (newHistory.length > 1) {
           const [first, ...rest] = newHistory;
           return [...rest, first];
@@ -423,7 +423,7 @@ const Flow: React.FC = () => {
     fitView
   ]);
 
-  // Vereinfachte Funktion für Collapse All
+ 
   const handleCollapseAll = useCallback(() => {
     setNodes(currentNodes => 
       currentNodes.map(node => ({
@@ -437,7 +437,7 @@ const Flow: React.FC = () => {
     );
   }, [setNodes]);
 
-  // Aktualisiere die handleNodeExpand Funktion
+ 
   const handleNodeExpand = useCallback((nodeId: string, expanded: boolean) => {
     setNodes(currentNodes => 
       currentNodes.map(node => {
@@ -447,7 +447,7 @@ const Flow: React.FC = () => {
             data: { 
               ...node.data, 
               expanded,
-              isExpanded: expanded, // Setze beide Flags
+              isExpanded: expanded,
               onExpandChange: (newExpanded: boolean) => handleNodeExpand(node.id, newExpanded)
             } 
           };
@@ -457,7 +457,7 @@ const Flow: React.FC = () => {
     );
   }, []);
 
-  // Nodes mit Handler - nur einmal berechnet wenn sich nodes ändert
+ 
   const nodesWithHandlers = useMemo(() => 
     nodes.map(node => ({
       ...node,
@@ -469,7 +469,7 @@ const Flow: React.FC = () => {
     }))
   , [nodes, handleNodeExpand]);
 
-  // Debounce für häufig aufgerufene Handler
+ 
   const debouncedHandleMaxSubTypesChange = useCallback(
     debounce((value: number) => {
       setMaxSubTypesPerRow(value);
@@ -496,7 +496,7 @@ const Flow: React.FC = () => {
     [activeNodeId, allNodes, allEdges, colors, showFullHierarchy, useCurvedLines, showEnums]
   );
 
-  // Throttle für Zoom/Pan Events
+ 
   const throttledFitView = useMemo(
     () => throttle((options: FitViewOptions) => {
       fitView(options);
@@ -504,7 +504,7 @@ const Flow: React.FC = () => {
     [fitView]
   );
 
-  // Aktualisiere die handleExpandAll Funktion
+ 
   const handleExpandAll = useCallback(() => {
     setNodes(currentNodes => 
       currentNodes.map(node => ({
@@ -517,9 +517,9 @@ const Flow: React.FC = () => {
         }
       }))
     );
-  }, [handleNodeExpand]); // Füge handleNodeExpand als Dependency hinzu
+  }, [handleNodeExpand]);
 
-  // Hilfsfunktion zum Berechnen der Bounds
+ 
   const calculateBounds = (nodes: Node[]) => {
     let minY = Infinity;
     let maxY = -Infinity;
@@ -545,17 +545,17 @@ const Flow: React.FC = () => {
   const [isClipboardExport, setIsClipboardExport] = useState(false);
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Toast States
+ 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastSeverity, setToastSeverity] = useState<'success' | 'error'>('success');
 
-  // Zuerst handleExportClose definieren
+ 
   const handleExportClose = useCallback(() => {
     setExportAnchorEl(null);
   }, []);
 
-  // Dann die anderen Export-Handler
+ 
   const handleExportClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setExportAnchorEl(event.currentTarget);
   }, []);
@@ -578,11 +578,11 @@ const Flow: React.FC = () => {
     setTimeout(() => setIsExporting(false), 500);
   }, [isExporting, handleExportClose]);
 
-  // Füge diese neuen Handler hinzu
+ 
   const handleSelectionStart = useCallback((event: React.MouseEvent) => {
     if (!isSelectingArea) return;
     
-    // Verwende das Event-Target direkt
+   
     const target = event.currentTarget;
     const rect = target.getBoundingClientRect();
     const x = event.clientX - rect.left;
@@ -597,14 +597,14 @@ const Flow: React.FC = () => {
       height: 0
     });
 
-    // Verhindere Standard-Drag-Verhalten
+   
     event.preventDefault();
   }, [isSelectingArea]);
 
   const handleSelectionMove = useCallback((event: React.MouseEvent) => {
     if (!isDragging || !selectionStartRef.current) return;
     
-    // Verwende das Event-Target direkt
+   
     const target = event.currentTarget;
     const rect = target.getBoundingClientRect();
     const currentX = event.clientX - rect.left;
@@ -617,7 +617,7 @@ const Flow: React.FC = () => {
       height: currentY - selectionStartRef.current.y
     });
 
-    // Verhindere Standard-Drag-Verhalten
+   
     event.preventDefault();
   }, [isDragging]);
 
@@ -632,12 +632,12 @@ const Flow: React.FC = () => {
     const viewport = getViewport();
     const zoom = getZoom();
     
-    // Angepasste Offset-Höhen
-    const headerOffset = 36; // AppBar Höhe
-    const toolbarOffset = 28; // Angepasste Toolbar Höhe
+   
+    const headerOffset = 36;
+    const toolbarOffset = 28;
     const totalOffset = headerOffset + toolbarOffset;
     
-    // Berechne die tatsächlichen Koordinaten unter Berücksichtigung des Viewports und Offsets
+   
     const normalizedRect = {
       x: Math.min(selectionRect.startX, selectionRect.startX + selectionRect.width),
       y: Math.min(selectionRect.startY, selectionRect.startY + selectionRect.height) - totalOffset,
@@ -645,7 +645,7 @@ const Flow: React.FC = () => {
       height: Math.abs(selectionRect.height)
     };
 
-    // Berechne die tatsächliche Position im Flow
+   
     const flowRect = {
       x: (normalizedRect.x - viewport.x * zoom) / zoom,
       y: (normalizedRect.y - viewport.y * zoom) / zoom,
@@ -653,7 +653,7 @@ const Flow: React.FC = () => {
       height: normalizedRect.height / zoom
     };
 
-    // Erstelle temporäres Style-Element
+   
     const tempStyle = document.createElement('style');
     tempStyle.innerHTML = `
       .react-flow__background { display: none !important; }
@@ -665,7 +665,7 @@ const Flow: React.FC = () => {
     `;
     document.head.appendChild(tempStyle);
 
-    // Verstecke UI-Elemente
+   
     const elementsToHide = document.querySelectorAll(
       '.react-flow__controls, .search-toolbar, .layout-settings, .side-toolbar, .upload-area'
     );
@@ -699,7 +699,7 @@ const Flow: React.FC = () => {
       }
     };
 
-    // Führe den Export durch
+   
     toPng(flowElement as HTMLElement, exportOptions)
       .then(dataUrl => {
         if (isClipboardExport) {
@@ -733,7 +733,7 @@ const Flow: React.FC = () => {
         setToastOpen(true);
       })
       .finally(() => {
-        // Cleanup
+       
         tempStyle.remove();
         elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
         
@@ -751,10 +751,10 @@ const Flow: React.FC = () => {
     getZoom, 
     getViewport, 
     isClipboardExport,
-    isExporting // Neue Dependency
+    isExporting
   ]);
 
-  // Debounce für häufig aufgerufene Handler
+ 
   const debouncedHandleNodeClick = useMemo(
     () => debounce((event: React.MouseEvent, node: Node) => {
       handleNodeClick(event, node);
@@ -762,7 +762,7 @@ const Flow: React.FC = () => {
     [handleNodeClick]
   );
 
-  // Füge den SVG Export Handler VOR dem return Statement hinzu
+ 
   const handleExportAsSvg = useCallback(() => {
     if (isExporting) return;
     
@@ -772,7 +772,7 @@ const Flow: React.FC = () => {
     setIsExporting(true);
     handleExportClose();
 
-    // Erstelle temporäres Style-Element
+   
     const tempStyle = document.createElement('style');
     tempStyle.innerHTML = `
       .react-flow__background { display: none !important; }
@@ -784,7 +784,7 @@ const Flow: React.FC = () => {
     `;
     document.head.appendChild(tempStyle);
 
-    // Verstecke UI-Elemente
+   
     const elementsToHide = document.querySelectorAll(
       '.react-flow__controls, .search-toolbar, .layout-settings, .side-toolbar, .upload-area'
     );
@@ -823,7 +823,7 @@ const Flow: React.FC = () => {
         setToastOpen(true);
       })
       .finally(() => {
-        // Cleanup
+       
         tempStyle.remove();
         elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
         setIsExporting(false);
@@ -896,7 +896,7 @@ const Flow: React.FC = () => {
             color: colors.inheritance
           }
         }}
-        nodesDraggable={!isSelectingArea} // Deaktiviere Node-Dragging während der Auswahl
+        nodesDraggable={!isSelectingArea}
         nodesConnectable={false}
         elementsSelectable={true}
         onNodesChange={onNodesChange}
@@ -1154,7 +1154,7 @@ const Flow: React.FC = () => {
       {isSelectingArea && (
         <div
           style={{
-            position: 'fixed', // Ändern zu fixed
+            position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
@@ -1167,7 +1167,7 @@ const Flow: React.FC = () => {
           onMouseDown={handleSelectionStart}
           onMouseMove={handleSelectionMove}
           onMouseUp={handleSelectionEnd}
-          onMouseLeave={handleSelectionEnd} // Füge MouseLeave hinzu
+          onMouseLeave={handleSelectionEnd}
         >
           <Typography
             sx={{
@@ -1179,7 +1179,7 @@ const Flow: React.FC = () => {
               textAlign: 'center',
               pointerEvents: 'none',
               textShadow: '0 0 4px rgba(0,0,0,0.5)',
-              userSelect: 'none', // Verhindere Text-Selektion
+              userSelect: 'none',
             }}
           >
             Ziehen Sie ein Rechteck, um den Export-Bereich auszuwählen
@@ -1206,7 +1206,7 @@ const Flow: React.FC = () => {
   );
 };
 
-// Wrapper-Komponente für ReactFlowProvider
+
 export const IliSchemaExplorer: React.FC = () => {
   const { colors } = useTheme();
   
