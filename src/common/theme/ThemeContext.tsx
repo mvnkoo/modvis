@@ -52,6 +52,16 @@ interface ThemeProviderProps {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function normalizeColorScheme(scheme: string | null): string {
+  if (scheme === 'emo') {
+    return 'purple';
+  }
+  if (!scheme || !colorSchemes[scheme]) {
+    return 'default';
+  }
+  return scheme;
+}
+
 const colorSchemes: Record<string, Record<string, any>> = {
   default: {
     // Schema Explorer Farben (default)
@@ -163,7 +173,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     selectedNodeBg: (mode: string) => mode === 'dark' ? '#1a1a1a' : '#f5f5f5',
     nodeHeaderText: '#FFFFFF',
   },
-  emo: {
+  purple: {
     // Schema Explorer Farben (default)
     entity: '#2196f3',          
     abstractEntity: '#1565c0',  
@@ -259,7 +269,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   const [colorScheme, setColorScheme] = useState(() => {
     const saved = localStorage.getItem('colorScheme');
-    return saved || 'default';
+    const normalized = normalizeColorScheme(saved);
+    if (normalized !== saved) {
+      localStorage.setItem('colorScheme', normalized);
+    }
+    return normalized;
   });
 
   useEffect(() => {
@@ -278,7 +292,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   }, [mode]);
 
   const colors = useMemo(() => {
-    const scheme = colorSchemes[colorScheme];
+    const schemeKey = colorSchemes[colorScheme] ? colorScheme : 'default';
+    const scheme = colorSchemes[schemeKey];
     return Object.keys(scheme).reduce<Partial<ThemeColors>>((acc, key) => {
       const value = scheme[key];
       if (typeof value === 'object' && value !== null) {
