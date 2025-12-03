@@ -76,13 +76,13 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
     document.removeEventListener('mouseup', handleResizeEnd);
   }, [handleResizeMove]);
 
-  // Extrahiere den Klassennamen aus dem vollqualifizierten Namen
+ 
   const getShortClassName = (fullName: string) => {
     const parts = fullName.split('.');
     return parts[parts.length - 1];
   };
 
-  // Debug-Ausgabe
+ 
   console.log('Association Node Render:', {
     label: data.label,
     isSource: data.isSource,
@@ -386,8 +386,8 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
           top: '50%',
           [data.arrowDirection === 'left' ? 'left' : 'right']: -16,
           transform: 'translateY(-50%)',
-          // width: 0,
-          // height: 0,
+         
+         
           borderTop: '10px solid transparent',
           borderBottom: '10px solid transparent',
           [data.arrowDirection === 'left' 

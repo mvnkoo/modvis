@@ -33,12 +33,12 @@ import { SchemaNode } from '../types/expTypes';
 import ExpLegend from './legend/expLegend';
 import { SearchOption } from '../types/expTypes';
 
-// Füge die Node-Typen hinzu
+
 interface NodeData {
   label: string;
   superTypes?: string[];
   subTypes?: string[];
-  // ... andere Node-Daten
+ 
 }
 
 interface CustomNode extends Node {
@@ -93,25 +93,25 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
   const zoomToFit = useCallback(() => {
     if (!reactFlowInstance || !currentNodeId) return;
 
-    // Finde den aktiven Node
+   
     const activeNode = nodes.find(node => node.id === currentNodeId) as CustomNode;
     if (!activeNode) return;
 
-    // Sammle nur die relevanten Nodes
+   
     const relevantNodes = nodes.filter(node => {
-      // Aktiver Node
+     
       if (node.id === currentNodeId) return true;
       
-      // Direkter Supertyp (eine Ebene über dem aktiven Node)
+     
       if (activeNode.data.superTypes?.includes(node.id)) return true;
       
-      // Direkte Subtypen (eine Ebene unter dem aktiven Node)
+     
       if ((node as CustomNode).data.superTypes?.includes(currentNodeId)) return true;
       
       return false;
     });
 
-    // Zoom auf die relevanten Nodes
+   
     setTimeout(() => {
       reactFlowInstance.fitView({
         padding: 0.5,
@@ -157,10 +157,10 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
         setNodes(relatedNodes.nodes as CustomNode[]);
         setEdges(relatedNodes.edges as Edge[]);
 
-        // Warte bis die Nodes aktualisiert sind
+       
         setTimeout(() => {
           if (reactFlowInstance) {
-            // Finde alle relevanten Nodes für den Zoom
+           
             const activeNode = relatedNodes.nodes.find(n => n.id === selectedNode.id);
             const superTypes = relatedNodes.nodes.filter(n => 
               activeNode?.data.superTypes?.includes(n.id)
@@ -169,7 +169,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
               n.data.superTypes?.includes(selectedNode.id)
             );
 
-            // Zoom auf alle relevanten Nodes
+           
             reactFlowInstance.fitView({
               padding: 0.5,
               maxZoom: 0.7,
@@ -189,7 +189,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
     if (schemaNode) {
       setCurrentNodeId(schemaNode.id);
       
-      // Erst das Layout aktualisieren
+     
       const relatedNodes = ExpSchemaService.getDirectRelations(
         schemaNode,
         schemaData.nodes,
@@ -200,14 +200,14 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
         useCurvedLines
       );
 
-      // Nodes und Edges setzen
+     
       setNodes(relatedNodes.nodes as CustomNode[]);
       setEdges(relatedNodes.edges as Edge[]);
       
-      // Warte bis die Nodes aktualisiert sind
+     
       setTimeout(() => {
         if (reactFlowInstance) {
-          // Finde alle relevanten Nodes für den Zoom
+         
           const activeNode = relatedNodes.nodes.find(n => n.id === schemaNode.id);
           const superTypes = relatedNodes.nodes.filter(n => 
             activeNode?.data.superTypes?.includes(n.id)
@@ -216,7 +216,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
             n.data.superTypes?.includes(schemaNode.id)
           );
 
-          // Zoom auf alle relevanten Nodes
+         
           reactFlowInstance.fitView({
             padding: 0.5,
             maxZoom: 0.7,
@@ -234,7 +234,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
     }
   }, [schemaData.nodes, schemaData.edges, colors, showFullHierarchy, useCurvedLines, history, historyIndex, onNodeNavigation, reactFlowInstance]);
 
-  // Initiales Laden mit Zoom
+ 
   useEffect(() => {
     if (schemaData.nodes.length > 0 && !currentNodeId) {
       const rootNode = schemaData.nodes.find(node => node.id === 'IfcRoot');
@@ -253,10 +253,10 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
         setNodes(relatedNodes.nodes as CustomNode[]);
         setEdges(relatedNodes.edges as Edge[]);
 
-        // Warte bis die Nodes gerendert sind
+       
         setTimeout(() => {
           if (reactFlowInstance) {
-            // Finde alle relevanten Nodes für den Zoom
+           
             const activeNode = relatedNodes.nodes.find(n => n.id === rootNode.id);
             const superTypes = relatedNodes.nodes.filter(n => 
               activeNode?.data.superTypes?.includes(n.id)
@@ -265,7 +265,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
               n.data.superTypes?.includes(rootNode.id)
             );
 
-            // Zoom auf alle relevanten Nodes
+           
             reactFlowInstance.fitView({
               padding: 0.5,
               maxZoom: 0.7,
@@ -275,7 +275,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
           }
         }, 50);
       } else {
-        // Gleiches für initialNode
+       
         const initialNode = schemaData.nodes[0];
         setCurrentNodeId(initialNode.id);
         const relatedNodes = ExpSchemaService.getDirectRelations(
@@ -318,7 +318,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
     if (rootNode) {
       setCurrentNodeId(rootNode.id);
       
-      // Erst das Layout aktualisieren
+     
       const relatedNodes = ExpSchemaService.getDirectRelations(
         rootNode,
         schemaData.nodes,
@@ -329,14 +329,14 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
         useCurvedLines
       );
 
-      // Nodes und Edges setzen
+     
       setNodes(relatedNodes.nodes as CustomNode[]);
       setEdges(relatedNodes.edges as Edge[]);
       
-      // Warte bis die Nodes aktualisiert sind
+     
       setTimeout(() => {
         if (reactFlowInstance) {
-          // Finde alle relevanten Nodes für den Zoom
+         
           const activeNode = relatedNodes.nodes.find(n => n.id === rootNode.id);
           const superTypes = relatedNodes.nodes.filter(n => 
             activeNode?.data.superTypes?.includes(n.id)
@@ -345,7 +345,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
             n.data.superTypes?.includes(rootNode.id)
           );
 
-          // Zoom auf alle relevanten Nodes
+         
           reactFlowInstance.fitView({
             padding: 0.5,
             maxZoom: 0.7,
@@ -404,7 +404,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
     setUseCurvedLines(prev => {
       const newValue = !prev;
       
-      // Sofortige Aktualisierung des Layouts
+     
       if (currentNodeId) {
         const currentNode = schemaData.nodes.find(node => node.id === currentNodeId);
         if (currentNode) {
@@ -415,7 +415,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
             colors,
             [],
             showFullHierarchy,
-            newValue  // Verwende den neuen Wert statt des alten
+            newValue 
           );
 
           setNodes(relatedNodes.nodes as CustomNode[]);
@@ -427,7 +427,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
     });
   }, [currentNodeId, schemaData.nodes, schemaData.edges, colors, showFullHierarchy, setNodes, setEdges]);
 
-  // Neuer Effect für das Entladen des Schemas
+ 
   useEffect(() => {
     if (!hasActiveSchema) {
       setNodes([]);

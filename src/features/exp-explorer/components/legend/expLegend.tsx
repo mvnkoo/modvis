@@ -17,7 +17,7 @@ const ExpLegend: React.FC = () => {
     { label: 'ENTITY', color: colors.entity },
     { label: 'SELECTED', color: colors.selectedEntity },
     { label: 'TYPE/ENUM', color: colors.typeNode },
-    // { label: 'ACTIVE', color: colors.selectedEntity }
+   
   ];
 
   const attributeItems = [

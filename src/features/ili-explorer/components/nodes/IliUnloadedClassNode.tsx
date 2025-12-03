@@ -56,7 +56,7 @@ export const IliUnloadedClassNode: React.FC<IliUnloadedClassNodeProps> = ({ data
     };
   }, [handleResizeMove, handleResizeEnd]);
 
-  // Verhindere Event-Bubbling
+ 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
   };
@@ -64,7 +64,7 @@ export const IliUnloadedClassNode: React.FC<IliUnloadedClassNodeProps> = ({ data
   return (
     <Paper 
       elevation={2}
-      onClick={handleClick} // Verhindere Klick-Events
+      onClick={handleClick}
       sx={{ 
         width: width,
         position: 'relative',
@@ -74,7 +74,7 @@ export const IliUnloadedClassNode: React.FC<IliUnloadedClassNodeProps> = ({ data
         bgcolor: alpha(colors.nodeContent, 0.5),
         color: colors.text,
         opacity: 0.7,
-        pointerEvents: 'none' // Deaktiviere alle Maus-Interaktionen
+        pointerEvents: 'none'
       }}
     >
       <ResizeHandle position="right" onMouseDown={handleResizeStart} />

@@ -1,27 +1,27 @@
 import React, { createContext, useContext, useReducer, ReactNode, useMemo } from 'react';
 import { ValidationResult } from '../features/exp-explorer/types/expTypes';
 
-// Neue Gruppierung für bessere Typsicherheit
+
 type LogLevel = 'INFO' | 'WARNING' | 'ERROR';
 type EnumStyle = 'ENUMERATION' | 'STRING_WHERE';
 
-// Optimierte Interfaces mit strikteren Typen
+
 interface MergingRules {
-  // Type-bezogene Regeln
+ 
   readonly createNewTypes: boolean;
   readonly transformTypes: boolean;
   readonly useDirectTypes: boolean;
   readonly addPrefixToTypes: boolean;
   
-  // Entity-bezogene Regeln
+ 
   readonly extendExistingEntities: boolean;
   readonly useApplicableClasses: boolean;
   
-  // Property & Relation Regeln
+ 
   readonly addSuffixToProperties: boolean;
   readonly createNewRelations: boolean;
   
-  // Dokumentations-Regeln
+ 
   readonly addComments: boolean;
   readonly enumerationStyle: EnumStyle;
 }
@@ -54,7 +54,7 @@ interface AppState {
   readonly configuration: Configuration;
 }
 
-// Optimierte Action Types mit discriminated unions
+
 type AppAction = 
   | { readonly type: 'SET_EXPRESS_FILE'; readonly payload: File }
   | { readonly type: 'SET_EXPRESS_DATA'; readonly payload: string }
@@ -69,11 +69,11 @@ type AppAction =
   | { readonly type: 'ADD_PSET_FILES_BATCH'; readonly payload: readonly PSetFile[] }
   | { readonly type: 'SET_EXPRESS_VALIDATION'; readonly payload: ValidationResult };
 
-// Optimierte Context Creation mit strikteren Typen
+
 const AppStateContext = createContext<AppState | undefined>(undefined);
 const AppDispatchContext = createContext<React.Dispatch<AppAction> | undefined>(undefined);
 
-// Optimierte Initial States als readonly
+
 const initialMergingRules = {
   createNewTypes: false,
   transformTypes: false,
@@ -101,7 +101,7 @@ const initialState = {
   }
 } as const satisfies AppState;
 
-// Optimierter Reducer mit Performance-Verbesserungen
+
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_EXPRESS_FILE':
@@ -157,7 +157,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
   }
 }
 
-// Hilfsfunktionen für den Reducer
+
 function getPayloadKey(type: string): string {
   return type.toLowerCase().replace('set_', '');
 }
@@ -166,7 +166,7 @@ function getClearKey(type: string): string {
   return type.toLowerCase().replace('clear_', '');
 }
 
-// Optimierter Provider mit Error Boundaries
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
@@ -179,7 +179,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Optimierte Hook-Funktionen mit besserer Fehlermeldung
+
 export function useAppState(): AppState {
   const context = useContext(AppStateContext);
   if (context === undefined) {

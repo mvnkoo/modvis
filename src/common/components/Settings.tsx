@@ -9,12 +9,10 @@ import {
   Divider,
   Box,
   Radio,
-  RadioGroup,
-  colors
+  RadioGroup
 } from '@mui/material';
 import { Settings as SettingsIcon } from '@mui/icons-material';
 import { useTheme } from '../theme/ThemeContext';
-import { ControlButton } from 'reactflow';
 
 const Settings: React.FC = () => {
   const { mode, setMode, colorScheme, setColorScheme } = useTheme();
@@ -101,7 +99,7 @@ const Settings: React.FC = () => {
               }
             />
             <FormControlLabel 
-              value="emo" 
+              value="purple" 
               control={<Radio size="small" />} 
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

@@ -29,7 +29,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   const [textFieldValue, setTextFieldValue] = useState('4');
   const initialSetupDone = useRef(false);
 
-  // Initiale Konfiguration
+ 
   useEffect(() => {
     if (!initialSetupDone.current) {
       setLimitSubTypes(true);
@@ -39,9 +39,9 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
     }
   }, [onMaxSubTypesChange]);
 
-  // Synchronisiere den State mit den Props
+ 
   useEffect(() => {
-    // Stelle sicher, dass der Toggle immer aktiviert ist, wenn maxSubTypesPerRow > 0
+   
     if (maxSubTypesPerRow > 0) {
       setLimitSubTypes(true);
       setTextFieldValue(maxSubTypesPerRow.toString());
@@ -63,7 +63,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
     const numValue = value as number;
     setTextFieldValue(numValue.toString());
     onMaxSubTypesChange(numValue);
-    setLimitSubTypes(true); // Aktiviere den Toggle wenn der Slider verwendet wird
+    setLimitSubTypes(true);
   };
 
   const handleLimitChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +85,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
     const numValue = parseInt(value);
     if (!isNaN(numValue) && numValue > 0) {
       onMaxSubTypesChange(numValue);
-      setLimitSubTypes(true); // Aktiviere den Toggle wenn ein gültiger Wert eingegeben wird
+      setLimitSubTypes(true);
     }
   };
 

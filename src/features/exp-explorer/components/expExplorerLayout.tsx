@@ -16,12 +16,12 @@ export const ExpSchemaExplorer: React.FC = () => {
   const [customExpressData, setCustomExpressData] = useState<string | null>(null);
   const [customFileName, setCustomFileName] = useState<string | null>(null);
 
-  // Berechne, ob ein Schema aktiv ist
+ 
   const hasActiveSchema = useMemo(() => {
     return schemaSource === 'unified' ? !!(mergedData || expressData) : !!customExpressData;
   }, [schemaSource, mergedData, expressData, customExpressData]);
 
-  // Schema Daten laden und Suchoptionen generieren
+ 
   const { searchOptions } = useMemo(() => {
     const data = schemaSource === 'unified' ? (mergedData || expressData) : customExpressData;
     if (!data) return { searchOptions: [] };
@@ -51,10 +51,10 @@ export const ExpSchemaExplorer: React.FC = () => {
   }, [expressData, mergedData, customExpressData, schemaSource]);
 
   const handleSchemaSourceChange = async (event: React.MouseEvent<HTMLElement>, newSource: 'unified' | 'custom' | null) => {
-    // Verhindere das Standard-Toggle-Verhalten
+   
     event.preventDefault();
     
-    // Wenn custom geklickt wird, öffne einfach den Dialog ohne den Source zu ändern
+   
     if (newSource === 'custom') {
       const input = document.createElement('input');
       input.type = 'file';
@@ -72,7 +72,7 @@ export const ExpSchemaExplorer: React.FC = () => {
       return;
     }
     
-    // Nur wenn unified geklickt wird, ändere den Source
+   
     if (newSource === 'unified') {
       setSchemaSource('unified');
     }
@@ -81,10 +81,10 @@ export const ExpSchemaExplorer: React.FC = () => {
   const handleClearCustomFile = () => {
     setCustomExpressData(null);
     setCustomFileName(null);
-    setSearchValue(null); // Reset search value
+    setSearchValue(null);
   };
 
-  // Neue Callback-Funktion für Graph-Navigation
+ 
   const handleNodeNavigation = useCallback(() => {
     requestAnimationFrame(() => {
       setSearchValue(null);

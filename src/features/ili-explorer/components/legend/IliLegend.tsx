@@ -28,8 +28,8 @@ const IliLegend: React.FC<IliLegendProps> = ({
 }) => {
   const { colors } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  // console.log('IliLegend render - enumsVisible:', enumsVisible);
-  // console.log('IliLegend render - showAssociations:', showAssociations);
+ 
+ 
 
   const legendItems: LegendItem[] = [
     { label: 'MODEL', color: colors.entity },

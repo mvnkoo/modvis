@@ -7,7 +7,7 @@ import { AppProvider } from './context/AppContext';
 import { useTheme } from './common/theme/ThemeContext';
 import { Settings } from './common/components/Settings';
 
-// Feature Imports
+
 import SchemaMerger from './features/schema-merger/SchemaMerger';
 import { ExpExplorer } from './features/exp-explorer/expExplorer';
 import { IliSchemaExplorer } from './features/ili-explorer/components/IliSchemaExplorer';
