@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Box, Paper, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Paper } from '@mui/material';
 import * as OBC from '@thatopen/components';
 import * as THREE from 'three';
 import { ViewerToolbar } from './ViewerToolbar';
