@@ -1,30 +1,19 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { Node, Edge, Connection, MarkerType, FitViewOptions } from '@xyflow/react';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { IliSchemaService } from '../services/iliSchemaService';
 import { IliLayoutService } from '../services/IliLayoutService';
-import { IliBaseNode, IliRelation, IliClassNode } from '../services/types/IliBaseTypes';
+import {
+  IliBaseNode,
+  IliRelation,
+  IliNode,
+  SearchOption,
+  NavigationState,
+} from '../services/types/IliBaseTypes';
+import { IliClassNode } from '../services/types/IliModelTypes';
 
-
-interface IliNode extends Node {
-  type: string;
-  position: { x: number; y: number };
-  data: {
-    label: string;
-    isHighlighted: boolean;
-    isActive: boolean;
-    [key: string]: any;
-  };
-}
-
-
-export interface SearchOption {
-  id: string;
-  label: string;
-  type: string;
-  description: string;
-  category: string;
-}
+export type { SearchOption };
 
 
 interface UseIliSchemaReturn {
@@ -45,8 +34,8 @@ interface UseIliSchemaReturn {
   showFullHierarchy: boolean;
   activeNodeId: string | null;
   setActiveNodeId: (id: string | null) => void;
-  setNavigationHistory: (history: NavigationState[]) => void;
-  setHistoryIndex: (index: number) => void;
+  setNavigationHistory: Dispatch<SetStateAction<NavigationState[]>>;
+  setHistoryIndex: Dispatch<SetStateAction<number>>;
   allNodes: Node[];
   allEdges: Edge[];
   showEnums: boolean;
@@ -77,17 +66,11 @@ interface ViewportState {
 }
 
 
-interface NavigationState {
-  nodeId: string;
-  showEnums: boolean;
-  showAssociations: boolean;
-}
-
 export const useIliSchema = (
-  setNodes: (nodes: Node[]) => void,
-  setEdges: (edges: Edge[]) => void,
+  setNodes: Dispatch<SetStateAction<IliNode[]>>,
+  setEdges: Dispatch<SetStateAction<Edge[]>>,
   useCurvedLines: boolean,
-  setUseCurvedLines: (value: boolean) => void,
+  setUseCurvedLines: Dispatch<SetStateAction<boolean>>,
   fitView: (options?: FitViewOptions) => void
 ): UseIliSchemaReturn => {
   const { colors } = useTheme();
@@ -753,7 +736,11 @@ export const useIliSchema = (
         setNodes(relatedNodes.nodes);
         setEdges(relatedNodes.edges);
         setActiveNodeId(firstAbstractClass.id);
-        setNavigationHistory([firstAbstractClass.id]);
+        setNavigationHistory([{
+          nodeId: firstAbstractClass.id,
+          showEnums: true,
+          showAssociations: true,
+        }]);
         setHistoryIndex(0);
       }
     }
@@ -814,7 +801,7 @@ export const useIliSchema = (
       const newValue = !prev;
       
       const expandedStates = new Map<string, boolean>(
-        currentNodes.map(node => [node.id, node.data?.expanded || false])
+        currentNodes.map(node => [node.id, Boolean(node.data?.expanded)] as const)
       );
       
       const nodePositions = new Map<string, { x: number; y: number }>(

@@ -46,6 +46,7 @@ export interface AttributeData {
 }
 
 export interface NodeData {
+  [key: string]: unknown;
   label: string;
   attributes?: AttributeData[];
   superTypes?: string[];
@@ -58,12 +59,9 @@ export interface NodeData {
   baseType?: string;
 }
 
-export interface SchemaNode extends Node {
-  id: string;
-  type: 'entityNode' | 'typeNode';
-  position: { x: number; y: number };
-  data: NodeData;
-}
+export type SchemaNodeType = 'entityNode' | 'typeNode' | 'enumNode';
+
+export type SchemaNode = Node<NodeData, SchemaNodeType>;
 
 export interface SchemaEdge extends Omit<ReactFlowEdge, 'style'> {
   id: string;

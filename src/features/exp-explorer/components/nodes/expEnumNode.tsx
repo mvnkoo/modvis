@@ -39,15 +39,17 @@ const ExpEnumNode: React.FC<EnumNodeProps> = memo(({ data }) => {
         }
       }}
     >
-      <Handle 
-        type="target" 
+      <Handle
+        type="target"
         position={Position.Left}
-        style={{ opacity: 0 }} 
+        id="left"
+        style={{ opacity: 0 }}
       />
-      <Handle 
-        type="source" 
+      <Handle
+        type="source"
         position={Position.Right}
-        style={{ opacity: 0 }} 
+        id="right"
+        style={{ opacity: 0 }}
       />
       
       <Box sx={{ 

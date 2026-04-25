@@ -1,27 +1,15 @@
 import { Node, Edge, Position, MarkerType } from '@xyflow/react';
 import { ThemeColors } from '../../../common/theme/ThemeContext';
-import { IliAttribute, IliAssociation } from './types/IliBaseTypes';
-
-interface IliNode extends Node {
-  id: string;
-  type: string;
-  position: { x: number; y: number };
-  data: {
-    label: string;
-    isHighlighted: boolean;
-    isActive: boolean;
-    [key: string]: any;
-  };
-}
+import { IliAttribute, IliAssociation, IliNode } from './types/IliBaseTypes';
 
 interface NodeData {
+  [key: string]: any;
   isHighlighted: boolean;
   isActive: boolean;
-  label: string;
+  label?: string;
   expanded?: boolean;
   isExpanded?: boolean;
   onExpandChange?: (expanded: boolean) => void;
-  [key: string]: any;
 }
 
 export class IliLayoutService {
@@ -817,7 +805,7 @@ export class IliLayoutService {
           data: nodeData
         };
       })
-      .filter((node): node is IliNode => node !== null);
+      .filter((node) => node !== null) as IliNode[];
 
    
     allEdgesResult = [

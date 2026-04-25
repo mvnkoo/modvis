@@ -183,14 +183,14 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
         </Box>
       </Tooltip>
 
-      <Box sx={{ 
+      <Box sx={{
         p: 1,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         bgcolor: colors.nodeSection,
-        borderBottomLeftRadius: expanded ? 0 : 'inherit',
-        borderBottomRightRadius: expanded ? 0 : 'inherit',
+        borderBottomLeftRadius: expanded ? 0 : 2,
+        borderBottomRightRadius: expanded ? 0 : 2,
         overflow: 'hidden'
       }}>
         <Typography variant="subtitle2">

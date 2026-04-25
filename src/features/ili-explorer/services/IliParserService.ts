@@ -582,7 +582,7 @@ export class IliParserService {
           position: { x: 0, y: 0 },
           data: {
             label: enumName,
-            enumValues: values,
+            enumValues: values.map(value => ({ value })),
             comment: undefined,
             isHighlighted: false,
             isActive: false

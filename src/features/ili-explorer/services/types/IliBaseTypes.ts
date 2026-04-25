@@ -1,12 +1,32 @@
-export type IliNodeType = 
-  | 'MODEL' 
-  | 'TOPIC' 
-  | 'CLASS' 
-  | 'STRUCTURE' 
+import type { Node } from '@xyflow/react';
+
+export type IliNodeType =
+  | 'MODEL'
+  | 'TOPIC'
+  | 'CLASS'
+  | 'STRUCTURE'
   | 'ASSOCIATION'
   | 'ENUMERATION'
   | 'enumNode'
   | 'domainEnumNode';
+
+export interface IliFlowNodeData {
+  [key: string]: any;
+  label?: string;
+  isHighlighted?: boolean;
+  isActive?: boolean;
+}
+
+export type IliNode = Node<IliFlowNodeData>;
+
+export interface SearchOption {
+  id: string;
+  label: string;
+  type: string;
+  description: string;
+  category: string;
+}
+
 
 export interface IliEnumValue {
   value: string;
@@ -25,6 +45,7 @@ export interface IliAttribute {
   isEnum?: boolean;
   isInlineEnum?: boolean;
   isDomainEnum?: boolean;
+  isReference?: boolean;
   isAllOf?: boolean;
   baseEnum?: string;
   domainEnumName?: string;
@@ -96,6 +117,10 @@ export interface NavigationState {
   nodeId: string;
   showEnums: boolean;
   showAssociations: boolean;
+  label?: string;
+  type?: string;
+  isAbstract?: boolean;
+  timestamp?: number;
 }
 
 export interface IliAssociationNodeData extends IliBaseNodeData {

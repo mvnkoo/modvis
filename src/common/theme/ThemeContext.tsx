@@ -196,7 +196,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     nodeContent: (mode: string) => mode === 'dark' ? '#242424' : '#ffffff',
     
     // UI Farben
-    background: mode => mode === 'dark' 
+    background: (mode: string) => mode === 'dark'
       ? 'linear-gradient(135deg, #15235A 0%, #260C38 50%, #380C24 100%)'  // Dunkler Verlauf: Violett -> Indigo -> Dunkelblau
       : 'linear-gradient(135deg, #8CC3E4 0%, #CAA2EF 60%, #F189C2 100%)',  // Heller Verlauf: Helles Violett -> Indigo -> Hellblau
     paper: (mode: string) => mode === 'dark' ? '#242424' : '#ffffff',
