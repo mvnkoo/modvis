@@ -1,5 +1,5 @@
 import React from 'react';
-import { getBezierPath, Position } from 'reactflow';
+import { getBezierPath, Position } from '@xyflow/react';
 import { EdgeProps } from '../../types/expTypes';
 
 export const ExpSchemaEdge: React.FC<EdgeProps> = ({

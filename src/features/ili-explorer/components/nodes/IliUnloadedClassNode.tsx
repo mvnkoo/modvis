@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 import { Paper, Typography, Box } from '@mui/material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 import { alpha } from '@mui/material/styles';

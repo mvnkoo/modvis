@@ -1,4 +1,4 @@
-import { Node, Edge as ReactFlowEdge } from 'reactflow';
+import { Node, Edge as ReactFlowEdge } from '@xyflow/react';
 
 export interface ValidationResult {
   isValid: boolean;

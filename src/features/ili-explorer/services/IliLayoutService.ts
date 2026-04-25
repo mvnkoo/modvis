@@ -1,4 +1,4 @@
-import { Node, Edge, Position, MarkerType } from 'reactflow';
+import { Node, Edge, Position, MarkerType } from '@xyflow/react';
 import { ThemeColors } from '../../../common/theme/ThemeContext';
 import { IliAttribute, IliAssociation } from './types/IliBaseTypes';
 

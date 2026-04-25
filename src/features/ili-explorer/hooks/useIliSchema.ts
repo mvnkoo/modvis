@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { Node, Edge, Connection, MarkerType, FitViewOptions } from 'reactflow';
+import { Node, Edge, Connection, MarkerType, FitViewOptions } from '@xyflow/react';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { IliSchemaService } from '../services/iliSchemaService';
 import { IliLayoutService } from '../services/IliLayoutService';
