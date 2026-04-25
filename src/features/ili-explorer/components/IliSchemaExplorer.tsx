@@ -43,7 +43,6 @@ import { LayoutSettings } from './sidebar/LayoutSettings';
 import 'reactflow/dist/style.css';
 import { debounce, throttle } from 'lodash';
 import { toPng, toSvg } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 
 
 interface CustomNode extends ReactFlowNode {

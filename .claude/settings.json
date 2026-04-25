@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm audit *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npm outdated *)",
+      "Bash(npm view *)"
     ]
   }
 }
