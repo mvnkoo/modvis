@@ -10,7 +10,7 @@ import {
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 import { IliStructureNode as IliStructureNodeType } from '../../services/types/IliModelTypes';
-import { IliAttributeType } from '../../services/types/IliBaseTypes';
+import { IliAttribute } from '../../services/types/IliBaseTypes';
 
 interface StructureNodeProps {
   data: IliStructureNodeType & {
@@ -21,7 +21,7 @@ interface StructureNodeProps {
 }
 
 interface AttributeRowProps {
-  attribute: IliAttributeType;
+  attribute: IliAttribute;
 }
 
 const AttributeRow: React.FC<AttributeRowProps> = memo(({ attribute }) => {

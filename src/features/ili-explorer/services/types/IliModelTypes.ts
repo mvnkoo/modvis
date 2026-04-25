@@ -1,4 +1,4 @@
-import { IliBaseNode, IliAttribute } from './IliBaseTypes';
+import { IliBaseNode, IliAttribute, IliAssociation } from './IliBaseTypes';
 
 export interface IliModelNode extends IliBaseNode {
   type: 'MODEL';
@@ -20,6 +20,7 @@ export interface IliClassNode extends IliBaseNode {
   type: 'CLASS';
   topicId: string;
   attributes: IliAttribute[];
+  associations?: IliAssociation[];
   inheritedAttributes?: { className: string; attributes: IliAttribute[] }[];
   superTypes?: string[];
   constraints?: string[];

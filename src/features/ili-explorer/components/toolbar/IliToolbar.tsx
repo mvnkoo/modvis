@@ -251,7 +251,7 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
           options={sortedOptions}
           groupBy={(option) => option.category}
           getOptionLabel={(option) => option.label}
-          renderOption={(props: React.HTMLAttributes<HTMLLIElement>, option) => {
+          renderOption={(props: React.HTMLAttributes<HTMLLIElement> & { key: string }, option) => {
            
             const { key, ...restProps } = props;
 

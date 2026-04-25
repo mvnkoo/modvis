@@ -36,15 +36,13 @@ import { SearchOption } from '../types/expTypes';
 
 
 interface NodeData {
+  [key: string]: unknown;
   label: string;
   superTypes?: string[];
   subTypes?: string[];
- 
 }
 
-interface CustomNode extends Node {
-  data: NodeData;
-}
+type CustomNode = Node<NodeData>;
 
 const nodeTypes = {
   entityNode: ExpEntityNode,
@@ -75,12 +73,12 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
   hasActiveSchema,
   onNodeNavigation
 }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState<CustomNode[]>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<CustomNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { colors } = useTheme();
   const [showFullHierarchy, setShowFullHierarchy] = useState(false);
   const [useCurvedLines, setUseCurvedLines] = useState(true);
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<CustomNode, Edge> | null>(null);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -175,7 +173,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
               padding: 0.5,
               maxZoom: 0.7,
               duration: 500,
-              nodes: [activeNode, ...superTypes, ...subTypes].filter(Boolean)
+              nodes: [activeNode, ...superTypes, ...subTypes].filter((n): n is SchemaNode => Boolean(n))
             });
           }
         }, 50);
@@ -222,7 +220,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
             padding: 0.5,
             maxZoom: 0.7,
             duration: 500,
-            nodes: [activeNode, ...superTypes, ...subTypes].filter(Boolean)
+            nodes: [activeNode, ...superTypes, ...subTypes].filter((n): n is SchemaNode => Boolean(n))
           });
         }
       }, 50);
@@ -271,7 +269,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
               padding: 0.5,
               maxZoom: 0.7,
               duration: 500,
-              nodes: [activeNode, ...superTypes, ...subTypes].filter(Boolean)
+              nodes: [activeNode, ...superTypes, ...subTypes].filter((n): n is SchemaNode => Boolean(n))
             });
           }
         }, 50);
@@ -306,7 +304,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
               padding: 0.5,
               maxZoom: 0.7,
               duration: 500,
-              nodes: [activeNode, ...superTypes, ...subTypes].filter(Boolean)
+              nodes: [activeNode, ...superTypes, ...subTypes].filter((n): n is SchemaNode => Boolean(n))
             });
           }
         }, 50);
@@ -351,7 +349,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
             padding: 0.5,
             maxZoom: 0.7,
             duration: 500,
-            nodes: [activeNode, ...superTypes, ...subTypes].filter(Boolean)
+            nodes: [activeNode, ...superTypes, ...subTypes].filter((n): n is SchemaNode => Boolean(n))
           });
         }
       }, 50);
@@ -442,7 +440,7 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
   return (
     <ReactFlowProvider>
       <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
-        <ReactFlow
+        <ReactFlow<CustomNode>
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}

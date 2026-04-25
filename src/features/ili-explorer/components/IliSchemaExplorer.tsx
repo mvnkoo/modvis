@@ -10,6 +10,7 @@ import {
   useNodesState,
   useEdgesState,
   Node as ReactFlowNode,
+  Edge,
   MarkerType,
   ReactFlowInstance,
   useReactFlow,
@@ -25,6 +26,11 @@ import { alpha } from '@mui/material/styles';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { CurvedIcon, StraightIcon } from '../../exp-explorer/components/expIcons';
 import { IliLayoutService } from '../services/IliLayoutService';
+import {
+  IliNode,
+  SearchOption,
+  NavigationState,
+} from '../services/types/IliBaseTypes';
 
 import { IliToolbar } from './toolbar/IliToolbar';
 import IliLegend from './legend/IliLegend';
@@ -91,18 +97,6 @@ interface SelectionRect {
 }
 
 
-interface IliNode extends ReactFlowNode {
-  id: string;
-  type: string;
-  position: { x: number; y: number };
-  data: {
-    label: string;
-    isHighlighted?: boolean;
-    isActive?: boolean;
-    [key: string]: any;
-  };
-}
-
 const globalStyles = `
   body.resizing {
     cursor: ew-resize !important;
@@ -118,17 +112,16 @@ const globalStyles = `
 
 const Flow: React.FC = () => {
   const { 
-    fitView, 
-    setViewport, 
+    fitView,
+    setViewport,
     getViewport,
     getZoom,
-    project
   } = useReactFlow();
   const { colors } = useTheme();
   const [useCurvedLines, setUseCurvedLines] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<IliNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   const {
     isLoading,
@@ -194,21 +187,22 @@ const Flow: React.FC = () => {
     
    
     const nodeType = node.type || 'classNode';
-    const nodeTitle = node.data?.label || node.data?.title || node.id;
-    const isAbstract = node.data?.isAbstract || false;
+    const nodeTitle = String(node.data?.label || node.data?.title || node.id);
+    const isAbstract = Boolean(node.data?.isAbstract);
     
    
     setNavigationHistory(prev => {
-      const newEntry: HistoryEntry = {
-        id: node.id,
-        label: nodeTitle, 
-        type: nodeType,   
+      const newEntry: NavigationState = {
+        nodeId: node.id,
+        showEnums: true,
+        showAssociations: true,
+        label: nodeTitle,
+        type: nodeType,
         isAbstract: isAbstract,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
-     
-      const filteredHistory = prev.filter(entry => entry.id !== node.id);
+
+      const filteredHistory = prev.filter(entry => entry.nodeId !== node.id);
       return [newEntry, ...filteredHistory].slice(0, 7);
     });
 
@@ -756,7 +750,7 @@ const Flow: React.FC = () => {
 
  
   const debouncedHandleNodeClick = useMemo(
-    () => debounce((event: React.MouseEvent, node: Node) => {
+    () => debounce((event: React.MouseEvent, node: ReactFlowNode) => {
       handleNodeClick(event, node);
     }, 100),
     [handleNodeClick]
