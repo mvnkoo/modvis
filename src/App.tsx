@@ -2,16 +2,13 @@ import React, { useState } from 'react';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, AppBar, Toolbar, Typography, Tabs, Tab } from '@mui/material';
-import { Merge, Schema, ViewInAr } from '@mui/icons-material';
+import { Schema } from '@mui/icons-material';
 import { AppProvider } from './context/AppContext';
 import { useTheme } from './common/theme/ThemeContext';
 import { Settings } from './common/components/Settings';
 
-
-import SchemaMerger from './features/schema-merger/SchemaMerger';
 import { ExpExplorer } from './features/exp-explorer/expExplorer';
 import { IliSchemaExplorer } from './features/ili-explorer/components/IliSchemaExplorer';
-import { IfcViewer } from './features/ifc-viewer/components';
 
 function App() {
   const { mode, colors } = useTheme();
@@ -184,7 +181,7 @@ function App() {
                 }}
                 onClick={handleLogoClick}
               >
-                Wizzbo
+                modvis
               </Typography>
               <Box sx={{ 
                 display: 'flex', 
@@ -261,37 +258,23 @@ function App() {
                   }
                 }}
               >
-                <Tab 
-                  icon={<Schema fontSize="small" />} 
-                  label="ILI Explorer" 
+                <Tab
+                  icon={<Schema fontSize="small" />}
+                  label="ILI Explorer"
                   iconPosition="start"
                 />
-                <Tab 
-                  icon={<Schema fontSize="small" />} 
-                  label="EXP Explorer" 
-                  iconPosition="start"
-                  sx={{ display: showAllTabs ? 'flex' : 'none' }}
-                />
-                <Tab 
-                  icon={<Merge fontSize="small" />} 
-                  label="IFC MERGE" 
-                  iconPosition="start"
-                  sx={{ display: showAllTabs ? 'flex' : 'none' }}
-                />
-                <Tab 
-                  icon={<ViewInAr fontSize="small" />} 
-                  label="IFC Viewer" 
+                <Tab
+                  icon={<Schema fontSize="small" />}
+                  label="EXP Explorer"
                   iconPosition="start"
                   sx={{ display: showAllTabs ? 'flex' : 'none' }}
                 />
               </Tabs>
             </Box>
           </AppBar>
-          
+
           {currentTab === 0 && <IliSchemaExplorer />}
           {showAllTabs && currentTab === 1 && <ExpExplorer />}
-          {showAllTabs && currentTab === 2 && <SchemaMerger />}
-          {showAllTabs && currentTab === 3 && <IfcViewer />}
         </Box>
       </MuiThemeProvider>
     </AppProvider>
