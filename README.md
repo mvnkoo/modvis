@@ -1,6 +1,8 @@
-# Wizzbo - INTERLIS Schema Explorer
+# modvis - Model Visualisation
 
-A modern web application for visualizing and exploring INTERLIS schema files. This tool helps users understand complex INTERLIS schemas through interactive visualization and exploration.
+> **Hinweis:** Diese Anwendung hieß früher **Wizzbo** und wurde in **modvis** (kurz für *Model Visualisation*) umbenannt. Bestehende Verweise auf „Wizzbo" in Code, Manifesten oder Dokumentation beziehen sich auf dasselbe Projekt.
+
+A modern web application for visualizing and exploring model and schema files. modvis helps users understand complex INTERLIS schemas, EXPRESS schemas and IFC models through interactive visualization and exploration.
 
 ## Features
 
@@ -29,7 +31,7 @@ A modern web application for visualizing and exploring INTERLIS schema files. Th
 ## Project Structure
 
 ```
-wizzbo/
+modvis/
 ├── src/                      # Source code
 │   └── features/
 │       └── ili-explorer/     # INTERLIS explorer feature
@@ -86,8 +88,8 @@ Comprehensive TypeScript type definitions for INTERLIS elements:
 Build and run with Docker:
 
 ```bash
-docker build -t wizzbo .
-docker run -p 80:80 wizzbo
+docker build -t modvis .
+docker run -p 80:80 modvis
 ```
 
 ## Contributing
