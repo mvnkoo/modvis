@@ -24,9 +24,8 @@ A modern web application for visualizing and exploring model and schema files. m
 ## Technical Stack
 
 - **Frontend**: TypeScript/JavaScript with modern web technologies
-- **Backend**: Node.js
-- **Container Support**: Docker configuration included
-- **Web Server**: Nginx for production deployment
+- **Build Tool**: react-scripts (Create React App)
+- **Hosting**: Cloudflare Pages (statisches Hosting via GitHub-Integration)
 
 ## Project Structure
 
@@ -38,10 +37,10 @@ modvis/
 │           ├── services/     # Core services
 │           └── types/        # TypeScript type definitions
 ├── public/                   # Static assets
-├── Dockerfile               # Docker configuration
-├── nginx.conf              # Nginx configuration
-├── package.json            # Project dependencies
-└── tsconfig.json          # TypeScript configuration
+│   ├── _headers              # Cloudflare Pages: Security-Header & Caching
+│   └── _redirects            # Cloudflare Pages: SPA-Fallback
+├── package.json              # Project dependencies
+└── tsconfig.json             # TypeScript configuration
 ```
 
 ## Core Components
@@ -83,14 +82,20 @@ Comprehensive TypeScript type definitions for INTERLIS elements:
    npm run build
    ```
 
-## Docker Deployment
+## Deployment (Cloudflare Pages)
 
-Build and run with Docker:
+Das Deployment erfolgt automatisch über die GitHub-Integration von Cloudflare Pages:
 
-```bash
-docker build -t modvis .
-docker run -p 80:80 modvis
-```
+- **Build command**: `npm run build`
+- **Build output directory**: `build`
+- **Node version**: 18 oder höher
+
+Die Dateien [public/_redirects](public/_redirects) und [public/_headers](public/_headers) werden bei `npm run build` nach `build/` kopiert und steuern:
+
+- **`_redirects`**: SPA-Fallback (alle Routen → `/index.html`).
+- **`_headers`**: Security-Header (CSP, X-Frame-Options, …) sowie Caching/MIME-Type für die WASM-Files unter `/wasm/*`.
+
+Bei Bedarf können diese Dateien angepasst werden — die CSP enthält `'wasm-unsafe-eval'` für `web-ifc`.
 
 ## Contributing
 
