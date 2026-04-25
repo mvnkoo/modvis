@@ -1,15 +1,33 @@
+# Dependencies
 node_modules/
-.DS_Store
+
+# Build output
+build/
+dist/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Vite cache
+.vite/
+
+# Test coverage
+coverage/
+
+# Local env files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-build/
-dist/
-coverage/
+
+# OS
+.DS_Store
+
+# Editor / tooling
+.claude/
+
+# Project-specific
 testfiles/
-.claude
