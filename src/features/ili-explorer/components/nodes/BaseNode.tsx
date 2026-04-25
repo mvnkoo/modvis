@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 import { Paper, Box } from '@mui/material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 

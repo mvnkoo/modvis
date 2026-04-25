@@ -6,7 +6,7 @@ import {
   AttributeData,
   LayoutAnalysis
 } from '../types/expTypes';
-import { MarkerType } from 'reactflow';
+import { MarkerType } from '@xyflow/react';
 
 export class ExpSchemaService {
   private static readonly CONSTANTS = {

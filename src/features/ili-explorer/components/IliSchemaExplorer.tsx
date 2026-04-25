@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import ReactFlow, { 
-  Background, 
+import {
+  ReactFlow,
+  Background,
   Controls,
   MiniMap,
   NodeTypes,
@@ -17,7 +18,7 @@ import ReactFlow, {
   StepEdge,
   NodeMouseHandler,
   FitViewOptions
-} from 'reactflow';
+} from '@xyflow/react';
 import { Box, Paper, Alert, CircularProgress, IconButton, Divider, Tooltip, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Snackbar } from '@mui/material';
 import { AccountTree, Refresh, Upload, ArrowBack, AutoFixHigh, ExpandMore, ExpandLess, FileDownload } from '@mui/icons-material';
 import { alpha } from '@mui/material/styles';
@@ -40,7 +41,7 @@ import {
 import { useIliSchema } from '../hooks/useIliSchema';
 import { LayoutSettings } from './sidebar/LayoutSettings';
 
-import 'reactflow/dist/style.css';
+import '@xyflow/react/dist/style.css';
 import { debounce, throttle } from 'lodash';
 import { toPng, toSvg } from 'html-to-image';
 

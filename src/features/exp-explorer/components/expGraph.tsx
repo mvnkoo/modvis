@@ -5,9 +5,10 @@ import {
   Paper,
   Divider
 } from '@mui/material';
-import ReactFlow, { 
-  ReactFlowProvider, 
-  Background, 
+import {
+  ReactFlow,
+  ReactFlowProvider,
+  Background,
   BackgroundVariant,
   Controls,
   Panel,
@@ -19,8 +20,8 @@ import ReactFlow, {
   NodeChange,
   NodeMouseHandler,
   Connection
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { AccountTree, Refresh, ArrowBack } from '@mui/icons-material';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { CurvedIcon, StraightIcon } from './expIcons';

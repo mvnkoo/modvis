@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 import { Paper, Typography, Box, IconButton, Collapse } from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
