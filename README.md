@@ -1,6 +1,6 @@
 # modvis - Model Visualisation
 
-> **Hinweis:** Diese Anwendung hieß früher **Wizzbo** und wurde in **modvis** (kurz für *Model Visualisation*) umbenannt. Bestehende Verweise auf „Wizzbo" in Code, Manifesten oder Dokumentation beziehen sich auf dasselbe Projekt.
+> **Hinweis:** Diese Anwendung hiess früher **Wizzbo** und wurde in **modvis** (kurz für *Model Visualisation*) umbenannt. Bestehende Verweise auf „Wizzbo" in Code, Manifesten oder Dokumentation beziehen sich auf dasselbe Projekt.
 
 A modern web application for visualizing and exploring model and schema files. modvis helps users understand complex INTERLIS schemas, EXPRESS schemas and IFC models through interactive visualization and exploration.
 
