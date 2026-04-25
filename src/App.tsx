@@ -13,23 +13,9 @@ import { IliSchemaExplorer } from './features/ili-explorer/components/IliSchemaE
 function App() {
   const { mode, colors } = useTheme();
   const [currentTab, setCurrentTab] = useState(0);
-  const [clickCount, setClickCount] = useState(0);
-  const [showAllTabs, setShowAllTabs] = useState(false);
 
-  const handleLogoClick = () => {
-    setClickCount(prevCount => {
-      const newCount = prevCount + 1;
-      if (newCount >= 8) {
-        setShowAllTabs(true);
-      }
-      return newCount;
-    });
-  };
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    if (newValue === 0 || showAllTabs) {
-      setCurrentTab(newValue);
-    }
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue);
   };
 
   const theme = createTheme({
@@ -179,9 +165,8 @@ function App() {
                   WebkitTextFillColor: colors.background === 'transparent' ? 'transparent' : '#FFFFFF',
                   cursor: 'default'
                 }}
-                onClick={handleLogoClick}
               >
-                modvis
+                MODVIS
               </Typography>
               <Box sx={{ 
                 display: 'flex', 
@@ -214,12 +199,12 @@ function App() {
                 position: 'relative'
               }}
             >
-              <Tabs 
-                value={currentTab} 
+              <Tabs
+                value={currentTab}
                 onChange={handleTabChange}
                 variant="scrollable"
-                scrollButtons={showAllTabs ? "auto" : "never"}
-                allowScrollButtonsMobile={showAllTabs}
+                scrollButtons="auto"
+                allowScrollButtonsMobile
                 sx={{ 
                   minHeight: '28px',
                   px: 2,
@@ -267,14 +252,13 @@ function App() {
                   icon={<Schema fontSize="small" />}
                   label="EXP Explorer"
                   iconPosition="start"
-                  sx={{ display: showAllTabs ? 'flex' : 'none' }}
                 />
               </Tabs>
             </Box>
           </AppBar>
 
           {currentTab === 0 && <IliSchemaExplorer />}
-          {showAllTabs && currentTab === 1 && <ExpExplorer />}
+          {currentTab === 1 && <ExpExplorer />}
         </Box>
       </MuiThemeProvider>
     </AppProvider>

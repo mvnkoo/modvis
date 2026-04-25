@@ -53,9 +53,6 @@ interface ThemeProviderProps {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 function normalizeColorScheme(scheme: string | null): string {
-  if (scheme === 'emo') {
-    return 'purple';
-  }
   if (!scheme || !colorSchemes[scheme]) {
     return 'default';
   }
