@@ -30,18 +30,17 @@ export class IliSchemaService {
       const { nodes, relations } = this.parser.parseContent(content);
       
      
-      const firstAbstractClass = nodes.find(node => 
-        node.type === 'CLASS' && node.isAbstract
-      );
-      
-      if (firstAbstractClass) {
-        console.log('Found first abstract class:', firstAbstractClass);
-        this.addNode(firstAbstractClass);
+      const initialClass =
+        nodes.find(node => node.type === 'CLASS' && node.isAbstract) ??
+        nodes.find(node => node.type === 'CLASS');
+
+      if (initialClass) {
+        console.log('Initial class:', initialClass);
+        this.addNode(initialClass);
       }
 
-     
       nodes.forEach(node => {
-        if (node.id !== firstAbstractClass?.id) {
+        if (node.id !== initialClass?.id) {
           console.log('Adding node:', node);
           this.addNode(node);
         }

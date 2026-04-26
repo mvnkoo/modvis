@@ -2,6 +2,7 @@
   "name": "modvis",
   "version": "0.8.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "@emotion/react": "^11.11.3",
