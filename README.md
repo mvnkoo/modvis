@@ -6,8 +6,10 @@ Web-Anwendung zur Darstellung von **INTERLIS**- und **EXPRESS**-Schemas als inte
 
 ## Verfügbarkeit
 
-- **Entwicklungs-Branch (`dev`):** [dev.modvis.ch](https://dev.modvis.ch) und [dev.iliexplorer.ch](https://dev.iliexplorer.ch)
+- **Beta / Staging:** [dev.modvis.ch](https://dev.modvis.ch) und [dev.iliexplorer.ch](https://dev.iliexplorer.ch) — laufender Stand für Beta-Tester.
 - **Stabile Version (geplant):** [www.modvis.ch](https://www.modvis.ch) und [www.iliexplorer.ch](https://www.iliexplorer.ch) — wird verfügbar, sobald eine stabile Version vorliegt.
+
+Welche Branch wohin deployt, siehe [Branch-Strategie](#branch-strategie).
 
 ## Funktionen
 
@@ -112,17 +114,40 @@ Das Deployment erfolgt über die GitHub-Integration von Cloudflare Pages.
 - `_redirects`: SPA-Fallback (alle Routen → `/index.html`).
 - `_headers`: Security-Header (CSP, X-Frame-Options, weitere).
 
+## Branch-Strategie
+
+Code fliesst grundsätzlich `feature/* → staging → main`. Releases und Hotfixes laufen über kurzlebige Sonder-Branches.
+
+| Branch          | Deployment                                          | Zweck                                                 |
+| --------------- | --------------------------------------------------- | ----------------------------------------------------- |
+| `main`          | [www.modvis.ch](https://www.modvis.ch) (Produktion) | Stabile, freigegebene Version                         |
+| `staging`       | [dev.modvis.ch](https://dev.modvis.ch) (Beta)       | Integration aller Features, Beta-Test vor Release     |
+| `feature/<xyz>` | –                                                   | Feature-Entwicklung; PR gegen `staging`               |
+| `release/x.x.x` | –                                                   | Release-Vorbereitung; aus `staging` gecuttet          |
+| `hotfix/<xyz>`  | –                                                   | Kritische Fixes; aus `main` gecuttet                  |
+
 ## Mitwirken
 
-1. Repository forken
-2. Feature-Branch erstellen
-3. Änderungen vornehmen
-4. Pull Request einreichen
+### Normaler Feature-Flow
+
+1. Repository forken (oder Feature-Branch direkt anlegen, falls Schreibrechte vorhanden).
+2. Branch `feature/<beschreibender-name>` von `staging` cutten.
+3. Änderungen vornehmen, lokal testen: `npm run dev`, `npm run typecheck`.
+4. Pull Request einreichen — **Ziel: `staging`**.
+
+Nach Merge wird `staging` automatisch auf [dev.modvis.ch](https://dev.modvis.ch) deployed und steht Beta-Testern zur Verfügung.
+
+### Kritische Hotfixes
+
+1. Branch `hotfix/<kurze-beschreibung>` von `main` cutten.
+2. Fix einbauen und lokal verifizieren.
+3. Pull Request gegen `main` einreichen (Priorität: schnelles Review).
+4. Nach Merge in `main`: zweiten PR mit demselben Fix gegen `staging` öffnen, damit der Hotfix beim nächsten Release nicht wieder verloren geht.
+
+### Release-Vorbereitung (Maintainer)
+
+Releases werden aus `staging` heraus gecuttet: `release/x.x.x`. In dieser Phase werden nur noch Bugfixes und Polish akzeptiert, keine neuen Features. Bei Merge in `main` wird automatisch [www.modvis.ch](https://www.modvis.ch) deployed und das Tag `vx.x.x` gesetzt.
 
 ## Lizenz
 
-[Lizenzinformationen ergänzen]
-
-## Kontakt
-
-[Kontaktinformationen ergänzen]
+tbd
