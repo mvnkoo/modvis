@@ -117,7 +117,7 @@ const Flow: React.FC = () => {
     getViewport,
     getZoom,
   } = useReactFlow();
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const [useCurvedLines, setUseCurvedLines] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<IliNode>([]);
@@ -874,6 +874,7 @@ const Flow: React.FC = () => {
         onNodeClick={handleNodeClick as unknown as NodeMouseHandler}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        colorMode={mode}
         fitView
         attributionPosition="bottom-right"
         minZoom={0.1}

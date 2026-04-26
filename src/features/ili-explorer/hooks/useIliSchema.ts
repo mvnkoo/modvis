@@ -170,12 +170,12 @@ export const useIliSchema = (
     }
     
     if (!nodeId) {
-      const firstAbstractClass = allNodes.find(n => 
-        n.type === 'classNode' && n.data.isAbstract
-      );
-      if (firstAbstractClass) {
+      const initialClass =
+        allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+        allNodes.find(n => n.type === 'classNode');
+      if (initialClass) {
         const relatedNodes = IliLayoutService.getDirectRelations(
-          firstAbstractClass,
+          initialClass,
           allNodes,
           allEdges,
           colors,
@@ -183,12 +183,12 @@ export const useIliSchema = (
           showFullHierarchy,
           useCurvedLines,
           showEnums,
-          4 
+          4
         );
 
         setNodes(relatedNodes.nodes);
         setEdges(relatedNodes.edges);
-        setActiveNodeId(firstAbstractClass.id);
+        setActiveNodeId(initialClass.id);
       }
       return;
     }
@@ -289,14 +289,14 @@ export const useIliSchema = (
       setSearchOptions(generateSearchOptions(baseNodes));
 
      
-      const firstAbstractClass = flowNodes.find(n => 
-        n.type === 'classNode' && n.data.isAbstract
-      ) as IliNode;
+      const initialClass = (
+        flowNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+        flowNodes.find(n => n.type === 'classNode')
+      ) as IliNode | undefined;
 
-      if (firstAbstractClass) {
-       
+      if (initialClass) {
         const relatedNodes = IliLayoutService.getDirectRelations(
-          firstAbstractClass as IliNode,
+          initialClass,
           flowNodes,
           flowEdges,
           colors,
@@ -308,12 +308,11 @@ export const useIliSchema = (
           showAssociations
         );
 
-       
         setNodes(relatedNodes.nodes);
         setEdges(relatedNodes.edges);
-        setActiveNodeId(firstAbstractClass.id);
+        setActiveNodeId(initialClass.id);
         setNavigationHistory([{
-          nodeId: firstAbstractClass.id,
+          nodeId: initialClass.id,
           showEnums: true,
           showAssociations: showAssociations
         }]);
@@ -504,13 +503,13 @@ export const useIliSchema = (
     setShowEnums(true);
     setShowAssociations(true);
     
-    const firstAbstractClass = allNodes.find(n => 
-      n.type === 'classNode' && n.data.isAbstract
-    );
+    const initialClass =
+      allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+      allNodes.find(n => n.type === 'classNode');
 
-    if (firstAbstractClass) {
+    if (initialClass) {
       const relatedNodes = IliLayoutService.getDirectRelations(
-        firstAbstractClass as IliNode,
+        initialClass as IliNode,
         allNodes as IliNode[],
         allEdges,
         colors,
@@ -519,16 +518,15 @@ export const useIliSchema = (
         useCurvedLines,
         true,
         maxSubTypesPerRow,
-        true 
+        true
       );
 
       setNodes(relatedNodes.nodes);
       setEdges(relatedNodes.edges);
-      setActiveNodeId(firstAbstractClass.id);
-      
-     
+      setActiveNodeId(initialClass.id);
+
       const initialState: NavigationState = {
-        nodeId: firstAbstractClass.id,
+        nodeId: initialClass.id,
         showEnums: true,
         showAssociations: true
       };

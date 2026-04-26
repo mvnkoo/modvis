@@ -150,4 +150,6 @@ Releases werden aus `staging` heraus gecuttet: `release/x.x.x`. In dieser Phase 
 
 ## Lizenz
 
-tbd
+[MIT License](LICENSE) — Copyright (c) 2026 Martin Vanek.
+
+Du darfst den Code frei nutzen, modifizieren, weitergeben und auch kommerziell verwenden, einschliesslich in Closed-Source-Projekten. Einzige Bedingung: Copyright-Vermerk und Lizenztext müssen erhalten bleiben. Keine Garantie.
