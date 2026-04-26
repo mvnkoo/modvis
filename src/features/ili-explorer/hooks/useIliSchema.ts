@@ -1,9 +1,14 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Node, Edge, Connection, MarkerType, FitViewOptions } from '@xyflow/react';
+import { Node, Edge, Connection, FitViewOptions } from '@xyflow/react';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { IliSchemaService } from '../services/iliSchemaService';
 import { IliLayoutService } from '../services/IliLayoutService';
+import { generateSearchOptions } from '../services/searchOptions';
+import {
+  flowNodeFromBaseNode,
+  inheritanceEdgesFromRelations,
+} from '../services/flowMapping';
 import {
   IliBaseNode,
   IliRelation,
@@ -102,60 +107,6 @@ export const useIliSchema = (
  
   const isResizingRef = useRef(false);
 
- 
-  const generateSearchOptions = useCallback((nodes: IliBaseNode[]): SearchOption[] => {
-    const options: SearchOption[] = [];
-
-   
-    nodes.forEach(node => {
-     
-      if (node.type === 'MODEL') return;
-      
-     
-      const validTypes = ['CLASS', 'STRUCTURE', 'TOPIC', 'ENUMERATION'];
-      if (!validTypes.includes(node.type)) return;
-
-      options.push({
-        id: node.id,
-        label: node.name,
-        type: node.type,
-        description: `${node.type} ${node.isAbstract ? '(Abstract)' : ''}`,
-        category: node.type === 'CLASS' ? 'Classes' : 
-                 node.type === 'STRUCTURE' ? 'Structures' : 
-                 node.type === 'TOPIC' ? 'Topics' : 
-                 'Enumerations'
-      });
-
-     
-      if (node.type === 'CLASS') {
-        const classNode = node as IliClassNode;
-        if (classNode.attributes) {
-          classNode.attributes.forEach(attr => {
-            options.push({
-              id: `${node.id}.${attr.name}`,
-              label: `${attr.name} (${node.name})`,
-              type: 'ATTRIBUTE',
-              description: `${attr.type}${attr.mandatory ? ', Mandatory' : ''}`,
-              category: 'Attributes'
-            });
-          });
-        }
-      }
-    });
-
-   
-    return options.sort((a, b) => {
-     
-      const categoryOrder = ['Classes', 'Topics', 'Structures', 'Enumerations', 'Attributes'];
-      const categoryDiff = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
-      if (categoryDiff !== 0) return categoryDiff;
-      
-     
-      return a.label.localeCompare(b.label);
-    });
-  }, []);
-
- 
   const filterNodesAndEdges = useCallback((nodeId: string | null = null) => {
    
     const layoutCache = new Map<string, {nodes: Node[]; edges: Edge[]}>();
@@ -254,34 +205,8 @@ export const useIliSchema = (
       const baseNodes = schemaServiceRef.current.getNodes();
       const relations = schemaServiceRef.current.getRelations();
 
-      const flowNodes = baseNodes.map(node => ({
-        id: node.id,
-        type: node.type === 'ASSOCIATION' ? 'associationNode' : `${node.type.toLowerCase()}Node`,
-        position: { x: 0, y: 0 },
-        draggable: true,
-        data: {
-          ...node,
-          label: node.name,
-          isHighlighted: false,
-          isActive: false,
-          expanded: false
-        }
-      }));
-
-      const flowEdges = relations
-        .filter(relation => relation.type === 'EXTENDS')
-        .map(relation => ({
-          id: relation.id,
-          source: relation.sourceId,
-          target: relation.targetId,
-          type: useCurvedLines ? 'default' : 'step',
-          animated: false,
-          style: { stroke: colors.inheritance, strokeWidth: 2 },
-          markerEnd: {
-            type: MarkerType.Arrow,
-            color: colors.inheritance
-          }
-        }));
+      const flowNodes = baseNodes.map(flowNodeFromBaseNode);
+      const flowEdges = inheritanceEdgesFromRelations(relations, colors, useCurvedLines);
 
      
       setAllNodes(flowNodes);
@@ -331,13 +256,13 @@ export const useIliSchema = (
       setIsLoading(false);
     }
   }, [
-    colors, 
-    showFullHierarchy, 
-    useCurvedLines, 
-    showEnums, 
-    setNodes, 
-    setEdges, 
-    generateSearchOptions
+    colors,
+    showFullHierarchy,
+    useCurvedLines,
+    showEnums,
+    showAssociations,
+    setNodes,
+    setEdges,
   ]);
 
   const handleSearchChange = useCallback((option: SearchOption | null) => {
@@ -971,18 +896,6 @@ export const useIliSchema = (
   }, []);
 
  
-  const createNode = useCallback((node: IliBaseNode) => {
-    const width = nodeWidths.get(node.id) || 400;
-    return {
-      ...node,
-      data: {
-        ...node.data,
-        width,
-        onResize: (newWidth: number) => handleNodeResize(node.id, newWidth)
-      }
-    };
-  }, [nodeWidths, handleNodeResize]);
-
   return {
     isLoading,
     error,
@@ -1017,41 +930,4 @@ export const useIliSchema = (
     handleToggleAssociations,
     handleMagicLayout,
   };
-}; 
-
-
-export const useNodeManagement = () => {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
-  
-  const updateNodeLayout = useCallback((nodeId: string, layout: Partial<Node>) => {
-    setNodes(prev => prev.map(node => 
-      node.id === nodeId ? { ...node, ...layout } : node
-    ));
-  }, []);
-
-  return {
-    nodes,
-    edges,
-    setNodes,
-    setEdges,
-    updateNodeLayout
-  };
 };
-
-export const useNavigationState = () => {
-  const [navigationHistory, setNavigationHistory] = useState<NavigationState[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  
-  const navigateTo = useCallback((state: NavigationState) => {
-    setNavigationHistory(prev => [...prev.slice(0, historyIndex + 1), state]);
-    setHistoryIndex(prev => prev + 1);
-  }, [historyIndex]);
-
-  return {
-    navigationHistory,
-    historyIndex,
-    navigateTo,
-    setHistoryIndex
-  };
-}; 

@@ -45,11 +45,11 @@ import {
   IliDomainEnumNode
 } from './nodes';
 import { useIliSchema } from '../hooks/useIliSchema';
+import { useDiagramExport } from '../hooks/useDiagramExport';
 import { LayoutSettings } from './sidebar/LayoutSettings';
 
 import '@xyflow/react/dist/style.css';
 import { debounce, throttle } from 'lodash';
-import { toPng, toSvg } from 'html-to-image';
 
 
 interface CustomNode extends ReactFlowNode {
@@ -89,14 +89,6 @@ const DEFAULT_FIT_VIEW_OPTIONS = {
 } as const;
 
 
-interface SelectionRect {
-  startX: number;
-  startY: number;
-  width: number;
-  height: number;
-}
-
-
 const globalStyles = `
   body.resizing {
     cursor: ew-resize !important;
@@ -111,12 +103,7 @@ const globalStyles = `
 `;
 
 const Flow: React.FC = () => {
-  const { 
-    fitView,
-    setViewport,
-    getViewport,
-    getZoom,
-  } = useReactFlow();
+  const { fitView, getViewport } = useReactFlow();
   const { colors, mode } = useTheme();
   const [useCurvedLines, setUseCurvedLines] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -531,222 +518,25 @@ const Flow: React.FC = () => {
     return { minY, maxY, maxX };
   };
 
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportAnchorEl, setExportAnchorEl] = useState<null | HTMLElement>(null);
-  const [isSelectingArea, setIsSelectingArea] = useState(false);
-  const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isClipboardExport, setIsClipboardExport] = useState(false);
-  const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
+  const {
+    exportAnchorEl,
+    handleExportClick,
+    handleExportClose,
+    handleExportAsPng,
+    handleExportToClipboard,
+    handleExportAsSvg,
+    isSelectingArea,
+    isDragging,
+    selectionRect,
+    handleSelectionStart,
+    handleSelectionMove,
+    handleSelectionEnd,
+    toastOpen,
+    toastMessage,
+    toastSeverity,
+    setToastOpen,
+  } = useDiagramExport(currentFileName);
 
- 
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastSeverity, setToastSeverity] = useState<'success' | 'error'>('success');
-
- 
-  const handleExportClose = useCallback(() => {
-    setExportAnchorEl(null);
-  }, []);
-
- 
-  const handleExportClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
-    setExportAnchorEl(event.currentTarget);
-  }, []);
-
-  const handleExportAsPng = useCallback(() => {
-    if (isExporting) return;
-    setIsExporting(true);
-    setIsClipboardExport(false);
-    setIsSelectingArea(true);
-    handleExportClose();
-    setTimeout(() => setIsExporting(false), 500);
-  }, [isExporting, handleExportClose]);
-
-  const handleExportToClipboard = useCallback(() => {
-    if (isExporting) return;
-    setIsExporting(true);
-    setIsClipboardExport(true);
-    setIsSelectingArea(true);
-    handleExportClose();
-    setTimeout(() => setIsExporting(false), 500);
-  }, [isExporting, handleExportClose]);
-
- 
-  const handleSelectionStart = useCallback((event: React.MouseEvent) => {
-    if (!isSelectingArea) return;
-    
-   
-    const target = event.currentTarget;
-    const rect = target.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    
-    selectionStartRef.current = { x, y };
-    setIsDragging(true);
-    setSelectionRect({
-      startX: x,
-      startY: y,
-      width: 0,
-      height: 0
-    });
-
-   
-    event.preventDefault();
-  }, [isSelectingArea]);
-
-  const handleSelectionMove = useCallback((event: React.MouseEvent) => {
-    if (!isDragging || !selectionStartRef.current) return;
-    
-   
-    const target = event.currentTarget;
-    const rect = target.getBoundingClientRect();
-    const currentX = event.clientX - rect.left;
-    const currentY = event.clientY - rect.top;
-    
-    setSelectionRect({
-      startX: selectionStartRef.current.x,
-      startY: selectionStartRef.current.y,
-      width: currentX - selectionStartRef.current.x,
-      height: currentY - selectionStartRef.current.y
-    });
-
-   
-    event.preventDefault();
-  }, [isDragging]);
-
-  const handleSelectionEnd = useCallback(() => {
-    if (!isDragging || !selectionRect || isExporting) return;
-    
-    const flowElement = document.querySelector('.react-flow');
-    if (!flowElement) return;
-
-    setIsExporting(true);
-
-    const viewport = getViewport();
-    const zoom = getZoom();
-    
-   
-    const headerOffset = 36;
-    const toolbarOffset = 28;
-    const totalOffset = headerOffset + toolbarOffset;
-    
-   
-    const normalizedRect = {
-      x: Math.min(selectionRect.startX, selectionRect.startX + selectionRect.width),
-      y: Math.min(selectionRect.startY, selectionRect.startY + selectionRect.height) - totalOffset,
-      width: Math.abs(selectionRect.width),
-      height: Math.abs(selectionRect.height)
-    };
-
-   
-    const flowRect = {
-      x: (normalizedRect.x - viewport.x * zoom) / zoom,
-      y: (normalizedRect.y - viewport.y * zoom) / zoom,
-      width: normalizedRect.width / zoom,
-      height: normalizedRect.height / zoom
-    };
-
-   
-    const tempStyle = document.createElement('style');
-    tempStyle.innerHTML = `
-      .react-flow__background { display: none !important; }
-      .react-flow { background-color: ${isClipboardExport ? 'transparent' : 'white'} !important; }
-      .react-flow__handle { opacity: 0 !important; }
-      .react-flow__controls,
-      .react-flow__minimap,
-      .selection-overlay { display: none !important; }
-    `;
-    document.head.appendChild(tempStyle);
-
-   
-    const elementsToHide = document.querySelectorAll(
-      '.react-flow__controls, .search-toolbar, .layout-settings, .side-toolbar, .upload-area'
-    );
-    elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
-
-    const exportOptions = {
-      quality: 1,
-      pixelRatio: window.devicePixelRatio * 4,
-      backgroundColor: isClipboardExport ? undefined : '#ffffff',
-      filter: (node: HTMLElement) => {
-        return !node.classList?.contains('react-flow__background') &&
-               !node.classList?.contains('react-flow__controls') &&
-               !node.classList?.contains('react-flow__minimap') &&
-               !node.classList?.contains('search-toolbar') &&
-               !node.classList?.contains('layout-settings') &&
-               !node.classList?.contains('side-toolbar') &&
-               !node.classList?.contains('upload-area') &&
-               !node.classList?.contains('hidden-for-export') &&
-               !node.classList?.contains('selection-overlay');
-      },
-      width: normalizedRect.width,
-      height: normalizedRect.height,
-      style: {
-        transform: `
-          translate(${-normalizedRect.x}px, ${-normalizedRect.y}px)
-          scale(${1})
-        `,
-        transformOrigin: 'top left',
-        width: `${flowElement.clientWidth}px`,
-        height: `${flowElement.clientHeight}px`
-      }
-    };
-
-   
-    toPng(flowElement as HTMLElement, exportOptions)
-      .then(dataUrl => {
-        if (isClipboardExport) {
-          return fetch(dataUrl)
-            .then(res => res.blob())
-            .then(blob => {
-              return navigator.clipboard.write([
-                new ClipboardItem({
-                  'image/png': blob
-                })
-              ]);
-            })
-            .then(() => {
-              setToastMessage('Diagramm wurde in die Zwischenablage kopiert');
-              setToastSeverity('success');
-              setToastOpen(true);
-            });
-        } else {
-          const link = document.createElement('a');
-          link.href = dataUrl;
-          link.download = `${currentFileName?.replace('.ili', '') || 'diagram'}.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      })
-      .catch(error => {
-        console.error('Export error:', error);
-        setToastMessage('Fehler beim Exportieren des Diagramms');
-        setToastSeverity('error');
-        setToastOpen(true);
-      })
-      .finally(() => {
-       
-        tempStyle.remove();
-        elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
-        
-        setIsExporting(false);
-        setIsDragging(false);
-        setIsSelectingArea(false);
-        setSelectionRect(null);
-        selectionStartRef.current = null;
-        setIsClipboardExport(false);
-      });
-  }, [
-    isDragging, 
-    selectionRect, 
-    currentFileName, 
-    getZoom, 
-    getViewport, 
-    isClipboardExport,
-    isExporting
-  ]);
 
  
   const debouncedHandleNodeClick = useMemo(
@@ -756,73 +546,6 @@ const Flow: React.FC = () => {
     [handleNodeClick]
   );
 
- 
-  const handleExportAsSvg = useCallback(() => {
-    if (isExporting) return;
-    
-    const flowElement = document.querySelector('.react-flow');
-    if (!flowElement) return;
-
-    setIsExporting(true);
-    handleExportClose();
-
-   
-    const tempStyle = document.createElement('style');
-    tempStyle.innerHTML = `
-      .react-flow__background { display: none !important; }
-      .react-flow { background-color: white !important; }
-      .react-flow__handle { opacity: 0 !important; }
-      .react-flow__controls,
-      .react-flow__minimap,
-      .selection-overlay { display: none !important; }
-    `;
-    document.head.appendChild(tempStyle);
-
-   
-    const elementsToHide = document.querySelectorAll(
-      '.react-flow__controls, .search-toolbar, .layout-settings, .side-toolbar, .upload-area'
-    );
-    elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
-
-    const exportOptions = {
-      filter: (node: HTMLElement) => {
-        return !node.classList?.contains('react-flow__background') &&
-               !node.classList?.contains('react-flow__controls') &&
-               !node.classList?.contains('react-flow__minimap') &&
-               !node.classList?.contains('search-toolbar') &&
-               !node.classList?.contains('layout-settings') &&
-               !node.classList?.contains('side-toolbar') &&
-               !node.classList?.contains('upload-area') &&
-               !node.classList?.contains('hidden-for-export') &&
-               !node.classList?.contains('selection-overlay');
-      },
-      style: {
-        backgroundColor: 'white'
-      }
-    };
-
-    toSvg(flowElement as HTMLElement, exportOptions)
-      .then(dataUrl => {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = `${currentFileName?.replace('.ili', '') || 'diagram'}.svg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      })
-      .catch(error => {
-        console.error('SVG Export error:', error);
-        setToastMessage('Fehler beim Exportieren des Diagramms als SVG');
-        setToastSeverity('error');
-        setToastOpen(true);
-      })
-      .finally(() => {
-       
-        tempStyle.remove();
-        elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
-        setIsExporting(false);
-      });
-  }, [currentFileName, handleExportClose, isExporting]);
 
   useEffect(() => {
     const styleSheet = document.createElement('style');
