@@ -252,5 +252,6 @@ export function useDiagramExport(currentFileName: string | null) {
     toastMessage,
     toastSeverity,
     setToastOpen,
+    showToast,
   };
 }
