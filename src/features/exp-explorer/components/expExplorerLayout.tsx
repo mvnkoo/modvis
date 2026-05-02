@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Box, Paper, Tooltip, Typography, IconButton } from '@mui/material';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { Box, Paper, Tooltip, Typography, IconButton, Snackbar, Alert } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { ExpSchemaFlow } from './expGraph';
 import { ExpSchemaControls } from './expSearchBar';
 import { useTheme } from '../../../common/theme/ThemeContext';
@@ -12,6 +13,19 @@ export const ExpSchemaExplorer: React.FC = () => {
   const [searchValue, setSearchValue] = useState<SearchOption | null>(null);
   const [expressData, setExpressData] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [isFileDragging, setIsFileDragging] = useState(false);
+  const [errorOpen, setErrorOpen] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  const loadFile = useCallback(async (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.exp')) {
+      setErrorOpen(true);
+      return;
+    }
+    const content = await file.text();
+    setExpressData(content);
+    setFileName(file.name);
+  }, []);
 
   const { searchOptions } = useMemo(() => {
     if (!expressData) return { searchOptions: [] };
@@ -44,16 +58,46 @@ export const ExpSchemaExplorer: React.FC = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.exp';
-    input.onchange = async (e) => {
+    input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (file && file.name.endsWith('.exp')) {
-        const content = await file.text();
-        setExpressData(content);
-        setFileName(file.name);
-      }
+      if (file) loadFile(file);
     };
     input.click();
   };
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) setIsFileDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsFileDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsFileDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) loadFile(file);
+  }, [loadFile]);
 
   const handleClearFile = () => {
     setExpressData(null);
@@ -68,10 +112,16 @@ export const ExpSchemaExplorer: React.FC = () => {
   }, []);
 
   return (
-    <Box sx={{
-      height: 'calc(100vh - 64px)',
-      position: 'relative'
-    }}>
+    <Box
+      sx={{
+        height: 'calc(100vh - 64px)',
+        position: 'relative'
+      }}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <Box sx={{
         position: 'absolute',
         top: 0,
@@ -86,6 +136,53 @@ export const ExpSchemaExplorer: React.FC = () => {
           onNodeNavigation={handleNodeNavigation}
         />
       </Box>
+
+      {isFileDragging && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1500,
+            bgcolor: alpha(colors.primary, 0.1),
+            border: `3px dashed ${colors.primary}`,
+            borderRadius: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <Paper
+            elevation={6}
+            sx={{
+              px: 4,
+              py: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
+              bgcolor: 'background.paper',
+            }}
+          >
+            <Upload sx={{ fontSize: 48, color: colors.primary }} />
+            <Typography variant="h6">EXPRESS-Schema hier ablegen</Typography>
+            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+              Nur .exp-Dateien werden akzeptiert
+            </Typography>
+          </Paper>
+        </Box>
+      )}
+
+      <Snackbar
+        open={errorOpen}
+        autoHideDuration={3000}
+        onClose={() => setErrorOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setErrorOpen(false)} severity="error" sx={{ width: '100%' }}>
+          Nur .exp-Dateien werden unterstützt
+        </Alert>
+      </Snackbar>
 
       <Box sx={{
         position: 'absolute',

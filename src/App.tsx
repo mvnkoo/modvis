@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, AppBar, Toolbar, Typography, Tabs, Tab } from '@mui/material';
-import { Schema } from '@mui/icons-material';
+import { Box, AppBar, Toolbar, Typography, Tabs, Tab, Chip } from '@mui/material';
+import { Schema, Science } from '@mui/icons-material';
 import { useTheme } from './common/theme/ThemeContext';
+import { useSettings } from './common/settings/SettingsContext';
 import { Settings } from './common/components/Settings';
 
 import { ExpExplorer } from './features/exp-explorer/expExplorer';
@@ -11,7 +12,14 @@ import { IliSchemaExplorer } from './features/ili-explorer/components/IliSchemaE
 
 function App() {
   const { mode, colors } = useTheme();
+  const { experimentalFeatures } = useSettings();
   const [currentTab, setCurrentTab] = useState(0);
+
+  useEffect(() => {
+    if (!experimentalFeatures && currentTab === 1) {
+      setCurrentTab(0);
+    }
+  }, [experimentalFeatures, currentTab]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -165,6 +173,18 @@ function App() {
                 }}
               >
                 MODVIS
+                {currentTab === 0 && (
+                  <Box component="span" sx={{ opacity: 0.6, fontWeight: 500, mx: 1 }}>·</Box>
+                )}
+                {currentTab === 0 && (
+                  <Box component="span" sx={{ fontWeight: 500 }}>ILI Explorer</Box>
+                )}
+                {currentTab === 1 && experimentalFeatures && (
+                  <Box component="span" sx={{ opacity: 0.6, fontWeight: 500, mx: 1 }}>·</Box>
+                )}
+                {currentTab === 1 && experimentalFeatures && (
+                  <Box component="span" sx={{ fontWeight: 500 }}>EXP Explorer</Box>
+                )}
               </Typography>
               <Box sx={{ 
                 display: 'flex', 
@@ -180,7 +200,7 @@ function App() {
                     opacity: 0.8
                   }}
                 >
-                  V{__APP_VERSION__} (NICHT FÜR DEN PRODUKTIVEN EINSATZ!)
+                  V{__APP_VERSION__} (BETA)
                 </Typography>
                 <Settings />
               </Box>
@@ -246,17 +266,33 @@ function App() {
                   label="ILI Explorer"
                   iconPosition="start"
                 />
-                <Tab
-                  icon={<Schema fontSize="small" />}
-                  label="EXP Explorer"
-                  iconPosition="start"
-                />
+                {experimentalFeatures && (
+                  <Tab
+                    icon={<Science fontSize="small" />}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        EXP Explorer
+                        <Chip
+                          label="experimentell"
+                          size="small"
+                          sx={{
+                            height: 16,
+                            fontSize: '0.625rem',
+                            color: '#fff',
+                            bgcolor: 'rgba(255,255,255,0.2)',
+                          }}
+                        />
+                      </Box>
+                    }
+                    iconPosition="start"
+                  />
+                )}
               </Tabs>
             </Box>
           </AppBar>
 
         {currentTab === 0 && <IliSchemaExplorer />}
-        {currentTab === 1 && <ExpExplorer />}
+        {currentTab === 1 && experimentalFeatures && <ExpExplorer />}
       </Box>
     </MuiThemeProvider>
   );

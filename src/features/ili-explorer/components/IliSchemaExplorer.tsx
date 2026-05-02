@@ -419,7 +419,6 @@ const Flow: React.FC = () => {
     handleExportToClipboard,
     handleExportAsSvg,
     isSelectingArea,
-    isDragging,
     selectionRect,
     handleSelectionStart,
     handleSelectionMove,
@@ -428,7 +427,59 @@ const Flow: React.FC = () => {
     toastMessage,
     toastSeverity,
     setToastOpen,
+    showToast,
   } = useDiagramExport(currentFileName);
+
+  const [isFileDragging, setIsFileDragging] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    if (isSelectingArea) return;
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) {
+      setIsFileDragging(true);
+    }
+  }, [isSelectingArea]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    if (isSelectingArea) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsFileDragging(false);
+    }
+  }, [isSelectingArea]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (isSelectingArea) return;
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  }, [isSelectingArea]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    if (isSelectingArea) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsFileDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.ili')) {
+      showToast('Nur .ili-Dateien werden unterstützt', 'error');
+      return;
+    }
+
+    handleFileUpload(file);
+  }, [isSelectingArea, handleFileUpload, showToast]);
 
 
  
@@ -451,7 +502,49 @@ const Flow: React.FC = () => {
   }, []);
 
   return (
-    <>
+    <Box
+      sx={{ position: 'absolute', inset: 0 }}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {isFileDragging && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1500,
+            bgcolor: alpha(colors.primary, 0.1),
+            border: `3px dashed ${colors.primary}`,
+            borderRadius: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <Paper
+            elevation={6}
+            sx={{
+              px: 4,
+              py: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
+              bgcolor: 'background.paper',
+            }}
+          >
+            <Upload sx={{ fontSize: 48, color: colors.primary }} />
+            <Typography variant="h6">INTERLIS-Modell hier ablegen</Typography>
+            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+              Nur .ili-Dateien werden akzeptiert
+            </Typography>
+          </Paper>
+        </Box>
+      )}
+
       {isLoading && (
         <Box
           sx={{
@@ -813,7 +906,7 @@ const Flow: React.FC = () => {
           )}
         </div>
       )}
-    </>
+    </Box>
   );
 };
 

@@ -13,9 +13,11 @@ import {
 } from '@mui/material';
 import { Settings as SettingsIcon } from '@mui/icons-material';
 import { useTheme } from '../theme/ThemeContext';
+import { useSettings } from '../settings/SettingsContext';
 
 const Settings: React.FC = () => {
   const { mode, setMode, colorScheme, setColorScheme } = useTheme();
+  const { experimentalFeatures, setExperimentalFeatures } = useSettings();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -98,9 +100,9 @@ const Settings: React.FC = () => {
                 </Box>
               }
             />
-            <FormControlLabel 
-              value="purple" 
-              control={<Radio size="small" />} 
+            <FormControlLabel
+              value="purple"
+              control={<Radio size="small" />}
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 16, height: 16, bgcolor: '#9d18e9', borderRadius: 1 }} />
@@ -110,9 +112,23 @@ const Settings: React.FC = () => {
             />
           </RadioGroup>
         </MenuItem>
+        <Divider />
+        <MenuItem>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={experimentalFeatures}
+                onChange={(e) => setExperimentalFeatures(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="Experimentelle Features"
+          />
+        </MenuItem>
       </Menu>
     </>
   );
-} 
+}
+
 
 export { Settings };
