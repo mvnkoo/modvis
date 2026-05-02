@@ -3,7 +3,6 @@ import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/st
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, AppBar, Toolbar, Typography, Tabs, Tab } from '@mui/material';
 import { Schema } from '@mui/icons-material';
-import { AppProvider } from './context/AppContext';
 import { useTheme } from './common/theme/ThemeContext';
 import { Settings } from './common/components/Settings';
 
@@ -130,10 +129,9 @@ function App() {
   });
 
   return (
-    <AppProvider>
-      <MuiThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box sx={{ 
+    <MuiThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{
           minHeight: '100vh',
           background: colors.background,
           backgroundImage: colors.background.startsWith('linear-gradient') 
@@ -257,11 +255,10 @@ function App() {
             </Box>
           </AppBar>
 
-          {currentTab === 0 && <IliSchemaExplorer />}
-          {currentTab === 1 && <ExpExplorer />}
-        </Box>
-      </MuiThemeProvider>
-    </AppProvider>
+        {currentTab === 0 && <IliSchemaExplorer />}
+        {currentTab === 1 && <ExpExplorer />}
+      </Box>
+    </MuiThemeProvider>
   );
 }
 

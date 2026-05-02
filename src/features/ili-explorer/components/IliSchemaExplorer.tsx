@@ -238,28 +238,17 @@ const Flow: React.FC = () => {
 
   const handleReset = useCallback(() => {
     baseHandleReset();
-    
+
     setMaxSubTypesPerRow(4);
     setUseCurvedLines(true);
-    
-   
-    const initialState: NavigationState = {
-      nodeId: 'VSA_BaseClass',
-      showEnums: true,
-      showAssociations: true
-    };
-    
-    setActiveNodeId(initialState.nodeId);
-    setNavigationHistory([initialState]);
-    setHistoryIndex(0);
-    
+
     setTimeout(() => {
-      fitView({ 
+      fitView({
         padding: 0.2,
         duration: 200
       });
     }, 50);
-  }, [baseHandleReset, setActiveNodeId, setNavigationHistory, setHistoryIndex, fitView]);
+  }, [baseHandleReset, fitView]);
 
   const handleBack = useCallback(() => {
     if (historyIndex > 0) {

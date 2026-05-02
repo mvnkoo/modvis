@@ -56,21 +56,13 @@ const edgeTypes = {
 
 interface ExpSchemaFlowProps {
   expressData: string | null;
-  mergedData: string | null;
-  customExpressData: string | null;
-  schemaSource: 'unified' | 'custom';
   searchValue: SearchOption | null;
-  hasActiveSchema: boolean;
   onNodeNavigation: () => void;
 }
 
 export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
   expressData,
-  mergedData,
-  customExpressData,
-  schemaSource,
   searchValue,
-  hasActiveSchema,
   onNodeNavigation
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<CustomNode>([]);
@@ -83,11 +75,12 @@ export const ExpSchemaFlow: React.FC<ExpSchemaFlowProps> = ({
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
+  const hasActiveSchema = expressData !== null;
+
   const schemaData = useMemo(() => {
-    const data = schemaSource === 'unified' ? (mergedData || expressData) : customExpressData;
-    if (!data) return { nodes: [], edges: [] };
-    return ExpSchemaService.parseExpressSchema(data);
-  }, [expressData, mergedData, customExpressData, schemaSource]);
+    if (!expressData) return { nodes: [], edges: [] };
+    return ExpSchemaService.parseExpressSchema(expressData);
+  }, [expressData]);
 
   const zoomToFit = useCallback(() => {
     if (!reactFlowInstance || !currentNodeId) return;

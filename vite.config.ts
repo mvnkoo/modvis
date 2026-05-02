@@ -15,7 +15,6 @@ export default defineConfig({
       // Mirrors the CRA "baseUrl: src" behavior so absolute imports like
       // `import { Foo } from 'common/...'` keep working.
       common: path.resolve(__dirname, 'src/common'),
-      context: path.resolve(__dirname, 'src/context'),
       features: path.resolve(__dirname, 'src/features'),
       types: path.resolve(__dirname, 'src/types'),
     },

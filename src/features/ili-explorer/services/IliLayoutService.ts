@@ -814,12 +814,11 @@ export class IliLayoutService {
         .filter(edge => relatedNodeIds.has(edge.source) && relatedNodeIds.has(edge.target))
         .map(edge => ({
           ...edge,
-          id: `${edge.source}-${edge.target}-${Date.now()}`,
           type: useCurvedLines ? 'default' : 'step',
           animated: false,
           sourceHandle: 'top',
           targetHandle: 'bottom',
-          style: { 
+          style: {
             stroke: colors.inheritance,
             strokeWidth: 2
           }

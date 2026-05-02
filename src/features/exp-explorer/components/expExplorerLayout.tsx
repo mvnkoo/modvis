@@ -1,90 +1,66 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Box, Paper, ToggleButtonGroup, ToggleButton, Tooltip, Typography, IconButton } from '@mui/material';
+import { Box, Paper, Tooltip, Typography, IconButton } from '@mui/material';
 import { ExpSchemaFlow } from './expGraph';
 import { ExpSchemaControls } from './expSearchBar';
 import { useTheme } from '../../../common/theme/ThemeContext';
-import { useAppState } from '../../../context/AppContext';
 import { SearchOption } from '../types/expTypes';
-import { Merge, Upload, Delete } from '@mui/icons-material';
+import { Upload, Delete } from '@mui/icons-material';
 import { ExpSchemaService } from '../services/expService';
 
 export const ExpSchemaExplorer: React.FC = () => {
   const { colors } = useTheme();
-  const { expressData, mergedData } = useAppState();
   const [searchValue, setSearchValue] = useState<SearchOption | null>(null);
-  const [schemaSource, setSchemaSource] = useState<'unified' | 'custom'>('unified');
-  const [customExpressData, setCustomExpressData] = useState<string | null>(null);
-  const [customFileName, setCustomFileName] = useState<string | null>(null);
+  const [expressData, setExpressData] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
- 
-  const hasActiveSchema = useMemo(() => {
-    return schemaSource === 'unified' ? !!(mergedData || expressData) : !!customExpressData;
-  }, [schemaSource, mergedData, expressData, customExpressData]);
-
- 
   const { searchOptions } = useMemo(() => {
-    const data = schemaSource === 'unified' ? (mergedData || expressData) : customExpressData;
-    if (!data) return { searchOptions: [] };
+    if (!expressData) return { searchOptions: [] };
 
-    const parsedSchema = ExpSchemaService.parseExpressSchema(data);
-    
+    const parsedSchema = ExpSchemaService.parseExpressSchema(expressData);
+
     const options = parsedSchema.nodes
       .map(node => ({
         id: node.id,
         label: node.data.label,
         type: node.type === 'entityNode' ? 'Entity' : 'Type',
         description: `${node.type === 'entityNode' ? 'Entity' : 'Type'} - ${
-          node.data.superTypes && node.data.superTypes.length > 0 
-            ? `Subtype of ${node.data.superTypes.join(', ')}` 
+          node.data.superTypes && node.data.superTypes.length > 0
+            ? `Subtype of ${node.data.superTypes.join(', ')}`
             : 'No supertypes'
         }`,
         category: ExpSchemaService.getDomainFromEntity(node.data.label)
       } as SearchOption));
 
-    return { 
+    return {
       searchOptions: options.sort((a, b) => {
         const categoryCompare = a.category.localeCompare(b.category);
         if (categoryCompare !== 0) return categoryCompare;
         return a.label.localeCompare(b.label);
       })
     };
-  }, [expressData, mergedData, customExpressData, schemaSource]);
+  }, [expressData]);
 
-  const handleSchemaSourceChange = async (event: React.MouseEvent<HTMLElement>, newSource: 'unified' | 'custom' | null) => {
-   
-    event.preventDefault();
-    
-   
-    if (newSource === 'custom') {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.exp';
-      input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file && file.name.endsWith('.exp')) {
-          const content = await file.text();
-          setCustomExpressData(content);
-          setCustomFileName(file.name);
-          setSchemaSource('custom');
-        }
-      };
-      input.click();
-      return;
-    }
-    
-   
-    if (newSource === 'unified') {
-      setSchemaSource('unified');
-    }
+  const handleUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.exp';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file && file.name.endsWith('.exp')) {
+        const content = await file.text();
+        setExpressData(content);
+        setFileName(file.name);
+      }
+    };
+    input.click();
   };
 
-  const handleClearCustomFile = () => {
-    setCustomExpressData(null);
-    setCustomFileName(null);
+  const handleClearFile = () => {
+    setExpressData(null);
+    setFileName(null);
     setSearchValue(null);
   };
 
- 
   const handleNodeNavigation = useCallback(() => {
     requestAnimationFrame(() => {
       setSearchValue(null);
@@ -92,11 +68,11 @@ export const ExpSchemaExplorer: React.FC = () => {
   }, []);
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       height: 'calc(100vh - 64px)',
       position: 'relative'
     }}>
-      <Box sx={{ 
+      <Box sx={{
         position: 'absolute',
         top: 0,
         left: 0,
@@ -104,18 +80,14 @@ export const ExpSchemaExplorer: React.FC = () => {
         bottom: 0,
         bgcolor: colors.background
       }}>
-        <ExpSchemaFlow 
+        <ExpSchemaFlow
           expressData={expressData}
-          mergedData={mergedData}
-          customExpressData={customExpressData}
-          schemaSource={schemaSource}
           searchValue={searchValue}
-          hasActiveSchema={hasActiveSchema}
           onNodeNavigation={handleNodeNavigation}
         />
       </Box>
 
-      <Box sx={{ 
+      <Box sx={{
         position: 'absolute',
         top: 16,
         left: 16,
@@ -124,49 +96,27 @@ export const ExpSchemaExplorer: React.FC = () => {
         gap: 2,
         zIndex: 1000
       }}>
-        <Box sx={{ 
+        <Box sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 1
         }}>
-          <Paper 
-            elevation={4} 
-            sx={{ 
+          <Paper
+            elevation={4}
+            sx={{
               borderRadius: 1,
               bgcolor: 'background.paper',
-              boxShadow: colors.shadow,
-              '& .MuiToggleButton-root': {
-                border: 'none',
-                borderRadius: 1,
-                '&:not(:first-of-type)': {
-                  borderLeft: 'none'
-                }
-              },
-              '& .MuiToggleButtonGroup-root': {
-                border: 'none'
-              }
+              boxShadow: colors.shadow
             }}
           >
-            <ToggleButtonGroup
-              value={schemaSource}
-              exclusive
-              onChange={handleSchemaSourceChange}
-              size="small"
-            >
-              <ToggleButton value="unified">
-                <Tooltip title="Unified Schema">
-                  <Merge />
-                </Tooltip>
-              </ToggleButton>
-              <ToggleButton value="custom">
-                <Tooltip title="Custom Schema">
-                  <Upload />
-                </Tooltip>
-              </ToggleButton>
-            </ToggleButtonGroup>
+            <Tooltip title="EXPRESS-Datei laden (.exp)">
+              <IconButton size="small" onClick={handleUpload}>
+                <Upload />
+              </IconButton>
+            </Tooltip>
           </Paper>
 
-          {customFileName && (
+          {fileName && (
             <Paper
               elevation={4}
               sx={{
@@ -181,11 +131,11 @@ export const ExpSchemaExplorer: React.FC = () => {
               }}
             >
               <Typography variant="body2" sx={{ color: colors.text }}>
-                {customFileName}
+                {fileName}
               </Typography>
               <IconButton
                 size="small"
-                onClick={handleClearCustomFile}
+                onClick={handleClearFile}
                 sx={{
                   width: 24,
                   height: 24,
@@ -200,9 +150,9 @@ export const ExpSchemaExplorer: React.FC = () => {
           )}
         </Box>
 
-        <Paper 
-          elevation={4} 
-          sx={{ 
+        <Paper
+          elevation={4}
+          sx={{
             flexGrow: 1,
             borderRadius: 1,
             bgcolor: 'background.paper',
@@ -215,7 +165,7 @@ export const ExpSchemaExplorer: React.FC = () => {
             }
           }}
         >
-          <ExpSchemaControls 
+          <ExpSchemaControls
             searchValue={searchValue}
             onSearchChange={setSearchValue}
             searchOptions={searchOptions}
@@ -224,4 +174,4 @@ export const ExpSchemaExplorer: React.FC = () => {
       </Box>
     </Box>
   );
-}; 
+};
