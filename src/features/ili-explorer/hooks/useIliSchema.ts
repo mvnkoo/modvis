@@ -111,8 +111,46 @@ export const useIliSchema = (
     setFitViewRequest(c => c + 1);
   }, []);
 
-  const schemaServiceRef = useRef<IliSchemaService>(new IliSchemaService());
-  const isResizingRef = useRef(false);
+ 
+  const filterNodesAndEdges = useCallback((nodeId: string | null = null) => {
+   
+    const layoutCache = new Map<string, {nodes: Node[]; edges: Edge[]}>();
+    
+    if (layoutCache.has(nodeId || '')) {
+      const cached = layoutCache.get(nodeId || '');
+      if (cached) {
+        setNodes(cached.nodes);
+        setEdges(cached.edges);
+        return;
+      }
+    }
+    
+    if (!nodeId) {
+      const initialClass =
+        allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+        allNodes.find(n => n.type === 'classNode');
+      if (initialClass) {
+        const relatedNodes = IliLayoutService.getDirectRelations(
+          initialClass,
+          allNodes,
+          allEdges,
+          colors,
+          [],
+          showFullHierarchy,
+          useCurvedLines,
+          showEnums,
+          4
+        );
+
+        setNodes(relatedNodes.nodes);
+        setEdges(relatedNodes.edges);
+        setActiveNodeId(initialClass.id);
+      }
+      return;
+    }
+
+    const activeNode = allNodes.find(n => n.id === nodeId);
+    if (!activeNode) return;
 
   const computeLayout = useCallback(
     (node: IliNode, override?: Partial<LayoutOptions>) => {
@@ -206,7 +244,7 @@ export const useIliSchema = (
       if (initialClass) {
         const relatedNodes = IliLayoutService.getDirectRelations(
           initialClass,
-          flowNodes as IliNode[],
+          flowNodes,
           flowEdges,
           colors,
           {
@@ -374,10 +412,21 @@ export const useIliSchema = (
       allNodes.find(n => n.type === 'classNode');
 
     if (initialClass) {
-      applyLayout(initialClass as IliNode, {
-        showEnums: true,
-        showAssociations: true,
-      });
+      const relatedNodes = IliLayoutService.getDirectRelations(
+        initialClass as IliNode,
+        allNodes as IliNode[],
+        allEdges,
+        colors,
+        [],
+        showFullHierarchy,
+        useCurvedLines,
+        true,
+        maxSubTypesPerRow,
+        true
+      );
+
+      setNodes(relatedNodes.nodes);
+      setEdges(relatedNodes.edges);
       setActiveNodeId(initialClass.id);
 
       const initialState: NavigationState = {

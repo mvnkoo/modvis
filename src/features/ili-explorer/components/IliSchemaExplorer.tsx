@@ -103,7 +103,12 @@ const globalStyles = `
 `;
 
 const Flow: React.FC = () => {
-  const { fitView, getViewport } = useReactFlow();
+  const { 
+    fitView,
+    setViewport,
+    getViewport,
+    getZoom,
+  } = useReactFlow();
   const { colors, mode } = useTheme();
   const [useCurvedLines, setUseCurvedLines] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
