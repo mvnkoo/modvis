@@ -390,7 +390,7 @@ export class IliParserService {
     console.log(`Collecting inherited attributes for ${className}`);
 
    
-    const classRegex = new RegExp(`CLASS\\s+${className}\\s*(?:\\(ABSTRACT\\))?\\s*EXTENDS\\s+(\\\w+)\\s*=`, 'i');
+    const classRegex = new RegExp(`CLASS\\s+${className}\\s*(?:\\(ABSTRACT\\))?\\s*EXTENDS\\s+([\\w\\.]+)\\s*=`, 'i');
     const match = classRegex.exec(content);
     
     if (match) {
@@ -560,40 +560,6 @@ export class IliParserService {
         console.log(`Created enum node:`, node);
       }
 
-     
-      const predefinedEnums = {
-        'Art': [
-          'andere',
-          'Beleuchtung',
-          'Fernwirkanlage',
-          'Funk',
-          'Telephon',
-          'unbekannt'
-        ]
-      };
-
-      Object.entries(predefinedEnums).forEach(([enumName, values]) => {
-        const nodeId = enumName;
-       
-        const node: IliBaseNode = {
-          id: nodeId,
-          type: 'enumNode', 
-          name: enumName,
-          position: { x: 0, y: 0 },
-          data: {
-            label: enumName,
-            enumValues: values.map(value => ({ value })),
-            comment: undefined,
-            isHighlighted: false,
-            isActive: false
-          }
-        };
-        
-        this.nodes.set(nodeId, node);
-        console.log(`Created predefined enum node:`, node);
-      });
-
-     
       const classRegex = /CLASS\s+(\w+)\s*(?:\(ABSTRACT\))?\s*(?:EXTENDS\s+([\w\.]+))?\s*=\s*([\s\S]*?)(?=END\s+\1;)/g;
       
      

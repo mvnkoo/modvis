@@ -137,4 +137,13 @@ export interface DomainDefinition {
   unit?: string;
   values?: IliEnumValue[];
   extends?: string;
-} 
+}
+
+export interface LayoutOptions {
+  showFullHierarchy: boolean;
+  useCurvedLines: boolean;
+  showEnums: boolean;
+  showAssociations: boolean;
+  maxSubTypesPerRow: number;
+  useMagicLayout: boolean;
+}
