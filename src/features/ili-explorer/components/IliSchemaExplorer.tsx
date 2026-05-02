@@ -140,6 +140,9 @@ const Flow: React.FC = () => {
     showAssociations,
     handleToggleAssociations,
     handleMagicLayout,
+    applyLayout,
+    fitViewRequest,
+    requestFitView,
   } = useIliSchema(
     setNodes, 
     setEdges, 
@@ -153,6 +156,18 @@ const Flow: React.FC = () => {
     setMaxSubTypesPerRow(0);
     setUseCurvedLines(true);
   }, [handleFileUploadBase]);
+
+  useEffect(() => {
+    if (fitViewRequest === 0) return;
+    const id = requestAnimationFrame(() => {
+      fitView({
+        ...DEFAULT_FIT_VIEW_OPTIONS,
+        duration: 800,
+        padding: 0.3,
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [fitViewRequest, fitView]);
 
   const handleLineTypeToggle = useCallback(() => {
     const newCurvedLines = !useCurvedLines;
@@ -204,71 +219,24 @@ const Flow: React.FC = () => {
       }
     };
 
-    const relatedNodes = IliLayoutService.getDirectRelations(
-      iliNode,
-      allNodes as IliNode[],
-      allEdges,
-      colors,
-      [],
-      showFullHierarchy,
-      useCurvedLines,
-      showEnums,
-      maxSubTypesPerRow
-    );
-
     const currentViewport = getViewport();
     baseHandleNodeClick(event, iliNode, currentViewport);
-
-    setTimeout(() => {
-      fitView({
-        ...DEFAULT_FIT_VIEW_OPTIONS,
-        duration: 800,
-        padding: 0.3,
-        includeHiddenNodes: false
-      });
-    }, 100);
-  }, [
-    activeNodeId,
-    baseHandleNodeClick,
-    getViewport,
-    fitView,
-    nodes,
-    historyIndex
-  ]);
+  }, [activeNodeId, baseHandleNodeClick, getViewport]);
 
   const handleReset = useCallback(() => {
     baseHandleReset();
 
     setMaxSubTypesPerRow(4);
     setUseCurvedLines(true);
-
-    setTimeout(() => {
-      fitView({
-        padding: 0.2,
-        duration: 200
-      });
-    }, 50);
-  }, [baseHandleReset, fitView]);
+    requestFitView();
+  }, [baseHandleReset, requestFitView, setMaxSubTypesPerRow]);
 
   const handleBack = useCallback(() => {
     if (historyIndex > 0) {
-      const shouldGoBack = baseHandleBack();
-      
-      if (shouldGoBack) {
-        setTimeout(() => {
-          fitView({
-            padding: 0.2,
-            duration: 800,
-            minZoom: 0.5,
-            maxZoom: 1.5
-          });
-        }, 50);
-      }
+      baseHandleBack();
 
-     
       setNavigationHistory(prev => {
         const newHistory = [...prev];
-       
         if (newHistory.length > 1) {
           const [first, ...rest] = newHistory;
           return [...rest, first];
@@ -276,30 +244,17 @@ const Flow: React.FC = () => {
         return newHistory;
       });
     }
-  }, [baseHandleBack, fitView]);
+  }, [baseHandleBack, historyIndex, setNavigationHistory]);
 
   const handleMaxSubTypesChange = useCallback((value: number) => {
     setMaxSubTypesPerRow(value);
     if (activeNodeId) {
       const currentNode = allNodes.find(n => n.id === activeNodeId);
       if (currentNode) {
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          currentNode,
-          allNodes,
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          showEnums,
-          value
-        );
-
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
+        applyLayout(currentNode as IliNode, { maxSubTypesPerRow: value });
       }
     }
-  }, [activeNodeId, allNodes, allEdges, colors, showFullHierarchy, useCurvedLines, showEnums, setNodes, setEdges]);
+  }, [activeNodeId, allNodes, applyLayout, setMaxSubTypesPerRow]);
 
   const controlsStyle = useMemo(() => ({
     backgroundColor: colors.paper,
@@ -315,25 +270,13 @@ const Flow: React.FC = () => {
   }), [colors]);
 
   useEffect(() => {
-    if (activeNodeId && allNodes.length > 0 && (maxSubTypesPerRow !== undefined)) {
+    if (activeNodeId && allNodes.length > 0) {
       const currentNode = allNodes.find(node => node.id === activeNodeId);
       if (currentNode) {
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          currentNode as IliNode,
-          allNodes as IliNode[],
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          showEnums,
-          maxSubTypesPerRow
-        );
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
+        applyLayout(currentNode as IliNode);
       }
     }
-  }, [maxSubTypesPerRow, activeNodeId]);
+  }, [maxSubTypesPerRow, activeNodeId, allNodes, applyLayout]);
 
   const handleSearchSelect = useCallback((selectedNode: SearchOption) => {
     if (selectedNode) {
@@ -349,31 +292,9 @@ const Flow: React.FC = () => {
       
       const currentNode = allNodes.find(node => node.id === selectedNode.id);
       if (currentNode) {
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          currentNode as IliNode,
-          allNodes as IliNode[],
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          showEnums,
-          maxSubTypesPerRow,
-          showAssociations
-        );
-
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
+        applyLayout(currentNode as IliNode);
         setActiveNodeId(selectedNode.id);
-
-        setTimeout(() => {
-          fitView({
-            padding: 0.2,
-            duration: 800,
-            minZoom: 0.2,
-            maxZoom: 1.8
-          });
-        }, 100);
+        requestFitView();
       }
     }
   }, [
@@ -382,15 +303,11 @@ const Flow: React.FC = () => {
     showEnums,
     showAssociations,
     allNodes,
-    allEdges,
-    colors,
-    showFullHierarchy,
-    useCurvedLines,
-    maxSubTypesPerRow,
-    setNodes,
-    setEdges,
+    applyLayout,
+    setNavigationHistory,
+    setHistoryIndex,
     setActiveNodeId,
-    fitView
+    requestFitView,
   ]);
 
  
@@ -446,24 +363,11 @@ const Flow: React.FC = () => {
       if (activeNodeId) {
         const currentNode = allNodes.find(n => n.id === activeNodeId);
         if (currentNode) {
-          const relatedNodes = IliLayoutService.getDirectRelations(
-            currentNode,
-            allNodes,
-            allEdges,
-            colors,
-            [],
-            showFullHierarchy,
-            useCurvedLines,
-            showEnums,
-            value
-          );
-
-          setNodes(relatedNodes.nodes);
-          setEdges(relatedNodes.edges);
+          applyLayout(currentNode as IliNode, { maxSubTypesPerRow: value });
         }
       }
     }, 150),
-    [activeNodeId, allNodes, allEdges, colors, showFullHierarchy, useCurvedLines, showEnums]
+    [activeNodeId, allNodes, applyLayout, setMaxSubTypesPerRow]
   );
 
  

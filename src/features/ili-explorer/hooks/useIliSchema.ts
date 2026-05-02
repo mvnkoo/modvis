@@ -15,6 +15,7 @@ import {
   IliNode,
   SearchOption,
   NavigationState,
+  LayoutOptions,
 } from '../services/types/IliBaseTypes';
 import { IliClassNode } from '../services/types/IliModelTypes';
 
@@ -54,6 +55,10 @@ interface UseIliSchemaReturn {
   showAssociations: boolean;
   handleToggleAssociations: (visible: boolean) => void;
   handleMagicLayout: () => void;
+  applyLayout: (node: IliNode, override?: Partial<LayoutOptions>) => { nodes: IliNode[]; edges: Edge[] };
+  computeLayout: (node: IliNode, override?: Partial<LayoutOptions>) => { nodes: IliNode[]; edges: Edge[] };
+  fitViewRequest: number;
+  requestFitView: () => void;
 }
 
 
@@ -100,82 +105,61 @@ export const useIliSchema = (
   const [associationHistory, setAssociationHistory] = useState<Map<string, boolean>>(new Map());
   const [useMagicLayout, setUseMagicLayout] = useState(false);
   const [nodeWidths, setNodeWidths] = useState<Map<string, number>>(new Map());
+  const [fitViewRequest, setFitViewRequest] = useState(0);
 
- 
+  const requestFitView = useCallback(() => {
+    setFitViewRequest(c => c + 1);
+  }, []);
+
   const schemaServiceRef = useRef<IliSchemaService>(new IliSchemaService());
-
- 
   const isResizingRef = useRef(false);
 
-  const filterNodesAndEdges = useCallback((nodeId: string | null = null) => {
-   
-    const layoutCache = new Map<string, {nodes: Node[]; edges: Edge[]}>();
-    
-    if (layoutCache.has(nodeId || '')) {
-      const cached = layoutCache.get(nodeId || '');
-      if (cached) {
-        setNodes(cached.nodes);
-        setEdges(cached.edges);
-        return;
-      }
-    }
-    
-    if (!nodeId) {
-      const initialClass =
-        allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
-        allNodes.find(n => n.type === 'classNode');
-      if (initialClass) {
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          initialClass,
-          allNodes,
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          showEnums,
-          4
-        );
-
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
-        setActiveNodeId(initialClass.id);
-      }
-      return;
-    }
-
-    const activeNode = allNodes.find(n => n.id === nodeId);
-    if (!activeNode) return;
-
-    const relatedNodes = IliLayoutService.getDirectRelations(
-      activeNode,
+  const computeLayout = useCallback(
+    (node: IliNode, override?: Partial<LayoutOptions>) => {
+      const opts: LayoutOptions = {
+        showFullHierarchy,
+        useCurvedLines,
+        showEnums,
+        showAssociations,
+        maxSubTypesPerRow,
+        useMagicLayout: false,
+        ...override,
+      };
+      return IliLayoutService.getDirectRelations(node, allNodes, allEdges, colors, opts);
+    },
+    [
       allNodes,
       allEdges,
       colors,
-      [],
       showFullHierarchy,
       useCurvedLines,
       showEnums,
-      maxSubTypesPerRow 
-    );
+      showAssociations,
+      maxSubTypesPerRow,
+    ]
+  );
 
-    setNodes(relatedNodes.nodes);
-    setEdges(relatedNodes.edges);
-    setActiveNodeId(nodeId);
+  const applyLayout = useCallback(
+    (node: IliNode, override?: Partial<LayoutOptions>) => {
+      const result = computeLayout(node, override);
+      setNodes(result.nodes);
+      setEdges(result.edges);
+      return result;
+    },
+    [computeLayout, setNodes, setEdges]
+  );
 
-   
-    layoutCache.set(nodeId || '', { nodes: relatedNodes.nodes, edges: relatedNodes.edges });
-  }, [
-    allNodes, 
-    allEdges, 
-    showFullHierarchy, 
-    colors, 
-    useCurvedLines, 
-    setNodes, 
-    setEdges,
-    showEnums,
-    maxSubTypesPerRow 
-  ]);
+  const filterNodesAndEdges = useCallback((nodeId: string | null = null) => {
+    const targetNode = nodeId
+      ? (allNodes.find(n => n.id === nodeId) as IliNode | undefined)
+      : ((allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+          allNodes.find(n => n.type === 'classNode')) as IliNode | undefined);
+
+    if (!targetNode) return;
+
+    applyLayout(targetNode, nodeId ? undefined : { maxSubTypesPerRow: 4 });
+    setActiveNodeId(targetNode.id);
+  }, [allNodes, applyLayout]);
 
   const handleFileUpload = useCallback(async (file: File) => {
     try {
@@ -222,15 +206,17 @@ export const useIliSchema = (
       if (initialClass) {
         const relatedNodes = IliLayoutService.getDirectRelations(
           initialClass,
-          flowNodes,
+          flowNodes as IliNode[],
           flowEdges,
           colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          showEnums,
-          4,
-          showAssociations
+          {
+            showFullHierarchy,
+            useCurvedLines,
+            showEnums,
+            showAssociations,
+            maxSubTypesPerRow: 4,
+            useMagicLayout: false,
+          }
         );
 
         setNodes(relatedNodes.nodes);
@@ -285,32 +271,10 @@ export const useIliSchema = (
         }
       };
 
-      const relatedNodes = IliLayoutService.getDirectRelations(
-        processedNode as IliNode,
-        allNodes as IliNode[],
-        allEdges,
-        colors,
-        [],
-        showFullHierarchy,
-        useCurvedLines,
-        showEnums,
-        maxSubTypesPerRow,
-        showAssociations
-      );
-
-      setNodes(relatedNodes.nodes);
-      setEdges(relatedNodes.edges);
+      applyLayout(processedNode as IliNode);
       setActiveNodeId(nodeId);
-      
-     
-      setTimeout(() => {
-        fitView({ duration: 500, padding: 0.2 });
-      }, 50);
-      
-     
-      setTimeout(() => {
-        setSearchValue(null);
-      }, 100);
+      requestFitView();
+      setSearchValue(null);
     } else {
      
       filterNodesAndEdges(null);
@@ -353,23 +317,12 @@ export const useIliSchema = (
       }
     };
 
-    const relatedNodes = IliLayoutService.getDirectRelations(
-      iliNode,
-      allNodes as IliNode[],
-      allEdges,
-      colors,
-      [],
-      showFullHierarchy,
-      useCurvedLines,
-      showEnums,
-      maxSubTypesPerRow,
-      showAssociations
-    );
+    const relatedNodes = computeLayout(iliNode);
 
-    const nodesWithDefaultWidth = relatedNodes.nodes.map(node => ({
-      ...node,
+    const nodesWithDefaultWidth = relatedNodes.nodes.map(n => ({
+      ...n,
       data: {
-        ...node.data,
+        ...n.data,
         width: 400
       }
     }));
@@ -392,31 +345,19 @@ export const useIliSchema = (
 
    
     if (!isResizingRef.current) {
-      setTimeout(() => {
-        fitView({
-          padding: 0.3,
-          duration: 800,
-          includeHiddenNodes: false,
-          minZoom: 0.2,
-          maxZoom: 1.8
-        });
-      }, 100);
+      requestFitView();
     }
   }, [
     activeNodeId,
     allNodes,
-    allEdges,
-    colors,
-    showFullHierarchy,
-    useCurvedLines,
-    maxSubTypesPerRow,
+    computeLayout,
     showEnums,
     showAssociations,
     navigationHistory,
     historyIndex,
     setNodes,
     setEdges,
-    fitView
+    requestFitView,
   ]);
 
   const handleReset = useCallback(() => {
@@ -433,21 +374,10 @@ export const useIliSchema = (
       allNodes.find(n => n.type === 'classNode');
 
     if (initialClass) {
-      const relatedNodes = IliLayoutService.getDirectRelations(
-        initialClass as IliNode,
-        allNodes as IliNode[],
-        allEdges,
-        colors,
-        [],
-        showFullHierarchy,
-        useCurvedLines,
-        true,
-        maxSubTypesPerRow,
-        true
-      );
-
-      setNodes(relatedNodes.nodes);
-      setEdges(relatedNodes.edges);
+      applyLayout(initialClass as IliNode, {
+        showEnums: true,
+        showAssociations: true,
+      });
       setActiveNodeId(initialClass.id);
 
       const initialState: NavigationState = {
@@ -458,14 +388,7 @@ export const useIliSchema = (
       setNavigationHistory([initialState]);
       setHistoryIndex(0);
     }
-  }, [
-    allNodes,
-    allEdges,
-    colors,
-    showFullHierarchy,
-    useCurvedLines,
-    maxSubTypesPerRow
-  ]);
+  }, [allNodes, applyLayout]);
 
   const handleBack = useCallback((): boolean => {
     if (historyIndex > 0) {
@@ -489,51 +412,19 @@ export const useIliSchema = (
           }
         };
 
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          iliNode,
-          allNodes as IliNode[],
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          previousState.showEnums,
-          maxSubTypesPerRow,
-          previousState.showAssociations
-        );
-
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
+        applyLayout(iliNode, {
+          showEnums: previousState.showEnums,
+          showAssociations: previousState.showAssociations,
+        });
         setActiveNodeId(previousState.nodeId);
         setHistoryIndex(historyIndex - 1);
-
-       
-        setTimeout(() => {
-          fitView({
-            padding: 0.2,
-            duration: 800,
-            minZoom: 0.5,
-            maxZoom: 1.5
-          });
-        }, 50);
+        requestFitView();
 
         return true;
       }
     }
     return false;
-  }, [
-    historyIndex,
-    navigationHistory,
-    allNodes,
-    allEdges,
-    colors,
-    showFullHierarchy,
-    useCurvedLines,
-    maxSubTypesPerRow,
-    setNodes,
-    setEdges,
-    fitView
-  ]);
+  }, [historyIndex, navigationHistory, allNodes, applyLayout, requestFitView]);
 
   const handleClearFile = useCallback(() => {
     setNodes([]);
@@ -580,20 +471,8 @@ export const useIliSchema = (
           ])
         );
 
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          currentNode as IliNode,
-          allNodes as IliNode[],
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          visible,
-          maxSubTypesPerRow,
-          showAssociations
-        );
+        const relatedNodes = computeLayout(currentNode as IliNode, { showEnums: visible });
 
-       
         const updatedNodes = relatedNodes.nodes.map(node => {
           const savedState = nodeStates.get(node.id);
           if (savedState) {
@@ -615,17 +494,7 @@ export const useIliSchema = (
         setEdges(relatedNodes.edges);
       }
     }
-  }, [
-    activeNodeId,
-    allNodes,
-    allEdges,
-    colors,
-    showFullHierarchy,
-    useCurvedLines,
-    maxSubTypesPerRow,
-    showAssociations,
-    currentNodes
-  ]);
+  }, [activeNodeId, allNodes, computeLayout, currentNodes, setNodes, setEdges]);
 
  
   useEffect(() => {
@@ -640,24 +509,11 @@ export const useIliSchema = (
  
   useEffect(() => {
     if (!activeNodeId && allNodes.length > 0) {
-      const firstAbstractClass = allNodes.find(n => 
+      const firstAbstractClass = allNodes.find(n =>
         n.type === 'classNode' && n.data.isAbstract
       );
       if (firstAbstractClass) {
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          firstAbstractClass as IliNode,
-          allNodes as IliNode[],
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          showEnums,
-          4,
-          showAssociations 
-        );
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
+        applyLayout(firstAbstractClass as IliNode, { maxSubTypesPerRow: 4 });
         setActiveNodeId(firstAbstractClass.id);
         setNavigationHistory([{
           nodeId: firstAbstractClass.id,
@@ -667,57 +523,19 @@ export const useIliSchema = (
         setHistoryIndex(0);
       }
     }
-  }, [
-    allNodes,
-    allEdges,
-    colors,
-    showFullHierarchy,
-    useCurvedLines,
-    showEnums,
-    showAssociations, 
-    setNodes,
-    setEdges
-  ]);
+  }, [activeNodeId, allNodes, applyLayout]);
 
  
   useEffect(() => {
     if (activeNodeId && allNodes.length > 0) {
-      console.log('Effect triggered - Current showAssociations state:', showAssociations);
       const currentNode = allNodes.find(node => node.id === activeNodeId);
       if (currentNode) {
-        console.log('Updating view for node:', currentNode.id);
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          currentNode as IliNode,
-          allNodes as IliNode[],
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          showEnums,
-          maxSubTypesPerRow,
-          showAssociations
-        );
-
-        console.log('Effect update result:', {
-          nodeCount: relatedNodes.nodes.length,
-          edgeCount: relatedNodes.edges.length,
-          associationNodes: relatedNodes.nodes.filter(n => n.type === 'associationNode').length
-        });
-
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
+        const relatedNodes = applyLayout(currentNode as IliNode);
         setCurrentNodes(relatedNodes.nodes);
         setCurrentEdges(relatedNodes.edges);
       }
     }
-  }, [activeNodeId, maxSubTypesPerRow, showAssociations]);
-
- 
-  useEffect(() => {
-    setCurrentNodes(prevNodes => prevNodes);
-    setCurrentEdges(prevEdges => prevEdges);
-  }, []);
+  }, [activeNodeId, allNodes, applyLayout]);
 
   const handleLineTypeToggle = useCallback(() => {
     setUseCurvedLines(prev => {
@@ -753,95 +571,40 @@ export const useIliSchema = (
   }, [currentNodes, setNodes, setEdges]);
 
   const handleToggleAssociations = useCallback((visible: boolean) => {
-    console.log('handleToggleAssociations called with:', visible);
-    console.log('Current showAssociations state before update:', showAssociations);
-
-   
     setShowAssociations(visible);
-    
-   
+
     if (activeNodeId) {
-        const currentNode = allNodes.find(node => node.id === activeNodeId);
-        if (currentNode) {
-            const relatedNodes = IliLayoutService.getDirectRelations(
-                currentNode as IliNode,
-                allNodes as IliNode[],
-                allEdges,
-                colors,
-                [],
-                showFullHierarchy,
-                useCurvedLines,
-                showEnums,
-                maxSubTypesPerRow,
-                visible 
-            );
+      const currentNode = allNodes.find(node => node.id === activeNodeId);
+      if (currentNode) {
+        applyLayout(currentNode as IliNode, { showAssociations: visible });
 
-            setNodes(relatedNodes.nodes);
-            setEdges(relatedNodes.edges);
-
-           
-            if (historyIndex >= 0) {
-                const updatedHistory = navigationHistory.map((entry, idx) => {
-                    if (idx === historyIndex) {
-                        return { ...entry, showAssociations: visible };
-                    }
-                    return entry;
-                });
-                setNavigationHistory(updatedHistory);
-            }
+        if (historyIndex >= 0) {
+          const updatedHistory = navigationHistory.map((entry, idx) =>
+            idx === historyIndex ? { ...entry, showAssociations: visible } : entry
+          );
+          setNavigationHistory(updatedHistory);
         }
+      }
     }
-  }, [
-    activeNodeId,
-    allNodes,
-    allEdges,
-    colors,
-    showFullHierarchy,
-    useCurvedLines,
-    showEnums,
-    maxSubTypesPerRow,
-    navigationHistory,
-    historyIndex
-  ]);
+  }, [activeNodeId, allNodes, applyLayout, navigationHistory, historyIndex]);
 
   const handleMagicLayout = useCallback(() => {
     if (activeNodeId) {
       const currentNode = allNodes.find(node => node.id === activeNodeId);
       if (currentNode) {
-       
-        const expandedStates = new Map(
-          currentNodes.map(node => [
-            node.id,
-            {
-              expanded: true,
-              isExpanded: true,
-              onExpandChange: node.data?.onExpandChange
-            }
-          ])
+        const expandedHandlers = new Map(
+          currentNodes.map(node => [node.id, node.data?.onExpandChange])
         );
 
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          currentNode as IliNode,
-          allNodes as IliNode[],
-          allEdges,
-          colors,
-          [],
-          showFullHierarchy,
-          useCurvedLines,
-          showEnums,
-          maxSubTypesPerRow,
-          showAssociations,
-          true 
-        );
+        const relatedNodes = computeLayout(currentNode as IliNode, { useMagicLayout: true });
 
-       
         const nodesWithExpandedStates = relatedNodes.nodes.map(node => ({
           ...node,
           data: {
             ...node.data,
             expanded: true,
             isExpanded: true,
-            onExpandChange: expandedStates.get(node.id)?.onExpandChange || node.data?.onExpandChange
+            onExpandChange: expandedHandlers.get(node.id) || node.data?.onExpandChange
           }
         }));
 
@@ -851,18 +614,7 @@ export const useIliSchema = (
         setCurrentEdges(relatedNodes.edges);
       }
     }
-  }, [
-    activeNodeId,
-    allNodes,
-    allEdges,
-    colors,
-    showFullHierarchy,
-    useCurvedLines,
-    showEnums,
-    maxSubTypesPerRow,
-    showAssociations,
-    currentNodes
-  ]);
+  }, [activeNodeId, allNodes, computeLayout, currentNodes, setNodes, setEdges]);
 
   const handleNodeResize = useCallback((nodeId: string, width: number) => {
    
@@ -929,5 +681,9 @@ export const useIliSchema = (
     showAssociations,
     handleToggleAssociations,
     handleMagicLayout,
+    applyLayout,
+    computeLayout,
+    fitViewRequest,
+    requestFitView,
   };
 };

@@ -1,6 +1,6 @@
 import { Node, Edge, Position, MarkerType } from '@xyflow/react';
 import { ThemeColors } from '../../../common/theme/ThemeContext';
-import { IliAttribute, IliAssociation, IliNode } from './types/IliBaseTypes';
+import { IliAttribute, IliAssociation, IliNode, LayoutOptions } from './types/IliBaseTypes';
 
 interface NodeData {
   [key: string]: any;
@@ -104,11 +104,9 @@ export class IliLayoutService {
 
  
   private static calculateSubtypePosition(
-    index: number, 
+    index: number,
     totalSubTypes: number,
     maxSubTypesPerRow: number,
-    heightMap: Map<string, number>,
-    subTypes: string[],
     useMagicLayout: boolean = false
   ): { x: number; y: number } {
    
@@ -173,23 +171,17 @@ export class IliLayoutService {
     allNodes: IliNode[],
     allEdges: Edge[],
     colors: ThemeColors,
-    nodeHeights: [string, number][] = [],
-    showFullHierarchy = false,
-    useCurvedLines = true,
-    showEnums = true,
-    maxSubTypesPerRow = 0,
-    showAssociations = true,
-    useMagicLayout = false,
+    options: LayoutOptions,
   ): { nodes: IliNode[]; edges: Edge[] } {
-   
-    console.log('getDirectRelations input entity:', {
-      id: entity.id,
-      type: entity.type,
-      data: entity.data,
-      showAssociations
-    });
+    const {
+      showFullHierarchy,
+      useCurvedLines,
+      showEnums,
+      showAssociations,
+      maxSubTypesPerRow,
+      useMagicLayout,
+    } = options;
 
-   
     if (!entity || !allNodes || !allEdges) return { nodes: [], edges: [] };
 
    
@@ -201,25 +193,6 @@ export class IliLayoutService {
     const enumEdges: Edge[] = [];
     let enhancedNodes: IliNode[] = [];
     let allEdgesResult: Edge[] = [];
-
-   
-    const heightMap = new Map(nodeHeights);
-
-   
-    const calculateVerticalOffset = (nodeId: string, baseOffset: number): number => {
-      const previousNodes = Array.from(relatedNodeIds)
-        .filter(id => {
-          const node = nodeMap.get(id);
-          return node && node.position.y < baseOffset;
-        });
-
-      let offset = baseOffset;
-      for (const prevId of previousNodes) {
-        const height = heightMap.get(prevId) || this.LAYOUT_CONFIG.NODE.HEIGHT;
-        offset += height + this.LAYOUT_CONFIG.SPACING.VERTICAL;
-      }
-      return offset;
-    };
 
    
     if (entity.type === 'enumNode' || entity.type === 'ENUMERATION' || entity.type === 'domainEnumNode') {
@@ -784,8 +757,6 @@ export class IliLayoutService {
             index,
             subTypeArray.length,
             maxSubTypesPerRow,
-            heightMap,
-            subTypeArray,
             useMagicLayout
           );
         }

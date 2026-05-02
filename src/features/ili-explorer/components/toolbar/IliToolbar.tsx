@@ -130,7 +130,7 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
             }
           }}
         >
-          <Tooltip title="INTERLIS Schema hochladen">
+          <Tooltip title="INTERLIS Modell hochladen (ili)">
             <IconButton
               onClick={handleUploadClick}
               size="small"
