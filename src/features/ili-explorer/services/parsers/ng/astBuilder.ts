@@ -13,6 +13,7 @@ interface VisitState {
   relations: IliRelation[];
   domainEnumsByName: Map<string, IliEnumValue[]>;
   parsedAssociations: IliAssociation[];
+  pendingReferences: { sourceClass: string; targetQualified: string; attrName: string; isExternal: boolean }[];
 }
 
 function lastSegment(qualified: string): string {
@@ -23,27 +24,101 @@ function imageOf(token: IToken | undefined): string {
   return token ? token.image : '';
 }
 
+function extractCommentText(token: IToken): string | null {
+  const raw = token.image;
+  if (raw.startsWith('!!@')) {
+    const m = raw.match(/^!!@\s*comment\s*=\s*"([^"]*)"/);
+    return m ? m[1].trim() : null;
+  }
+  if (raw.startsWith('!!')) {
+    const text = raw.slice(2).trim();
+    return text.length > 0 ? text : null;
+  }
+  if (raw.startsWith('/*')) {
+    const text = raw.slice(2, -2).trim();
+    return text.length > 0 ? text : null;
+  }
+  return null;
+}
+
 class IliCstToAstVisitor extends BaseVisitor {
   private state: VisitState = {
     topicName: '', nodes: [], relations: [],
     domainEnumsByName: new Map(), parsedAssociations: [],
+    pendingReferences: [],
   };
+  private commentBefore: Map<number, IToken[]> = new Map();
 
   constructor() {
     super();
     this.validateVisitor();
   }
 
-  build(cst: CstNode): { nodes: IliBaseNode[]; relations: IliRelation[] } {
+  build(
+    cst: CstNode,
+    commentBefore: Map<number, IToken[]> = new Map(),
+  ): { nodes: IliBaseNode[]; relations: IliRelation[] } {
     this.state = {
       topicName: '', nodes: [], relations: [],
       domainEnumsByName: new Map(), parsedAssociations: [],
+      pendingReferences: [],
     };
+    this.commentBefore = commentBefore;
     this.visit(cst);
     this.decorateDomainAttributes();
     this.decorateAssociations();
+    this.decorateReferences();
     this.decorateInheritedAttributes();
+    this.decorateExternalNodes();
     return { nodes: this.state.nodes, relations: this.state.relations };
+  }
+
+  private decorateExternalNodes(): void {
+    const knownIds = new Set(this.state.nodes.map(n => n.id));
+    const seen = new Set<string>();
+    for (const rel of this.state.relations) {
+      if (knownIds.has(rel.targetId) || seen.has(rel.targetId)) continue;
+      seen.add(rel.targetId);
+      const localName = lastSegment(rel.targetId);
+      const externalSource = rel.targetId.includes('.')
+        ? rel.targetId.slice(0, rel.targetId.lastIndexOf('.'))
+        : undefined;
+      this.state.nodes.push({
+        id: rel.targetId,
+        type: 'CLASS',
+        name: localName,
+        position: { x: 0, y: 0 },
+        data: {
+          label: localName,
+          isExternal: true,
+          externalSource,
+          isHighlighted: false,
+          isActive: false,
+        },
+      });
+    }
+  }
+
+  private decorateReferences(): void {
+    for (const ref of this.state.pendingReferences) {
+      const targetLocal = lastSegment(ref.targetQualified);
+      this.state.relations.push({
+        id: `${ref.sourceClass}-${ref.attrName}-${targetLocal}-ref`,
+        sourceId: ref.sourceClass,
+        targetId: targetLocal,
+        type: 'REFERENCES',
+        role: ref.attrName,
+      });
+    }
+  }
+
+  private commentFor(token: IToken | undefined): string | undefined {
+    if (!token) return undefined;
+    const cs = this.commentBefore.get(token.startOffset);
+    if (!cs || cs.length === 0) return undefined;
+    const texts = cs.map(extractCommentText).filter((t): t is string => !!t);
+    if (texts.length === 0) return undefined;
+    return texts.join('\n');
   }
 
   private decorateInheritedAttributes(): void {
@@ -123,6 +198,10 @@ class IliCstToAstVisitor extends BaseVisitor {
   modelDef(ctx: any) {
     if (ctx.domainSection) ctx.domainSection.forEach((d: CstNode) => this.visit(d));
     if (ctx.topicDef) ctx.topicDef.forEach((t: CstNode) => this.visit(t));
+    if (ctx.classDef) ctx.classDef.forEach((c: CstNode) => this.visit(c));
+    if (ctx.structureDef) ctx.structureDef.forEach((s: CstNode) => this.visit(s));
+    if (ctx.enumerationDef) ctx.enumerationDef.forEach((e: CstNode) => this.visit(e));
+    if (ctx.associationDef) ctx.associationDef.forEach((a: CstNode) => this.visit(a));
   }
 
   modelHeaderBits() {}
@@ -144,6 +223,7 @@ class IliCstToAstVisitor extends BaseVisitor {
   structureDef(ctx: any) {
     const structName = imageOf(ctx.structName?.[0]);
     const isAbstract = !!ctx.classModifier;
+    const comment = this.commentFor(ctx.Structure?.[0]);
 
     let superTypeQualified: string | undefined;
     if (ctx.extendsClause) {
@@ -173,6 +253,7 @@ class IliCstToAstVisitor extends BaseVisitor {
         isAbstract,
         attributes,
         topic: this.state.topicName,
+        comment,
         isHighlighted: false,
         isActive: false,
       },
@@ -187,6 +268,15 @@ class IliCstToAstVisitor extends BaseVisitor {
         type: 'EXTENDS',
       });
     }
+  }
+
+  referenceType(ctx: any): Partial<IliAttribute> {
+    const target = this.visit(ctx.qualifiedName[0]) as string;
+    const isExternal = !!ctx.External;
+    return {
+      type: `REFERENCE TO ${target}`,
+      isReference: true,
+    };
   }
 
   collectionType(ctx: any): Partial<IliAttribute> {
@@ -232,6 +322,7 @@ class IliCstToAstVisitor extends BaseVisitor {
 
   domainDef(ctx: any) {
     const domainName = imageOf(ctx.domainName?.[0]);
+    const comment = this.commentFor(ctx.domainName?.[0]);
     const id = `domain_${domainName}`;
     const extendsName = ctx.extendsRef ? this.visit(ctx.extendsRef[0]) as string : undefined;
 
@@ -250,6 +341,7 @@ class IliCstToAstVisitor extends BaseVisitor {
           isDomainEnum: true,
           isAllOf: true,
           baseEnum: baseRefName,
+          comment,
           isHighlighted: false,
           isActive: false,
         },
@@ -272,6 +364,7 @@ class IliCstToAstVisitor extends BaseVisitor {
           isDomainEnum: true,
           isAllOf: false,
           extends: extendsName,
+          comment,
           isHighlighted: false,
           isActive: false,
         },
@@ -290,6 +383,7 @@ class IliCstToAstVisitor extends BaseVisitor {
 
   enumerationDef(ctx: any) {
     const enumName = imageOf(ctx.enumName?.[0]);
+    const comment = this.commentFor(ctx.Enumeration?.[0]);
     const enumValues = (this.visit(ctx.enumValueList[0]) as IliEnumValue[]) ?? [];
     const node: IliBaseNode = {
       id: enumName,
@@ -299,6 +393,7 @@ class IliCstToAstVisitor extends BaseVisitor {
       data: {
         label: enumName,
         enumValues,
+        comment,
         isHighlighted: false,
         isActive: false,
       },
@@ -314,7 +409,9 @@ class IliCstToAstVisitor extends BaseVisitor {
 
   enumValue(ctx: any): IliEnumValue {
     const value = imageOf(ctx.valueName?.[0]);
+    const comment = this.commentFor(ctx.valueName?.[0]);
     const result: IliEnumValue = { value };
+    if (comment) result.comment = comment;
     if (ctx.enumValueList) {
       result.subValues = this.visit(ctx.enumValueList[0]) as IliEnumValue[];
     }
@@ -324,6 +421,7 @@ class IliCstToAstVisitor extends BaseVisitor {
   classDef(ctx: any) {
     const className = imageOf(ctx.className?.[0]);
     const isAbstract = !!ctx.classModifier;
+    const comment = this.commentFor(ctx.Class?.[0]);
 
     let superTypeQualified: string | undefined;
     if (ctx.extendsClause) {
@@ -340,6 +438,18 @@ class IliCstToAstVisitor extends BaseVisitor {
       });
     }
 
+    for (const attr of attributes) {
+      if (attr.isReference && attr.type.startsWith('REFERENCE TO ')) {
+        const target = attr.type.slice('REFERENCE TO '.length).trim();
+        this.state.pendingReferences.push({
+          sourceClass: className,
+          targetQualified: target,
+          attrName: attr.name,
+          isExternal: target.includes('.'),
+        });
+      }
+    }
+
     const node: IliClassNode = {
       id: className,
       type: 'CLASS',
@@ -350,6 +460,7 @@ class IliCstToAstVisitor extends BaseVisitor {
       associations: [],
       inheritedAttributes: [],
       topicId: this.state.topicName,
+      comment,
       data: {
         label: className,
         isAbstract,
@@ -357,6 +468,7 @@ class IliCstToAstVisitor extends BaseVisitor {
         associations: [],
         inheritedAttributes: [],
         topic: this.state.topicName,
+        comment,
         isHighlighted: false,
         isActive: false,
       },
@@ -395,15 +507,18 @@ class IliCstToAstVisitor extends BaseVisitor {
   attributeDef(ctx: any): IliAttribute {
     const name = imageOf(ctx.attrName?.[0]);
     const mandatory = !!ctx.Mandatory;
+    const comment = this.commentFor(ctx.attrName?.[0]);
     const typeInfo = ctx.attributeType?.[0]
       ? this.visit(ctx.attributeType[0]) as Partial<IliAttribute>
       : { type: '' };
-    return {
+    const result: IliAttribute = {
       name,
       mandatory,
       type: typeInfo.type ?? '',
       ...typeInfo,
     };
+    if (comment) result.comment = comment;
+    return result;
   }
 
   attributeType(ctx: any): Partial<IliAttribute> {
@@ -414,6 +529,7 @@ class IliCstToAstVisitor extends BaseVisitor {
     if (ctx.Boolean) return { type: 'BOOLEAN' };
     if (ctx.Date) return { type: 'DATE' };
     if (ctx.DateTime) return { type: 'DATETIME' };
+    if (ctx.referenceType) return this.visit(ctx.referenceType[0]) as Partial<IliAttribute>;
     if (ctx.collectionType) return this.visit(ctx.collectionType[0]) as Partial<IliAttribute>;
     if (ctx.geometryType) return this.visit(ctx.geometryType[0]) as Partial<IliAttribute>;
     if (ctx.enumValueList) {

@@ -5,7 +5,7 @@ import {
   Identifier, NumberLiteral, StringLiteral,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket,
   Colon,
-  Mandatory, Abstract, Extends,
+  Mandatory, Abstract, Final, Extends,
   Text, Numeric, Boolean, Date, DateTime, MText,
   Star, Minus, Plus, Slash, DashDash,
   ArrowLeft, ArrowRight, ArrowBoth,
@@ -24,6 +24,12 @@ import {
   Oid,
   Attribute, Extended, Unqualified,
   CompositionArrow, AggregationArrow,
+  Reference, Basket, HashIdentifier,
+  Not, And, Or, True, False, Null,
+  NotEqual, EqualEqual, ColonEquals, At2,
+  Tid, Type, Restriction,
+  Depends, On, No, Format, In, Constraints,
+  Required,
 } from './tokens';
 
 export class IliCstParser extends CstParser {
@@ -57,6 +63,10 @@ export class IliCstParser extends CstParser {
         { ALT: () => this.SUBRULE(this.domainSection) },
         { ALT: () => this.SUBRULE(this.importsClause) },
         { ALT: () => this.SUBRULE(this.unitSection) },
+        { ALT: () => this.SUBRULE(this.classDef) },
+        { ALT: () => this.SUBRULE(this.structureDef) },
+        { ALT: () => this.SUBRULE(this.enumerationDef) },
+        { ALT: () => this.SUBRULE(this.associationDef) },
       ]);
     });
     this.CONSUME(End);
@@ -117,11 +127,17 @@ export class IliCstParser extends CstParser {
     this.CONSUME(Translation);
     this.CONSUME(Of);
     this.SUBRULE(this.qualifiedName);
+    this.OPTION(() => {
+      this.CONSUME(LBracket);
+      this.CONSUME(StringLiteral);
+      this.CONSUME(RBracket);
+    });
   });
 
   topicDef = this.RULE('topicDef', () => {
     this.CONSUME(Topic);
     this.CONSUME(Identifier, { LABEL: 'topicName' });
+    this.OPTION3(() => this.SUBRULE(this.classModifier));
     this.OPTION(() => this.SUBRULE(this.extendsClause));
     this.CONSUME(Equals);
     this.MANY(() => {
@@ -131,10 +147,50 @@ export class IliCstParser extends CstParser {
         { ALT: () => this.SUBRULE(this.enumerationDef) },
         { ALT: () => this.SUBRULE(this.domainSection) },
         { ALT: () => this.SUBRULE(this.associationDef) },
+        { ALT: () => this.SUBRULE(this.basketOidDecl) },
+        { ALT: () => this.SUBRULE(this.topicOidDecl) },
+        { ALT: () => this.SUBRULE(this.dependsOnDecl) },
+        { ALT: () => this.SUBRULE(this.constraintsOfBlock) },
       ]);
     });
     this.CONSUME(End);
     this.CONSUME2(Identifier, { LABEL: 'topicEndName' });
+    this.CONSUME(Semicolon);
+  });
+
+  constraintsOfBlock = this.RULE('constraintsOfBlock', () => {
+    this.CONSUME(Constraints);
+    this.CONSUME(Of);
+    this.SUBRULE(this.qualifiedName);
+    this.CONSUME(Equals);
+    this.MANY(() => this.SUBRULE(this.constraintClause));
+    this.CONSUME(End);
+    this.CONSUME(Semicolon);
+  });
+
+  dependsOnDecl = this.RULE('dependsOnDecl', () => {
+    this.CONSUME(Depends);
+    this.CONSUME(On);
+    this.SUBRULE(this.qualifiedName);
+    this.MANY(() => {
+      this.CONSUME(Comma);
+      this.SUBRULE2(this.qualifiedName);
+    });
+    this.CONSUME(Semicolon);
+  });
+
+  topicOidDecl = this.RULE('topicOidDecl', () => {
+    this.CONSUME(Oid);
+    this.CONSUME(As);
+    this.SUBRULE(this.qualifiedName);
+    this.CONSUME(Semicolon);
+  });
+
+  basketOidDecl = this.RULE('basketOidDecl', () => {
+    this.CONSUME(Basket);
+    this.CONSUME(Oid);
+    this.CONSUME(As);
+    this.SUBRULE(this.qualifiedName);
     this.CONSUME(Semicolon);
   });
 
@@ -144,7 +200,12 @@ export class IliCstParser extends CstParser {
     this.OPTION(() => this.SUBRULE(this.classModifier));
     this.OPTION2(() => this.SUBRULE(this.extendsClause));
     this.CONSUME(Equals);
-    this.MANY(() => this.SUBRULE(this.attributeDef));
+    this.MANY(() => {
+      this.OR([
+        { ALT: () => this.SUBRULE(this.attributeDef) },
+        { ALT: () => this.SUBRULE(this.constraintClause) },
+      ]);
+    });
     this.CONSUME(End);
     this.CONSUME2(Identifier, { LABEL: 'structEndName' });
     this.CONSUME(Semicolon);
@@ -163,8 +224,18 @@ export class IliCstParser extends CstParser {
   associationDef = this.RULE('associationDef', () => {
     this.CONSUME(Association);
     this.CONSUME(Identifier, { LABEL: 'assocName' });
+    this.OPTION(() => this.SUBRULE(this.classModifier));
+    this.OPTION2(() => this.SUBRULE(this.extendsClause));
+    this.OPTION3(() => this.SUBRULE(this.oidClause));
     this.CONSUME(Equals);
-    this.MANY(() => this.SUBRULE(this.roleDef));
+    this.MANY(() => {
+      this.OR([
+        { ALT: () => this.SUBRULE(this.roleDef) },
+        { ALT: () => this.SUBRULE(this.constraintClause) },
+        { ALT: () => this.SUBRULE(this.attributeDef) },
+        { ALT: () => this.SUBRULE(this.topicOidDecl) },
+      ]);
+    });
     this.CONSUME(End);
     this.CONSUME2(Identifier, { LABEL: 'assocEndName' });
     this.CONSUME(Semicolon);
@@ -174,17 +245,43 @@ export class IliCstParser extends CstParser {
     this.CONSUME(Identifier, { LABEL: 'roleName' });
     this.OPTION(() => {
       this.CONSUME(LParen);
-      this.CONSUME(External);
+      this.OR([
+        { ALT: () => this.CONSUME(External) },
+        { ALT: () => this.CONSUME2(Identifier, { LABEL: 'roleModifier' }) },
+      ]);
+      this.MANY(() => {
+        this.CONSUME(Comma);
+        this.OR2([
+          { ALT: () => this.CONSUME2(External) },
+          { ALT: () => this.CONSUME3(Identifier, { LABEL: 'roleModifierMore' }) },
+        ]);
+      });
       this.CONSUME(RParen);
     });
-    this.OR([
+    this.OR3([
       { ALT: () => this.CONSUME(DashDash) },
       { ALT: () => this.CONSUME(CompositionArrow) },
       { ALT: () => this.CONSUME(AggregationArrow) },
     ]);
-    this.SUBRULE(this.cardinality);
+    this.OPTION2(() => this.SUBRULE(this.cardinality));
     this.SUBRULE(this.qualifiedName, { LABEL: 'targetClass' });
+    this.MANY2(() => {
+      this.CONSUME(Or);
+      this.SUBRULE2(this.qualifiedName, { LABEL: 'targetClassAlt' });
+    });
+    this.OPTION3(() => this.SUBRULE(this.restrictionClause));
     this.CONSUME(Semicolon);
+  });
+
+  restrictionClause = this.RULE('restrictionClause', () => {
+    this.CONSUME(Restriction);
+    this.CONSUME(LParen);
+    this.SUBRULE(this.qualifiedName);
+    this.MANY(() => {
+      this.CONSUME(Semicolon);
+      this.SUBRULE2(this.qualifiedName);
+    });
+    this.CONSUME(RParen);
   });
 
   domainSection = this.RULE('domainSection', () => {
@@ -206,9 +303,31 @@ export class IliCstParser extends CstParser {
       { ALT: () => this.SUBRULE4(this.numericRange) },
       { ALT: () => this.SUBRULE5(this.geometryType) },
       { ALT: () => this.SUBRULE6(this.textType) },
+      { ALT: () => this.SUBRULE(this.oidDomainType) },
+      { ALT: () => this.SUBRULE(this.formatType) },
       { ALT: () => this.SUBRULE7(this.qualifiedName, { LABEL: 'aliasRef' }) },
     ]);
     this.CONSUME(Semicolon);
+  });
+
+  formatType = this.RULE('formatType', () => {
+    this.CONSUME(Format);
+    this.OPTION(() => this.CONSUME(Identifier, { LABEL: 'formatBase' }));
+    this.SUBRULE(this.qualifiedName);
+    this.OPTION2(() => {
+      this.CONSUME(StringLiteral, { LABEL: 'minVal' });
+      this.CONSUME(DotDot);
+      this.CONSUME2(StringLiteral, { LABEL: 'maxVal' });
+    });
+  });
+
+  oidDomainType = this.RULE('oidDomainType', () => {
+    this.CONSUME(Oid);
+    this.OR([
+      { ALT: () => this.SUBRULE(this.textType) },
+      { ALT: () => this.SUBRULE(this.numericType) },
+      { ALT: () => this.SUBRULE(this.qualifiedName) },
+    ]);
   });
 
   allOfClause = this.RULE('allOfClause', () => {
@@ -235,6 +354,13 @@ export class IliCstParser extends CstParser {
       });
     });
     this.CONSUME(RParen);
+    this.OPTION2({
+      GATE: () => {
+        const t = this.LA(1);
+        return t.tokenType === Identifier && (t.image === 'ORDERED' || t.image === 'CIRCULAR');
+      },
+      DEF: () => this.CONSUME2(Identifier, { LABEL: 'enumModifier' }),
+    });
   });
 
   enumValue = this.RULE('enumValue', () => {
@@ -254,10 +380,17 @@ export class IliCstParser extends CstParser {
       this.OR([
         { ALT: () => this.SUBRULE(this.attributeDef) },
         { ALT: () => this.SUBRULE(this.constraintClause) },
+        { ALT: () => this.SUBRULE(this.noOidClause) },
       ]);
     });
     this.CONSUME(End);
     this.CONSUME2(Identifier, { LABEL: 'classEndName' });
+    this.CONSUME(Semicolon);
+  });
+
+  noOidClause = this.RULE('noOidClause', () => {
+    this.CONSUME(No);
+    this.CONSUME(Oid);
     this.CONSUME(Semicolon);
   });
 
@@ -285,7 +418,11 @@ export class IliCstParser extends CstParser {
 
   classModifier = this.RULE('classModifier', () => {
     this.CONSUME(LParen);
-    this.CONSUME(Abstract);
+    this.OR([
+      { ALT: () => this.CONSUME(Abstract) },
+      { ALT: () => this.CONSUME(Final) },
+      { ALT: () => this.CONSUME(Extended) },
+    ]);
     this.CONSUME(RParen);
   });
 
@@ -319,6 +456,10 @@ export class IliCstParser extends CstParser {
     this.CONSUME(Colon);
     this.OPTION2(() => this.CONSUME(Mandatory));
     this.SUBRULE(this.attributeType);
+    this.OPTION3(() => {
+      this.CONSUME(ColonEquals);
+      this.MANY(() => this.SUBRULE(this.geometryBodyToken));
+    });
     this.CONSUME(Semicolon);
   });
 
@@ -331,11 +472,24 @@ export class IliCstParser extends CstParser {
       { ALT: () => this.CONSUME(Boolean) },
       { ALT: () => this.CONSUME(Date) },
       { ALT: () => this.CONSUME(DateTime) },
+      { ALT: () => this.SUBRULE(this.referenceType) },
+      { ALT: () => this.SUBRULE(this.oidDomainType) },
       { ALT: () => this.SUBRULE(this.collectionType) },
       { ALT: () => this.SUBRULE(this.geometryType) },
       { ALT: () => this.SUBRULE(this.enumValueList) },
       { ALT: () => this.SUBRULE(this.qualifiedName) },
     ]);
+  });
+
+  referenceType = this.RULE('referenceType', () => {
+    this.CONSUME(Reference);
+    this.CONSUME(To);
+    this.OPTION(() => {
+      this.CONSUME(LParen);
+      this.CONSUME(External);
+      this.CONSUME(RParen);
+    });
+    this.SUBRULE(this.qualifiedName);
   });
 
   mtextType = this.RULE('mtextType', () => {
@@ -364,7 +518,30 @@ export class IliCstParser extends CstParser {
     this.OR([
       { ALT: () => this.CONSUME(NumberLiteral) },
       { ALT: () => this.CONSUME(Identifier) },
+      { ALT: () => this.CONSUME(HashIdentifier) },
       { ALT: () => this.CONSUME(StringLiteral) },
+      { ALT: () => this.CONSUME(Interlis) },
+      { ALT: () => this.CONSUME(Not) },
+      { ALT: () => this.CONSUME(And) },
+      { ALT: () => this.CONSUME(Or) },
+      { ALT: () => this.CONSUME(True) },
+      { ALT: () => this.CONSUME(False) },
+      { ALT: () => this.CONSUME(Null) },
+      { ALT: () => this.CONSUME(NotEqual) },
+      { ALT: () => this.CONSUME(EqualEqual) },
+      { ALT: () => this.CONSUME(ColonEquals) },
+      { ALT: () => this.CONSUME(At2) },
+      { ALT: () => this.CONSUME(Constraint) },
+      { ALT: () => this.CONSUME(Unique) },
+      { ALT: () => this.CONSUME(Existence) },
+      { ALT: () => this.CONSUME(Set) },
+      { ALT: () => this.CONSUME(Tid) },
+      { ALT: () => this.CONSUME(Oid) },
+      { ALT: () => this.CONSUME(Type) },
+      { ALT: () => this.CONSUME(All) },
+      { ALT: () => this.CONSUME(Reference) },
+      { ALT: () => this.CONSUME(Bag) },
+      { ALT: () => this.CONSUME(List) },
       { ALT: () => this.CONSUME(Comma) },
       { ALT: () => this.CONSUME(Dot) },
       { ALT: () => this.CONSUME(DotDot) },
@@ -395,6 +572,8 @@ export class IliCstParser extends CstParser {
       { ALT: () => this.CONSUME(Mandatory) },
       { ALT: () => this.CONSUME(Equals) },
       { ALT: () => this.CONSUME(Colon) },
+      { ALT: () => this.CONSUME(Required) },
+      { ALT: () => this.CONSUME(In) },
     ]);
   });
 
