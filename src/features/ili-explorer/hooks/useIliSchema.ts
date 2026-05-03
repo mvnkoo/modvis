@@ -2,7 +2,10 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Node, Edge, Connection, FitViewOptions } from '@xyflow/react';
 import { useTheme } from '../../../common/theme/ThemeContext';
+import { useSettings } from '../../../common/settings/SettingsContext';
 import { IliSchemaService } from '../services/iliSchemaService';
+import { LegacyIliParser } from '../services/parsers/LegacyIliParser';
+import { NgIliParser } from '../services/parsers/ng/NgIliParser';
 import { IliLayoutService } from '../services/IliLayoutService';
 import { generateSearchOptions } from '../services/searchOptions';
 import {
@@ -111,7 +114,15 @@ export const useIliSchema = (
     setFitViewRequest(c => c + 1);
   }, []);
 
-  const schemaServiceRef = useRef<IliSchemaService>(new IliSchemaService());
+  const { parserBackend } = useSettings();
+  const schemaServiceRef = useRef<IliSchemaService>(
+    new IliSchemaService(parserBackend === 'ng' ? new NgIliParser() : new LegacyIliParser())
+  );
+  useEffect(() => {
+    schemaServiceRef.current = new IliSchemaService(
+      parserBackend === 'ng' ? new NgIliParser() : new LegacyIliParser()
+    );
+  }, [parserBackend]);
   const isResizingRef = useRef(false);
 
   const computeLayout = useCallback(

@@ -1,25 +1,26 @@
-import { 
-  IliBaseNode, 
+import {
+  IliBaseNode,
   IliRelation,
   IliNodeType
 } from './types/IliBaseTypes';
 import {
   IliModelNode,
   IliTopicNode,
-  IliClassNode 
+  IliClassNode
 } from './types/IliModelTypes';
-import { IliParserService } from './IliParserService.ts';
+import type { IliParser } from './parsers/IliParser';
+import { LegacyIliParser } from './parsers/LegacyIliParser';
 import { v4 as uuid } from 'uuid';
 
 export class IliSchemaService {
   private nodes: Map<string, IliBaseNode>;
   private relations: Map<string, IliRelation>;
-  private parser: IliParserService;
+  private parser: IliParser;
 
-  constructor() {
+  constructor(parser: IliParser = new LegacyIliParser()) {
     this.nodes = new Map();
     this.relations = new Map();
-    this.parser = new IliParserService();
+    this.parser = parser;
   }
 
   public parseSchema(content: string): void {
