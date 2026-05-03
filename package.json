@@ -9,19 +9,22 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.6",
     "@mui/material": "^5.15.6",
+    "@xyflow/react": "^12.10.2",
     "html-to-image": "^1.11.11",
     "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-colorful": "^5.6.1",
     "react-dom": "^18.2.0",
-    "@xyflow/react": "^12.10.2",
     "uuid": "^14.0.0"
   },
   "scripts": {
     "dev": "vite",
     "start": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --noEmit"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.202",
@@ -31,6 +34,7 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.6.3",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "vitest": "^4.1.5"
   }
 }

@@ -43,50 +43,38 @@ interface IliDomainEnumNodeProps {
 
 const EnumValueRow: React.FC<{ value: IliEnumValue; depth?: number }> = memo(({ value, depth = 0 }) => {
   const { colors } = useTheme();
-  
-  const getTooltipContent = (value: IliEnumValue): React.ReactNode => {
-    const parts: React.ReactNode[] = [];
-    
-    if (value.comment) {
-      parts.push(
-        <Typography variant="caption" sx={{ display: 'block' }}>
-          {value.comment}
-        </Typography>
-      );
-    }
-    
-    return parts.length ? <Box sx={{ p: 1 }}>{parts}</Box> : null;
-  };
+  const hasSubValues = value.subValues && value.subValues.length > 0;
+
+  const tooltipContent = value.comment ? (
+    <Box sx={{ p: 1, maxWidth: 400 }}>
+      <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'pre-wrap', color: 'text.secondary' }}>
+        {value.comment}
+      </Typography>
+    </Box>
+  ) : null;
 
   return (
-    <Box sx={{ 
-      display: 'grid', 
-      gridTemplateColumns: '24px minmax(100px, 1fr)',
-      gap: 1,
-      alignItems: 'start',
-      py: 0.5,
-      px: 1,
-      pl: 1 + depth * 2,
-      '&:hover': {
-        bgcolor: 'action.hover'
-      }
-    }}>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        height: '100%',
-        pt: 0.3
+    <>
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: '24px minmax(100px, 1fr)',
+        gap: 1,
+        alignItems: 'start',
+        py: 0.5,
+        px: 1,
+        pl: 1 + depth * 2,
+        '&:hover': { bgcolor: 'action.hover' }
       }}>
-        <Box sx={{ 
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          bgcolor: 'text.primary'
-        }} />
-      </Box>
-      <Box>
-        <Tooltip 
-          title={getTooltipContent(value)}
+        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', pt: 0.3 }}>
+          <Box sx={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            bgcolor: 'text.primary'
+          }} />
+        </Box>
+        <Tooltip
+          title={tooltipContent}
           placement="right"
           componentsProps={{
             tooltip: {
@@ -99,33 +87,25 @@ const EnumValueRow: React.FC<{ value: IliEnumValue; depth?: number }> = memo(({ 
             }
           }}
         >
-          <Typography 
-            sx={{ 
+          <Typography
+            sx={{
               fontFamily: 'monospace',
               fontSize: '0.75rem',
               lineHeight: 1.4,
               color: colors.text,
+              cursor: value.comment ? 'help' : 'default',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word'
             }}
           >
             {value.value}
-            {value.comment && (
-              <Typography 
-                component="span" 
-                sx={{ 
-                  ml: 1,
-                  color: 'text.secondary',
-                  fontSize: '0.7rem'
-                }}
-              >
-                ({value.comment})
-              </Typography>
-            )}
           </Typography>
         </Tooltip>
       </Box>
-    </Box>
+      {hasSubValues && value.subValues!.map((subValue, index) => (
+        <EnumValueRow key={`${subValue.value}-${index}`} value={subValue} depth={depth + 1} />
+      ))}
+    </>
   );
 });
 
