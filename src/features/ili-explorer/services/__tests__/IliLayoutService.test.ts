@@ -176,6 +176,74 @@ describe('IliLayoutService.getDirectRelations', () => {
     expect(a.edges.map(e => e.id).sort()).toEqual(b.edges.map(e => e.id).sort());
   });
 
+  it('preserves canonical react-flow node types via flowMapping (regression)', () => {
+    const ili = `
+      MODEL Demo =
+        TOPIC T =
+          ENUMERATION Color = (red, green, blue);
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `;
+
+    const { flowNodes } = buildLayoutInput(ili);
+    const enumNode = flowNodes.find(n => n.id === 'Color');
+    expect(enumNode?.type).toBe('enumNode');
+  });
+
+  it('flattens parser data into flowNode.data so enumValues survive (regression)', () => {
+    const ili = `
+      MODEL Demo =
+        TOPIC T =
+          ENUMERATION Color = (red, green, blue);
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `;
+
+    const { flowNodes } = buildLayoutInput(ili);
+    const enumNode = flowNodes.find(n => n.id === 'Color');
+    expect(enumNode?.data.enumValues?.map((v: { value: string }) => v.value))
+      .toEqual(['red', 'green', 'blue']);
+  });
+
+  it('emits an edge from a class to its domain-enum attribute (regression)', () => {
+    const ili = `
+      MODEL Demo =
+        DOMAIN
+          BaseStatus EXTENDS External.Base = (
+            active,
+            inactive
+          );
+          Status = ALL OF BaseStatus;
+        TOPIC T =
+          CLASS Foo =
+            state : Status;
+          END Foo;
+        END T;
+      END Demo.
+    `;
+
+    const { flowNodes, flowEdges } = buildLayoutInput(ili);
+    const foo = flowNodes.find(n => n.id === 'Foo')!;
+
+    const result = IliLayoutService.getDirectRelations(
+      foo,
+      flowNodes,
+      flowEdges,
+      mockColors,
+      defaultLayoutOptions,
+    );
+
+    const domainEdge = result.edges.find(e => e.target === 'domain_Status');
+    expect(domainEdge).toBeDefined();
+    expect(domainEdge?.source).toBe('Foo');
+  });
+
   it('returns empty result for falsy entity / nodes / edges', () => {
     const empty = IliLayoutService.getDirectRelations(
       null as unknown as IliNode,

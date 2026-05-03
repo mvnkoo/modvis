@@ -128,17 +128,18 @@ export class IliParserService {
     let nestingLevel = 0;
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      
-      if (!line) continue;
+      const rawLine = lines[i].trim();
+      if (!rawLine) continue;
 
-     
-      if (line.startsWith('!!')) {
-        currentComment = this.extractComment(line) || '';
+      if (rawLine.startsWith('!!')) {
+        currentComment = this.extractComment(rawLine) || '';
         continue;
       }
 
-     
+      const inlineComment = this.extractComment(rawLine);
+      const line = rawLine.split('!!')[0].trimEnd();
+      if (!line) continue;
+
       if (line.includes('(')) {
         nestingLevel++;
         const valueMatch = line.match(/(\w+)\s*\(/);
@@ -155,7 +156,6 @@ export class IliParserService {
         continue;
       }
 
-     
       if (line.includes(')')) {
         nestingLevel--;
         if (nestingLevel === 0) {
@@ -164,8 +164,7 @@ export class IliParserService {
         continue;
       }
 
-      const inlineComment = this.extractComment(line);
-      const codePart = line.split('!!')[0];
+      const codePart = line;
 
       const valueMatches = [...codePart.matchAll(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/g)];
       for (const m of valueMatches) {
@@ -326,22 +325,21 @@ export class IliParserService {
           };
         }
       } else if (collectingEnum && currentAttribute) {
-       
         if (line.trim().startsWith('!!@')) {
           continue;
         }
 
-       
-        const parentMatch = line.match(/^\s*([a-zA-ZäöüÄÖÜß\w]+)\s*\(/);
+        const codeLine = line.split('!!')[0].trimEnd();
+
+        const parentMatch = codeLine.match(/^\s*([a-zA-ZäöüÄÖÜß\w]+)\s*\(/);
         if (parentMatch) {
           const parentValue = parentMatch[1].trim();
           currentParent = parentValue;
           continue;
         }
 
-       
-        if (line.includes(')')) {
-          if (line === ');') {
+        if (codeLine.includes(')')) {
+          if (codeLine === ');' || codeLine === ')') {
             collectingEnum = false;
             currentParent = '';
             if (currentAttribute) {
@@ -352,9 +350,7 @@ export class IliParserService {
           continue;
         }
 
-       
-       
-        const codePart = line.split('!!')[0];
+        const codePart = codeLine;
         const comment = this.extractComment(line, previousLine);
         const valueMatches = [...codePart.matchAll(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/g)];
 
@@ -678,16 +674,18 @@ export class IliParserService {
     let nestingLevel = 0;
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+      const rawLine = lines[i].trim();
+      if (!rawLine) continue;
 
-     
-      if (line.startsWith('!!')) {
-        currentComment = this.extractComment(line) || '';
+      if (rawLine.startsWith('!!')) {
+        currentComment = this.extractComment(rawLine) || '';
         continue;
       }
 
-     
+      const inlineComment = this.extractComment(rawLine);
+      const line = rawLine.split('!!')[0].trimEnd();
+      if (!line) continue;
+
       if (line.includes('(')) {
         nestingLevel++;
         const valueMatch = line.match(/(\w+)\s*\(/);
@@ -705,7 +703,6 @@ export class IliParserService {
         continue;
       }
 
-     
       if (line.includes(')')) {
         nestingLevel--;
         if (nestingLevel === 0) {
@@ -714,8 +711,7 @@ export class IliParserService {
         continue;
       }
 
-      const inlineComment = this.extractComment(line);
-      const codePart = line.split('!!')[0];
+      const codePart = line;
 
       const valueMatches = [...codePart.matchAll(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/g)];
       for (const m of valueMatches) {
