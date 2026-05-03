@@ -41,7 +41,7 @@ export class IliParserService {
     const domainEnums = new Map<string, IliEnumValue[]>();
     
    
-    const domainSections = content.match(/DOMAIN\s*\n([\s\S]*?)(?=\s*(?:TOPIC|CLASS|END))/g) || [];
+    const domainSections = content.match(/DOMAIN\s*\n([\s\S]*?)(?=\s*\b(?:TOPIC|CLASS|END)\b)/g) || [];
     
     domainSections.forEach(section => {
      
@@ -164,12 +164,15 @@ export class IliParserService {
         continue;
       }
 
-     
-      const valueMatch = line.match(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
-      if (valueMatch) {
-        const value = valueMatch[1].trim();
-        const comment = this.extractComment(line) || currentComment;
-        
+      const inlineComment = this.extractComment(line);
+      const codePart = line.split('!!')[0];
+
+      const valueMatches = [...codePart.matchAll(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/g)];
+      for (const m of valueMatches) {
+        const value = m[1].trim();
+        if (!value) continue;
+        const comment = inlineComment || currentComment;
+
         const enumValue: IliEnumValue = {
           value,
           comment: comment || undefined
@@ -180,9 +183,9 @@ export class IliParserService {
         } else if (nestingLevel === 0) {
           values.push(enumValue);
         }
-
-        currentComment = '';
       }
+
+      if (valueMatches.length > 0) currentComment = '';
     }
 
     return values;
@@ -297,15 +300,20 @@ export class IliParserService {
             comment: this.extractComment(line, previousLine)
           };
         } else if (resolvedType.includes('(') && !resolvedType.includes('..')) {
-         
-          collectingEnum = true;
+          const closesOnSameLine = resolvedType.includes(')');
+          const insideParens = resolvedType.match(/\(([^)]*)\)/)?.[1] ?? '';
+          const inlineValues: IliEnumValue[] = [...insideParens.matchAll(/([a-zA-ZäöüÄÖÜß\w]+)/g)]
+            .map(m => ({ value: m[1].trim() }))
+            .filter(v => v.value.length > 0);
+
+          collectingEnum = !closesOnSameLine;
           currentAttribute = {
             name,
             type: 'ENUMERATION',
             mandatory,
             isEnum: true,
             isInlineEnum: true,
-            enumValues: [],
+            enumValues: inlineValues,
             comment: this.extractComment(line, previousLine)
           };
         } else {
@@ -346,23 +354,22 @@ export class IliParserService {
 
        
        
-        const enumValueMatch = line.match(/^\s*([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
-        if (enumValueMatch) {
-          const value = enumValueMatch[1].trim();
-          const comment = this.extractComment(line, previousLine);
-          
-         
+        const codePart = line.split('!!')[0];
+        const comment = this.extractComment(line, previousLine);
+        const valueMatches = [...codePart.matchAll(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/g)];
+
+        for (const m of valueMatches) {
+          const value = m[1].trim();
+          if (!value) continue;
           const fullValue = currentParent ? `${currentParent}.${value}` : value;
-          
-          const enumValue: IliEnumValue = { 
-            value: fullValue,
-            comment: comment || undefined 
-          };
-          
+
           if (!currentAttribute.enumValues) {
             currentAttribute.enumValues = [];
           }
-          currentAttribute.enumValues.push(enumValue);
+          currentAttribute.enumValues.push({
+            value: fullValue,
+            comment: comment || undefined
+          });
         }
       }
     }
@@ -707,12 +714,15 @@ export class IliParserService {
         continue;
       }
 
-     
-      const valueMatch = line.match(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/);
-      if (valueMatch) {
-        const value = valueMatch[1].trim();
-        const comment = this.extractComment(line) || currentComment;
-        
+      const inlineComment = this.extractComment(line);
+      const codePart = line.split('!!')[0];
+
+      const valueMatches = [...codePart.matchAll(/([a-zA-ZäöüÄÖÜß\w]+)\s*(?:,|$)/g)];
+      for (const m of valueMatches) {
+        const value = m[1].trim();
+        if (!value) continue;
+        const comment = inlineComment || currentComment;
+
         const enumValue: IliEnumValue = {
           value,
           comment: comment || undefined
@@ -723,11 +733,11 @@ export class IliParserService {
         } else if (nestingLevel === 0) {
           values.push(enumValue);
         }
-
-        currentComment = '';
       }
+
+      if (valueMatches.length > 0) currentComment = '';
     }
 
     return values;
   }
-} 
+}
