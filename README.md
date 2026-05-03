@@ -67,9 +67,47 @@ modvis/
 
 ## Kernkomponenten
 
+### Parser-Backends
+
+modvis kennt zwei Parser für INTERLIS, umschaltbar via Settings → "Experimentelle Features" → "Parser-Backend":
+
+- **Legacy (Regex):** der ursprüngliche, regex-basierte Parser. Stabil für einfache 2.3-Modelle, schwach bei verschachtelten Konstrukten und 2.4-Spezifika.
+- **NG (Chevrotain, beta):** Tokenizer + Recursive-Descent-Parser auf Basis von [Chevrotain](https://chevrotain.io). Deutlich höhere Coverage, sauberere Fehler-Recovery, getestet gegen reale Schemas (z.B. VSA_DSS_2020).
+
+Beim Umschalten wird das aktuell geladene Schema automatisch mit dem neuen Parser durchläuft.
+
+#### Coverage-Vergleich
+
+| Konstrukt | Legacy | NG |
+|---|---|---|
+| `MODEL`-Header (`AT`, `VERSION`, `TRANSLATION OF`, language tag) | partiell | ✅ |
+| `INTERLIS X.Y;` Versions-Statement | ❌ | ✅ |
+| `IMPORTS` (UNQUALIFIED, comma-list, multiple) | ❌ | ✅ |
+| `TOPIC` mit `EXTENDS` | ❌ | ✅ |
+| `CLASS` / `STRUCTURE` mit `(ABSTRACT)`, `EXTENDS`, `OID AS` | partiell | ✅ |
+| Optionaler `ATTRIBUTE`-Section-Header | ❌ | ✅ |
+| `(EXTENDED)` Attribut-Modifier | ❌ | ✅ |
+| Vererbte Attribute (rekursiver Walk) | ✅ | ✅ |
+| Basis-Typen: `TEXT*N`, `MTEXT*N`, `BOOLEAN`, `DATE`, `DATETIME` | partiell | ✅ |
+| `NUMERIC` mit Range + Unit-Reference (auch qualified) | partiell | ✅ |
+| Bare numeric range als Attribut-Typ | ❌ | ✅ |
+| `BAG OF` / `LIST OF` mit Cardinality | ❌ | ✅ |
+| Inline + verschachtelte `ENUMERATION` | ✅ | ✅ |
+| `DOMAIN` (enum, EXTENDS, ALL OF, range, geometry, alias) | partiell | ✅ |
+| `ASSOCIATION` mit Cardinalities, Roles, `(EXTERNAL)` | partiell | ✅ |
+| Composition `-<#>` / Aggregation `-<>` Pfeile | ❌ | ✅ |
+| Geometrie-Typen (`COORD`, `POLYLINE`, `SURFACE`, `AREA` + MULTI*) | ❌ | ✅ (Black-Box) |
+| `UNIT`-Section | ❌ | ✅ (Black-Box) |
+| Constraints (`UNIQUE` / `EXISTENCE` / `SET` / `MANDATORY` / `CONSTRAINT`) | ❌ | ✅ (Black-Box) |
+| `VIEW` / `PROJECTION` / `JOIN` / `UNION` / `AGGREGATION` | ❌ | ❌ (Phase D) |
+| `FUNCTION` / `REFSYSTEM` / `FORMAT` | ❌ | ❌ (Phase D) |
+| Multi-Lang Strings (`MTEXT` Translations) | ❌ | ❌ (Phase D) |
+
+NG ist als beta gekennzeichnet — Output-Struktur ist stabil und kompatibel zum Legacy-Format, aber komplexere 2.4-Spezifika und semantische Validierung (CONSTRAINT-Bodies, VIEW-Auflösung) fehlen noch.
+
 ### `IliParserService`
 
-Parst INTERLIS-Schemas:
+Der Legacy-Regex-Parser. Parst INTERLIS-Schemas:
 
 - Domain Enumerations inkl. verschachtelter Strukturen
 - Klassenvererbung

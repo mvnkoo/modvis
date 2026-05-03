@@ -2,7 +2,10 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Node, Edge, Connection, FitViewOptions } from '@xyflow/react';
 import { useTheme } from '../../../common/theme/ThemeContext';
+import { useSettings } from '../../../common/settings/SettingsContext';
 import { IliSchemaService } from '../services/iliSchemaService';
+import { LegacyIliParser } from '../services/parsers/LegacyIliParser';
+import { NgIliParser } from '../services/parsers/ng/NgIliParser';
 import { IliLayoutService } from '../services/IliLayoutService';
 import { generateSearchOptions } from '../services/searchOptions';
 import {
@@ -111,7 +114,11 @@ export const useIliSchema = (
     setFitViewRequest(c => c + 1);
   }, []);
 
-  const schemaServiceRef = useRef<IliSchemaService>(new IliSchemaService());
+  const { parserBackend } = useSettings();
+  const schemaServiceRef = useRef<IliSchemaService>(
+    new IliSchemaService(parserBackend === 'ng' ? new NgIliParser() : new LegacyIliParser())
+  );
+  const lastContentRef = useRef<{ content: string; fileName: string } | null>(null);
   const isResizingRef = useRef(false);
 
   const computeLayout = useCallback(
@@ -161,29 +168,23 @@ export const useIliSchema = (
     setActiveNodeId(targetNode.id);
   }, [allNodes, applyLayout]);
 
-  const handleFileUpload = useCallback(async (file: File) => {
+  const loadFromContent = useCallback(async (content: string, fileName: string) => {
     try {
-     
       setNodes([]);
       setEdges([]);
       setAllNodes([]);
       setAllEdges([]);
       setSearchOptions([]);
       setSearchValue(null);
-      setCurrentFileName(null);
       setError(null);
       setNavigationHistory([]);
       setHistoryIndex(-1);
       setActiveNodeId(null);
-
-     
       setMaxSubTypesPerRow(4);
-
-     
       setIsLoading(true);
-      setCurrentFileName(file.name);
+      setCurrentFileName(fileName);
 
-      const content = await file.text();
+      lastContentRef.current = { content, fileName };
       schemaServiceRef.current.parseSchema(content);
 
       const baseNodes = schemaServiceRef.current.getNodes();
@@ -250,6 +251,21 @@ export const useIliSchema = (
     setNodes,
     setEdges,
   ]);
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    const content = await file.text();
+    await loadFromContent(content, file.name);
+  }, [loadFromContent]);
+
+  useEffect(() => {
+    schemaServiceRef.current = new IliSchemaService(
+      parserBackend === 'ng' ? new NgIliParser() : new LegacyIliParser()
+    );
+    const cached = lastContentRef.current;
+    if (cached) {
+      void loadFromContent(cached.content, cached.fileName);
+    }
+  }, [parserBackend, loadFromContent]);
 
   const handleSearchChange = useCallback((option: SearchOption | null) => {
     setSearchValue(option);
