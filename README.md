@@ -152,6 +152,12 @@ Releases werden aus `staging` heraus gecuttet: `release/x.x.x`. In dieser Phase 
 
 ## Lizenz
 
-[MIT License](LICENSE) — Copyright (c) 2026 Martin Vanek.
+[GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)](LICENSE) — Copyright © 2026 Martin Vanek.
 
-Du darfst den Code frei nutzen, modifizieren, weitergeben und auch kommerziell verwenden, einschliesslich in Closed-Source-Projekten. Einzige Bedingung: Copyright-Vermerk und Lizenztext müssen erhalten bleiben. Keine Garantie.
+Du darfst den Code frei nutzen, modifizieren und weitergeben — auch kommerziell. Drei Bedingungen:
+
+1. **Copyleft**: Abgeleitete Werke müssen ebenfalls unter AGPL-3.0-or-later veröffentlicht werden.
+2. **Quellcode-Pflicht bei Distribution**: Wer modvis (modifiziert oder unmodifiziert) weitergibt, muss den vollständigen Quellcode mitliefern oder öffentlich zugänglich machen.
+3. **Quellcode-Pflicht bei Netzwerk-Nutzung** (AGPL-spezifisch): Wer modvis (modifiziert) als Online-Service betreibt — z.B. als gehostete Web-App — muss den Quellcode der eingesetzten Version den Nutzer:innen des Services zugänglich machen.
+
+Keine Garantie. Frühere unter MIT veröffentlichte Versionen bleiben unter MIT-Bedingungen verfügbar.
