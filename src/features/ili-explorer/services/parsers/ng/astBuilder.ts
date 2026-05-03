@@ -42,7 +42,42 @@ class IliCstToAstVisitor extends BaseVisitor {
     this.visit(cst);
     this.decorateDomainAttributes();
     this.decorateAssociations();
+    this.decorateInheritedAttributes();
     return { nodes: this.state.nodes, relations: this.state.relations };
+  }
+
+  private decorateInheritedAttributes(): void {
+    const classByName = new Map<string, IliClassNode>();
+    for (const node of this.state.nodes) {
+      if (node.type === 'CLASS' || node.type === 'STRUCTURE') {
+        classByName.set(node.name, node as IliClassNode);
+      }
+    }
+
+    const superTypeOf = new Map<string, string>();
+    for (const rel of this.state.relations) {
+      if (rel.type === 'EXTENDS') {
+        const targetLocal = lastSegment(rel.targetId);
+        superTypeOf.set(rel.sourceId, targetLocal);
+      }
+    }
+
+    for (const [className, classNode] of classByName) {
+      const inherited: { className: string; attributes: IliAttribute[] }[] = [];
+      const visited = new Set<string>([className]);
+      let current = superTypeOf.get(className);
+      while (current && !visited.has(current)) {
+        visited.add(current);
+        const ancestor = classByName.get(current);
+        if (!ancestor) break;
+        if (ancestor.attributes && ancestor.attributes.length > 0) {
+          inherited.push({ className: current, attributes: ancestor.attributes });
+        }
+        current = superTypeOf.get(current);
+      }
+      classNode.inheritedAttributes = inherited;
+      classNode.data.inheritedAttributes = inherited;
+    }
   }
 
   private decorateAssociations(): void {

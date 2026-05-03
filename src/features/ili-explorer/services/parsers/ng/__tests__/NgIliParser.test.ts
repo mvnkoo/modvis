@@ -531,6 +531,284 @@ describe('NgIliParser (Chevrotain backend)', () => {
     ]);
   });
 
+  it('parses multiple IMPORTS statements (UNQUALIFIED + plain)', () => {
+    const r = parse(`
+      INTERLIS 2.4;
+      MODEL Demo =
+        IMPORTS UNQUALIFIED INTERLIS;
+        IMPORTS Units;
+        IMPORTS Foo, Bar;
+        TOPIC T =
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    const foo = r.nodes.find(n => n.name === 'Foo' && n.type === 'CLASS') as IliClassNode;
+    expect(foo).toBeDefined();
+  });
+
+  it('parses MODEL with AT and TRANSLATION OF clauses', () => {
+    const r = parse(`
+      MODEL Demo (de)
+        AT "http://example.com/demo"
+        VERSION "2024-01-01"
+        TRANSLATION OF Other =
+        TOPIC T =
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    expect(r.nodes.find(n => n.name === 'Foo')).toBeDefined();
+  });
+
+  it('parses TOPIC with EXTENDS', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC Child EXTENDS Other.Parent =
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END Child;
+      END Demo.
+    `);
+    expect(r.nodes.find(n => n.name === 'Foo')).toBeDefined();
+  });
+
+  it('parses optional ATTRIBUTE section header in CLASS body', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Foo =
+            ATTRIBUTE
+              id : MANDATORY TEXT*10;
+              name : TEXT*40;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+    expect(foo.attributes).toHaveLength(2);
+  });
+
+  it('parses (EXTENDED) attribute modifier on inherited attributes', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Base =
+            label : MANDATORY TEXT*40;
+          END Base;
+          CLASS Sub EXTENDS Base =
+            label (EXTENDED) : MANDATORY TEXT*20;
+          END Sub;
+        END T;
+      END Demo.
+    `);
+    const sub = r.nodes.find(n => n.name === 'Sub') as IliClassNode;
+    const label = sub.attributes?.find(a => a.name === 'label');
+    expect(label?.type).toBe('TEXT*20');
+    expect(label?.mandatory).toBe(true);
+  });
+
+  it('parses ASSOCIATION with composition (-<#>) arrow', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Owner =
+            name : MANDATORY TEXT*40;
+          END Owner;
+          CLASS Child =
+            label : MANDATORY TEXT*40;
+          END Child;
+          ASSOCIATION Owns =
+            ownerRef -<#> {1} Owner;
+            childRef -- {0..*} Child;
+          END Owns;
+        END T;
+      END Demo.
+    `);
+    const owner = r.nodes.find(n => n.name === 'Owner') as IliClassNode;
+    expect(owner.associations).toHaveLength(1);
+  });
+
+  it('parses ASSOCIATION with aggregation (-<>) arrow', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Owner =
+            name : MANDATORY TEXT*40;
+          END Owner;
+          CLASS Asset =
+            label : MANDATORY TEXT*40;
+          END Asset;
+          ASSOCIATION Owns =
+            ownerRef -<> {1} Owner;
+            assetRef -- {0..*} Asset;
+          END Owns;
+        END T;
+      END Demo.
+    `);
+    const owner = r.nodes.find(n => n.name === 'Owner') as IliClassNode;
+    expect(owner.associations).toHaveLength(1);
+  });
+
+  it('skips UNIQUE / EXISTENCE / SET constraint clauses', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+            name : TEXT*40;
+          UNIQUE id;
+          UNIQUE name, id;
+          EXISTENCE id REQUIRED IN Other;
+          SET CONSTRAINT WHERE foo > 0;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+    expect(foo.attributes).toHaveLength(2);
+  });
+
+  it('skips a UNIT section', () => {
+    const r = parse(`
+      MODEL Demo =
+        UNIT
+          Kilogramm_pro_Jahr [kga] = (kg/Units.a);
+          Liter_pro_Sekunde [lps] = 1.0 [Units.l/s];
+        TOPIC T =
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    const foo = r.nodes.find(n => n.name === 'Foo');
+    expect(foo).toBeDefined();
+  });
+
+  it('parses OID AS in CLASS header', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Foo OID AS TEXT*16 =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    expect(r.nodes.find(n => n.name === 'Foo')).toBeDefined();
+  });
+
+  it('parses bare numeric range as attribute type (no NUMERIC keyword)', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Foo =
+            ratio : 0.00 .. 100.00 [Units.Percent];
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+    expect(foo.attributes?.[0].type).toBe('0.00..100.00 [Units.Percent]');
+  });
+
+  it('parses MTEXT*N attribute type', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Foo =
+            note : MTEXT*255;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+    expect(foo.attributes?.[0].type).toBe('MTEXT*255');
+  });
+
+  it('parses DOMAIN with bare numeric range', () => {
+    const r = parse(`
+      MODEL Demo =
+        DOMAIN
+          Promille = -10000 .. 10000;
+          Ratio = 0.00 .. 1.00;
+        TOPIC T =
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    expect(r.nodes.find(n => n.name === 'Foo')).toBeDefined();
+  });
+
+  it('parses DOMAIN with geometry alias', () => {
+    const r = parse(`
+      MODEL Demo =
+        DOMAIN
+          Gebiet = AREA WITH (STRAIGHTS, ARCS) VERTEX Coord WITHOUT OVERLAPS > 0.050;
+        TOPIC T =
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    expect(r.nodes.find(n => n.name === 'Foo')).toBeDefined();
+  });
+
+  it('parses multiple MODEL definitions in one file', () => {
+    const r = parse(`
+      INTERLIS 2.4;
+      MODEL First =
+        TOPIC T1 =
+          CLASS A =
+            id : MANDATORY TEXT*10;
+          END A;
+        END T1;
+      END First.
+      MODEL Second =
+        TOPIC T2 =
+          CLASS B =
+            id : MANDATORY TEXT*10;
+          END B;
+        END T2;
+      END Second.
+    `);
+    expect(r.nodes.find(n => n.name === 'A')).toBeDefined();
+    expect(r.nodes.find(n => n.name === 'B')).toBeDefined();
+  });
+
+  it('collects inherited attributes recursively from superclass chain', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Base (ABSTRACT) =
+            id : MANDATORY TEXT*10;
+          END Base;
+          CLASS Mid EXTENDS Base =
+            extra : TEXT*40;
+          END Mid;
+          CLASS Leaf EXTENDS Mid =
+            label : TEXT*20;
+          END Leaf;
+        END T;
+      END Demo.
+    `);
+    const leaf = r.nodes.find(n => n.name === 'Leaf') as IliClassNode;
+    expect(leaf.inheritedAttributes).toHaveLength(2);
+    expect(leaf.inheritedAttributes?.[0].className).toBe('Mid');
+    expect(leaf.inheritedAttributes?.[0].attributes.map(a => a.name)).toEqual(['extra']);
+    expect(leaf.inheritedAttributes?.[1].className).toBe('Base');
+    expect(leaf.inheritedAttributes?.[1].attributes.map(a => a.name)).toEqual(['id']);
+  });
+
   it('treats type-name attribute as a qualified-name reference', () => {
     const r = parse(`
       MODEL Demo =
