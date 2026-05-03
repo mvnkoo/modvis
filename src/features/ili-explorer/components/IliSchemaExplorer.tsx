@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   NodeTypes,
   ReactFlowProvider,
   Panel,
@@ -12,20 +11,14 @@ import {
   Node as ReactFlowNode,
   Edge,
   MarkerType,
-  ReactFlowInstance,
   useReactFlow,
   EdgeTypes,
   BezierEdge,
   StepEdge,
   NodeMouseHandler,
-  FitViewOptions
 } from '@xyflow/react';
-import { Box, Paper, Alert, CircularProgress, IconButton, Divider, Tooltip, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Snackbar } from '@mui/material';
-import { AccountTree, Refresh, Upload, ArrowBack, AutoFixHigh, ExpandMore, ExpandLess, FileDownload } from '@mui/icons-material';
-import { alpha } from '@mui/material/styles';
+import { Box, Alert, CircularProgress, Snackbar } from '@mui/material';
 import { useTheme } from '../../../common/theme/ThemeContext';
-import { CurvedIcon, StraightIcon } from '../../exp-explorer/components/expIcons';
-import { IliLayoutService } from '../services/IliLayoutService';
 import {
   IliNode,
   SearchOption,
@@ -33,6 +26,9 @@ import {
 } from '../services/types/IliBaseTypes';
 
 import { IliToolbar } from './toolbar/IliToolbar';
+import { IliSideToolbar } from './toolbar/IliSideToolbar';
+import { IliSelectionOverlay } from './IliSelectionOverlay';
+import { IliDropOverlay } from './IliDropOverlay';
 import IliLegend from './legend/IliLegend';
 import {
   IliClassNode,
@@ -49,7 +45,7 @@ import { useDiagramExport } from '../hooks/useDiagramExport';
 import { LayoutSettings } from './sidebar/LayoutSettings';
 
 import '@xyflow/react/dist/style.css';
-import { debounce, throttle } from 'lodash';
+import { debounce } from 'lodash';
 
 
 interface CustomNode extends ReactFlowNode {
@@ -370,13 +366,6 @@ const Flow: React.FC = () => {
     [activeNodeId, allNodes, applyLayout, setMaxSubTypesPerRow]
   );
 
- 
-  const throttledFitView = useMemo(
-    () => throttle((options: FitViewOptions) => {
-      fitView(options);
-    }, 100),
-    [fitView]
-  );
 
  
   const handleExpandAll = useCallback(() => {
@@ -509,41 +498,7 @@ const Flow: React.FC = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {isFileDragging && (
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 1500,
-            bgcolor: alpha(colors.primary, 0.1),
-            border: `3px dashed ${colors.primary}`,
-            borderRadius: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-          }}
-        >
-          <Paper
-            elevation={6}
-            sx={{
-              px: 4,
-              py: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 1,
-              bgcolor: 'background.paper',
-            }}
-          >
-            <Upload sx={{ fontSize: 48, color: colors.primary }} />
-            <Typography variant="h6">INTERLIS-Modell hier ablegen</Typography>
-            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-              Nur .ili-Dateien werden akzeptiert
-            </Typography>
-          </Paper>
-        </Box>
-      )}
+      <IliDropOverlay visible={isFileDragging} />
 
       {isLoading && (
         <Box
@@ -632,197 +587,26 @@ const Flow: React.FC = () => {
             maxSubTypesPerRow={maxSubTypesPerRow}
             onMaxSubTypesChange={debouncedHandleMaxSubTypesChange}
           />
-          <Paper
-            elevation={4}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 0.5,
-              p: 0.5,
-              bgcolor: 'background.paper',
-              borderRadius: 1,
-              width: 'fit-content',
-              '& .MuiIconButton-root': {
-                width: 32,
-                height: 32,
-                borderRadius: 0.5,
-                bgcolor: 'background.paper',
-                '&:hover': {
-                  bgcolor: 'action.hover'
-                },
-                '&.Mui-disabled': {
-                  bgcolor: 'transparent',
-                  color: theme => theme.palette.action.disabled
-                }
-              }
-            }}
-          >
-            <Tooltip 
-              title="Ansicht zurücksetzen" 
-              placement="right"
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleReset}
-                  disabled={!currentFileName}
-                  aria-label="Reset view"
-                >
-                  <Refresh fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-
-            <Tooltip 
-              title="Zurück zur vorherigen Ansicht" 
-              placement="right"
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleBack}
-                  disabled={historyIndex <= 0}
-                  aria-label="Go back"
-                >
-                  <ArrowBack fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-
-            <Tooltip 
-              title="Vollständige Hierarchie anzeigen" 
-              placement="right"
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleHierarchyToggle}
-                  disabled={!currentFileName || !activeNodeId}
-                  sx={{
-                    color: showFullHierarchy ? colors.active : 'default'
-                  }}
-                  aria-label="Toggle hierarchy view"
-                >
-                  <AccountTree fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-
-            <Divider sx={{ my: 0.5 }} />
-
-            <Tooltip 
-              title="Linientyp wechseln" 
-              placement="right"
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleLineTypeToggle}
-                  aria-label="Toggle line type"
-                >
-                  {useCurvedLines ? <StraightIcon /> : <CurvedIcon />}
-                </IconButton>
-              </span>
-            </Tooltip>
-
-            <Divider sx={{ my: 0.5 }} />
-
-            <Tooltip 
-              title="Magic Layout" 
-              placement="right"
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleMagicLayout}
-                  disabled={!currentFileName || !activeNodeId}
-                  aria-label="Magic layout"
-                  sx={{
-                    color: theme => theme.palette.warning.main,
-                    '&:hover': {
-                      bgcolor: theme => alpha(theme.palette.warning.main, 0.08)
-                    }
-                  }}
-                >
-                  <AutoFixHigh fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-
-            <Tooltip 
-              title="Alle Komponenten einklappen" 
-              placement="right"
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleCollapseAll}
-                  disabled={!currentFileName || !activeNodeId}
-                  aria-label="Collapse all nodes"
-                >
-                  <ExpandLess fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-
-            <Tooltip 
-              title="Alle Komponenten ausklappen" 
-              placement="right"
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleExpandAll}
-                  disabled={!currentFileName || !activeNodeId}
-                  aria-label="Expand all nodes"
-                >
-                  <ExpandMore fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-
-            <Divider sx={{ my: 0.5 }} />
-
-            <Tooltip 
-              title="Als Datei exportieren" 
-              placement="right"
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleExportClick}
-                  disabled={!currentFileName || !activeNodeId}
-                  aria-label="Export diagram"
-                >
-                  <FileDownload fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-
-            <Menu
-              anchorEl={exportAnchorEl}
-              open={Boolean(exportAnchorEl)}
-              onClose={handleExportClose}
-              anchorOrigin={{
-                vertical: 'center',
-                horizontal: 'right',
-              }}
-              transformOrigin={{
-                vertical: 'center',
-                horizontal: 'left',
-              }}
-            >
-              <MenuItem onClick={handleExportToClipboard}>
-                In Zwischenablage kopieren
-              </MenuItem>
-              <MenuItem onClick={handleExportAsPng}>
-                Als PNG speichern
-              </MenuItem>
-              <MenuItem onClick={handleExportAsSvg}>
-                Als SVG speichern
-              </MenuItem>
-            </Menu>
-          </Paper>
+          <IliSideToolbar
+            currentFileName={currentFileName}
+            activeNodeId={activeNodeId}
+            historyIndex={historyIndex}
+            showFullHierarchy={showFullHierarchy}
+            useCurvedLines={useCurvedLines}
+            exportAnchorEl={exportAnchorEl}
+            onReset={handleReset}
+            onBack={handleBack}
+            onHierarchyToggle={handleHierarchyToggle}
+            onLineTypeToggle={handleLineTypeToggle}
+            onMagicLayout={handleMagicLayout}
+            onCollapseAll={handleCollapseAll}
+            onExpandAll={handleExpandAll}
+            onExportClick={handleExportClick}
+            onExportClose={handleExportClose}
+            onExportToClipboard={handleExportToClipboard}
+            onExportAsPng={handleExportAsPng}
+            onExportAsSvg={handleExportAsSvg}
+          />
         </Panel>
 
         <input
@@ -855,57 +639,13 @@ const Flow: React.FC = () => {
         </Alert>
       </Snackbar>
 
-      {isSelectingArea && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-            cursor: 'crosshair',
-            zIndex: 1000,
-          }}
-          className="selection-overlay"
-          onMouseDown={handleSelectionStart}
-          onMouseMove={handleSelectionMove}
-          onMouseUp={handleSelectionEnd}
-          onMouseLeave={handleSelectionEnd}
-        >
-          <Typography
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              color: 'white',
-              textAlign: 'center',
-              pointerEvents: 'none',
-              textShadow: '0 0 4px rgba(0,0,0,0.5)',
-              userSelect: 'none',
-            }}
-          >
-            Ziehen Sie ein Rechteck, um den Export-Bereich auszuwählen
-          </Typography>
-
-          {selectionRect && (
-            <div
-              style={{
-                position: 'absolute',
-                left: `${selectionRect.startX}px`,
-                top: `${selectionRect.startY}px`,
-                width: `${selectionRect.width}px`,
-                height: `${selectionRect.height}px`,
-                border: '2px solid #2196f3',
-                backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                pointerEvents: 'none',
-                zIndex: 1001,
-              }}
-            />
-          )}
-        </div>
-      )}
+      <IliSelectionOverlay
+        isSelectingArea={isSelectingArea}
+        selectionRect={selectionRect}
+        onSelectionStart={handleSelectionStart}
+        onSelectionMove={handleSelectionMove}
+        onSelectionEnd={handleSelectionEnd}
+      />
     </Box>
   );
 };

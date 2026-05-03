@@ -170,6 +170,42 @@ describe('IliParserService.parseContent', () => {
     expect(assoc?.targetCardinality).toBe('0..*');
   });
 
+  it('does not treat words inside !! comments as enum values (regression)', () => {
+    const ili = `
+      MODEL Demo =
+        DOMAIN
+          Statuswerte EXTENDS External.Status = (
+            in_Betrieb (
+              provisorisch, !! something with parentheses (z.B. case)
+              wird_aufgehoben
+            ),
+            weitere (
+              Berechnungsvariante,
+              Projekt !! in Ausführung (im Bau)
+            )
+          );
+        TOPIC T =
+          CLASS Foo =
+            id : MANDATORY TEXT*10;
+          END Foo;
+        END T;
+      END Demo.
+    `;
+
+    const { nodes } = parse(ili);
+    const ext = nodes.find(n => n.id === 'domain_Statuswerte');
+    expect(ext).toBeDefined();
+
+    const topValues = ext?.data.enumValues as Array<{ value: string; subValues?: Array<{ value: string }> }>;
+    expect(topValues.map(v => v.value)).toEqual(['in_Betrieb', 'weitere']);
+
+    const inBetrieb = topValues.find(v => v.value === 'in_Betrieb');
+    expect(inBetrieb?.subValues?.map(s => s.value)).toEqual(['provisorisch', 'wird_aufgehoben']);
+
+    const weitere = topValues.find(v => v.value === 'weitere');
+    expect(weitere?.subValues?.map(s => s.value)).toEqual(['Berechnungsvariante', 'Projekt']);
+  });
+
   it('returns empty result for empty input', () => {
     const { nodes, relations } = parse('');
     expect(nodes).toEqual([]);

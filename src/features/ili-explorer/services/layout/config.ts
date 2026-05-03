@@ -1,0 +1,27 @@
+export const LAYOUT_CONFIG = {
+  NODE: {
+    HEIGHT: 80,
+    MIN_SPACING: 200,
+    GROUP_SPACING: 250,
+  },
+  SPACING: {
+    VERTICAL: 370,
+    HORIZONTAL: 450,
+    ROW: 200,
+    SUPERTYPE: -370,
+  },
+  ENUM: {
+    OFFSET_X: 1200,
+    SPACING_Y: 170,
+    CLASS_SPACING: 170,
+  },
+  ASSOCIATION: {
+    OFFSET_X: -1200,
+    SPACING_Y: 170,
+    CLASS_SPACING: 1000,
+  },
+  MAGIC: {
+    GAP: 50,
+    MULTIPLIER: 2.5,
+  },
+} as const;

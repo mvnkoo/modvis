@@ -2,14 +2,27 @@ import { Edge, MarkerType } from '@xyflow/react';
 import { IliBaseNode, IliRelation } from './types/IliBaseTypes';
 import { ThemeColors } from '../../../common/theme/ThemeContext';
 
+const FLOW_NODE_TYPE: Record<string, string> = {
+  MODEL: 'modelNode',
+  TOPIC: 'topicNode',
+  CLASS: 'classNode',
+  STRUCTURE: 'structureNode',
+  ASSOCIATION: 'associationNode',
+  ENUMERATION: 'enumNode',
+  enumNode: 'enumNode',
+  domainEnumNode: 'domainEnumNode',
+};
+
 export function flowNodeFromBaseNode(node: IliBaseNode) {
+  const { data: nodeData, ...nodeRest } = node;
   return {
     id: node.id,
-    type: node.type === 'ASSOCIATION' ? 'associationNode' : `${node.type.toLowerCase()}Node`,
+    type: FLOW_NODE_TYPE[node.type] ?? 'classNode',
     position: { x: 0, y: 0 },
     draggable: true,
     data: {
-      ...node,
+      ...nodeData,
+      ...nodeRest,
       label: node.name,
       isHighlighted: false,
       isActive: false,
