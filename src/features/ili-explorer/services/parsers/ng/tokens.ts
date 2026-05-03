@@ -9,18 +9,23 @@ export const Whitespace = createToken({
 export const LineComment = createToken({
   name: 'LineComment',
   pattern: /!![^\n]*/,
-  group: Lexer.SKIPPED,
+  group: 'comments',
 });
 
 export const BlockComment = createToken({
   name: 'BlockComment',
   pattern: /\/\*[\s\S]*?\*\//,
-  group: Lexer.SKIPPED,
+  group: 'comments',
 });
 
 export const Identifier = createToken({
   name: 'Identifier',
   pattern: /[a-zA-ZäöüÄÖÜß][a-zA-Z0-9äöüÄÖÜß_]*/,
+});
+
+export const HashIdentifier = createToken({
+  name: 'HashIdentifier',
+  pattern: /#[a-zA-ZäöüÄÖÜß][a-zA-Z0-9äöüÄÖÜß_.]*/,
 });
 
 function kw(name: string, literal?: string): TokenType {
@@ -102,6 +107,13 @@ export const External = kw('External', 'EXTERNAL');
 export const Restriction = kw('Restriction', 'RESTRICTION');
 export const Attribute = kw('Attribute', 'ATTRIBUTE');
 export const Unqualified = kw('Unqualified', 'UNQUALIFIED');
+export const Basket = kw('Basket', 'BASKET');
+export const Depends = kw('Depends', 'DEPENDS');
+export const On = kw('On', 'ON');
+export const No = kw('No', 'NO');
+export const Format = kw('Format', 'FORMAT');
+export const In = kw('In', 'IN');
+export const Constraints = kw('Constraints', 'CONSTRAINTS');
 
 export const StringLiteral = createToken({
   name: 'StringLiteral',
@@ -152,14 +164,15 @@ export const allTokens: TokenType[] = [
   Interlis, Version, Model, Topic, Class, Structure, Association, Enumeration,
   Domain, Unit, Function, View, Graphic, Refsystem, Coordsystem, Imports,
   End, Extends, Extended, Abstract, Final, Mandatory, All, Of, Bag, List,
-  Reference, Base, Constraint, Existence, Unique, Set, Where, Required,
+  Reference, Base, Constraints, Constraint, Existence, Unique, Set, Where, Required,
   Numeric, Text, MText, Boolean, DateTime, Date,
   Coord, MultiCoord, Polyline, MultiPolyline, Surface, MultiSurface, Area, MultiArea,
   AnyClass, AnyStructure, Translation, Attribute, At, Or, And, Not, Null, True, False,
   Inherit, To, From, Without, With, Oid, Tid, As, Type, External, Restriction,
-  Unqualified,
+  Unqualified, Basket, Depends, On, No, Format, In,
 
   Identifier,
+  HashIdentifier,
 
   StringLiteral,
   NumberLiteral,

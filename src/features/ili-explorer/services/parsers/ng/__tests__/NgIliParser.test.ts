@@ -822,4 +822,183 @@ describe('NgIliParser (Chevrotain backend)', () => {
     const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
     expect(foo.attributes?.[0].type).toBe('SomeDomainType');
   });
+
+  describe('comments preservation', () => {
+    it('extracts !!@ comment metadata above a CLASS', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            !!@ comment = "A documented class"
+            CLASS Foo =
+              id : MANDATORY TEXT*10;
+            END Foo;
+          END T;
+        END Demo.
+      `);
+      const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+      expect(foo.comment).toBe('A documented class');
+      expect(foo.data.comment).toBe('A documented class');
+    });
+
+    it('extracts !! plain comment above an attribute', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            CLASS Foo =
+              !! human-friendly attribute description
+              name : TEXT*40;
+            END Foo;
+          END T;
+        END Demo.
+      `);
+      const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+      expect(foo.attributes?.[0].comment).toBe('human-friendly attribute description');
+    });
+
+    it('joins consecutive comments above an entity with newline', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            !!@ comment = "Line one"
+            !!@ comment = "Line two"
+            CLASS Foo =
+              id : MANDATORY TEXT*10;
+            END Foo;
+          END T;
+        END Demo.
+      `);
+      const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+      expect(foo.comment).toBe('Line one\nLine two');
+    });
+
+    it('extracts comments above enum values', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            ENUMERATION Status = (
+              !! the active state
+              active,
+              !!@ comment = "the inactive state"
+              inactive
+            );
+            CLASS Foo =
+              id : MANDATORY TEXT*10;
+            END Foo;
+          END T;
+        END Demo.
+      `);
+      const status = r.nodes.find(n => n.name === 'Status');
+      const values = status?.data.enumValues as Array<{ value: string; comment?: string }>;
+      expect(values?.find(v => v.value === 'active')?.comment).toBe('the active state');
+      expect(values?.find(v => v.value === 'inactive')?.comment).toBe('the inactive state');
+    });
+
+    it('extracts comment above DOMAIN definition', () => {
+      const r = parse(`
+        MODEL Demo =
+          DOMAIN
+            !!@ comment = "Status values"
+            Status = (a, b, c);
+          TOPIC T =
+            CLASS Foo =
+              id : MANDATORY TEXT*10;
+            END Foo;
+          END T;
+        END Demo.
+      `);
+      const status = r.nodes.find(n => n.id === 'domain_Status');
+      expect(status?.data.comment).toBe('Status values');
+    });
+
+    it('REFERENCE TO Class produces a relation edge and isReference attribute flag', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            CLASS Owner =
+              name : MANDATORY TEXT*40;
+            END Owner;
+            CLASS Asset =
+              owner : REFERENCE TO Owner;
+              label : MANDATORY TEXT*40;
+            END Asset;
+          END T;
+        END Demo.
+      `);
+      const asset = r.nodes.find(n => n.name === 'Asset') as IliClassNode;
+      const ownerAttr = asset.attributes?.find(a => a.name === 'owner');
+      expect(ownerAttr?.isReference).toBe(true);
+      expect(ownerAttr?.type).toBe('REFERENCE TO Owner');
+
+      const refRel = r.relations.find(rel => rel.type === 'REFERENCES' && rel.sourceId === 'Asset');
+      expect(refRel?.targetId).toBe('Owner');
+      expect(refRel?.role).toBe('owner');
+    });
+
+    it('REFERENCE TO with qualified target stripped to last segment in edge', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            CLASS Asset =
+              ext : REFERENCE TO External.Foo;
+              label : MANDATORY TEXT*40;
+            END Asset;
+          END T;
+        END Demo.
+      `);
+      const refRel = r.relations.find(rel => rel.type === 'REFERENCES');
+      expect(refRel?.targetId).toBe('Foo');
+    });
+
+    it('creates external node placeholders for EXTENDS targets in imported models', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            CLASS Local EXTENDS Imported.Foreign =
+              extra : TEXT*40;
+            END Local;
+          END T;
+        END Demo.
+      `);
+      const ext = r.nodes.find(n => n.id === 'Imported.Foreign');
+      expect(ext).toBeDefined();
+      expect(ext?.name).toBe('Foreign');
+      expect(ext?.data.isExternal).toBe(true);
+      expect(ext?.data.externalSource).toBe('Imported');
+
+      const inh = r.relations.find(rel => rel.type === 'EXTENDS' && rel.sourceId === 'Local');
+      expect(inh?.targetId).toBe('Imported.Foreign');
+    });
+
+    it('does not create external node when target is locally defined', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            CLASS Base =
+              id : MANDATORY TEXT*10;
+            END Base;
+            CLASS Sub EXTENDS Base =
+              extra : TEXT*40;
+            END Sub;
+          END T;
+        END Demo.
+      `);
+      const externalCount = r.nodes.filter(n => n.data.isExternal === true).length;
+      expect(externalCount).toBe(0);
+    });
+
+    it('skips ili2db / non-comment !!@ metadata', () => {
+      const r = parse(`
+        MODEL Demo =
+          TOPIC T =
+            !!@ ili2db.tableName = "foo_table"
+            CLASS Foo =
+              id : MANDATORY TEXT*10;
+            END Foo;
+          END T;
+        END Demo.
+      `);
+      const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+      expect(foo.comment).toBeUndefined();
+    });
+  });
 });
