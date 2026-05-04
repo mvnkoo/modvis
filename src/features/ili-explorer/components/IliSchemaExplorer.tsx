@@ -132,6 +132,7 @@ const Flow: React.FC = () => {
     handleReset: baseHandleReset,
     handleBack: baseHandleBack,
     canGoBack,
+    showOverview,
     handleHierarchyToggle,
     activeNodeId,
     setActiveNodeId,
@@ -677,6 +678,7 @@ const Flow: React.FC = () => {
             activeNodeId={activeNodeId}
             historyIndex={historyIndex}
             canGoBack={canGoBack}
+            onShowOverview={showOverview}
             showFullHierarchy={showFullHierarchy}
             useCurvedLines={useCurvedLines}
             exportAnchorEl={exportAnchorEl}

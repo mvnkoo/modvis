@@ -70,6 +70,7 @@ interface UseIliSchemaReturn {
   fitViewRequest: number;
   requestFitView: () => void;
   canGoBack: boolean;
+  showOverview: () => void;
 }
 
 
@@ -101,6 +102,7 @@ export const useIliSchema = (
   const dismissParseWarnings = useCallback(() => setParseWarnings([]), []);
   const [imports, setImports] = useState<IliImportRef[]>([]);
   const [interlisVersion, setInterlisVersion] = useState<string | undefined>(undefined);
+  const [overviewWasShown, setOverviewWasShown] = useState(false);
   const [searchValue, setSearchValue] = useState<SearchOption | null>(null);
   const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
@@ -214,16 +216,18 @@ export const useIliSchema = (
       setSearchOptions(generateSearchOptions(baseNodes));
 
      
-      const showOverview = isOverviewCandidate(flowNodes as IliNode[], relations);
+      const useOverviewLayout = isOverviewCandidate(flowNodes as IliNode[], relations);
 
-      if (showOverview) {
+      if (useOverviewLayout) {
         const overview = layoutModelOverview(flowNodes as IliNode[], relations);
         setNodes(overview.nodes);
         setEdges(overview.edges);
         setActiveNodeId(null);
         setNavigationHistory([]);
         setHistoryIndex(-1);
+        setOverviewWasShown(true);
       } else {
+        setOverviewWasShown(false);
         const initialClass = (
           flowNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
           flowNodes.find(n => n.type === 'classNode')
@@ -422,9 +426,11 @@ export const useIliSchema = (
       setActiveNodeId(null);
       setNavigationHistory([]);
       setHistoryIndex(-1);
+      setOverviewWasShown(true);
       return;
     }
 
+    setOverviewWasShown(false);
     const initialClass =
       allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
       allNodes.find(n => n.type === 'classNode');
@@ -448,17 +454,27 @@ export const useIliSchema = (
 
   const canGoBack = useMemo(() => {
     if (historyIndex > 0) return true;
-    if (historyIndex === 0) {
-      const relations = schemaServiceRef.current.getRelations();
-      return isOverviewCandidate(allNodes as IliNode[], relations);
-    }
+    if (historyIndex === 0) return overviewWasShown;
     return false;
-  }, [historyIndex, allNodes]);
+  }, [historyIndex, overviewWasShown]);
+
+  const showOverview = useCallback(() => {
+    if (allNodes.length === 0) return;
+    const relations = schemaServiceRef.current.getRelations();
+    const overview = layoutModelOverview(allNodes as IliNode[], relations);
+    setNodes(overview.nodes as IliNode[]);
+    setEdges(overview.edges);
+    setActiveNodeId(null);
+    setNavigationHistory([]);
+    setHistoryIndex(-1);
+    setOverviewWasShown(true);
+    requestFitView();
+  }, [allNodes, setNodes, setEdges, requestFitView]);
 
   const handleBack = useCallback((): boolean => {
     if (historyIndex === 0) {
-      const relations = schemaServiceRef.current.getRelations();
-      if (isOverviewCandidate(allNodes as IliNode[], relations)) {
+      if (overviewWasShown) {
+        const relations = schemaServiceRef.current.getRelations();
         const overview = layoutModelOverview(allNodes as IliNode[], relations);
         setNodes(overview.nodes as IliNode[]);
         setEdges(overview.edges);
@@ -503,7 +519,7 @@ export const useIliSchema = (
       }
     }
     return false;
-  }, [historyIndex, navigationHistory, allNodes, applyLayout, requestFitView]);
+  }, [historyIndex, navigationHistory, allNodes, applyLayout, requestFitView, overviewWasShown, setNodes, setEdges]);
 
   const handleClearFile = useCallback(() => {
     setNodes([]);
@@ -517,6 +533,7 @@ export const useIliSchema = (
     setParseWarnings([]);
     setImports([]);
     setInterlisVersion(undefined);
+    setOverviewWasShown(false);
     setNavigationHistory([]);
     setHistoryIndex(-1);
     setActiveNodeId(null);
@@ -590,6 +607,7 @@ export const useIliSchema = (
 
  
   useEffect(() => {
+    if (overviewWasShown) return;
     if (!activeNodeId && allNodes.length > 0) {
       const firstAbstractClass = allNodes.find(n =>
         n.type === 'classNode' && n.data.isAbstract
@@ -605,7 +623,7 @@ export const useIliSchema = (
         setHistoryIndex(0);
       }
     }
-  }, [activeNodeId, allNodes, applyLayout]);
+  }, [activeNodeId, allNodes, applyLayout, overviewWasShown]);
 
  
   useEffect(() => {
@@ -748,6 +766,7 @@ export const useIliSchema = (
     handleReset,
     handleBack,
     canGoBack,
+    showOverview,
     navigationHistory,
     handleHierarchyToggle,
     showFullHierarchy,
