@@ -15,6 +15,7 @@ import {
   ExpandLess,
   FileDownload,
   GridView,
+  RestartAlt,
 } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 import { CurvedIcon, StraightIcon } from '../../../exp-explorer/components/expIcons';
@@ -29,6 +30,7 @@ interface IliSideToolbarProps {
   onShowOverview: () => void;
   onBack: () => void;
   onLineTypeToggle: () => void;
+  onResetLayout: () => void;
   onMagicLayout: () => void;
   onCollapseAll: () => void;
   onExpandAll: () => void;
@@ -49,6 +51,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   onShowOverview,
   onBack,
   onLineTypeToggle,
+  onResetLayout,
   onMagicLayout,
   onCollapseAll,
   onExpandAll,
@@ -113,6 +116,19 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
       </Tooltip>
 
       <Divider sx={{ my: 0.5 }} />
+
+      <Tooltip title="Layout zurücksetzen" placement="right">
+        <span>
+          <IconButton
+            size="small"
+            onClick={onResetLayout}
+            disabled={noNode}
+            aria-label="Reset layout"
+          >
+            <RestartAlt fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
 
       <Tooltip title="Magic Layout" placement="right">
         <span>

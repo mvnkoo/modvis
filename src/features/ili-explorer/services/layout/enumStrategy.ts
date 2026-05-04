@@ -89,7 +89,7 @@ export function attachClassEnums(
 
   const totalEnums = attributes.filter(a => a.isEnum || a.isDomainEnum).length || 0;
   const spacingY = useMagicLayout
-    ? LAYOUT_CONFIG.ENUM.SPACING_Y * LAYOUT_CONFIG.MAGIC.MULTIPLIER
+    ? LAYOUT_CONFIG.ENUM.SPACING_Y * LAYOUT_CONFIG.MAGIC.ENUM
     : LAYOUT_CONFIG.ENUM.SPACING_Y;
   const totalHeight = (totalEnums - 1) * spacingY;
   const startY = -(totalHeight / 2);

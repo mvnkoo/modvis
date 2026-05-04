@@ -129,7 +129,7 @@ export function attachClassAssociations(
   const activeNodeY = entity.position.y;
   const totalAssociations = sortedAssociations.length;
   const spacingY = useMagicLayout
-    ? LAYOUT_CONFIG.ASSOCIATION.SPACING_Y * LAYOUT_CONFIG.MAGIC.MULTIPLIER
+    ? LAYOUT_CONFIG.ASSOCIATION.SPACING_Y * LAYOUT_CONFIG.MAGIC.ASSOCIATION
     : LAYOUT_CONFIG.ASSOCIATION.SPACING_Y;
   const totalHeight = (totalAssociations - 1) * spacingY;
   const startY = activeNodeY - totalHeight / 2;

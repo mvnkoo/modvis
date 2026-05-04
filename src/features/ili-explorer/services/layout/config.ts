@@ -22,6 +22,9 @@ export const LAYOUT_CONFIG = {
   },
   MAGIC: {
     GAP: 50,
-    MULTIPLIER: 2.5,
+    SUBTYPE_VERTICAL: 2.7,
+    SUBTYPE_ROW: 3.0,
+    ENUM: 2.5,
+    ASSOCIATION: 2.5,
   },
 } as const;

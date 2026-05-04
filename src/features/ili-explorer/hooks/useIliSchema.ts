@@ -64,6 +64,7 @@ interface UseIliSchemaReturn {
   showAssociations: boolean;
   handleToggleAssociations: (visible: boolean) => void;
   handleMagicLayout: () => void;
+  resetCurrentLayout: () => void;
   applyLayout: (node: IliNode, override?: Partial<LayoutOptions>) => { nodes: IliNode[]; edges: Edge[] };
   computeLayout: (node: IliNode, override?: Partial<LayoutOptions>) => { nodes: IliNode[]; edges: Edge[] };
   fitViewRequest: number;
@@ -695,6 +696,14 @@ export const useIliSchema = (
     }
   }, [activeNodeId, allNodes, applyLayout, navigationHistory, historyIndex]);
 
+  const resetCurrentLayout = useCallback(() => {
+    if (!activeNodeId) return;
+    const targetNode = allNodes.find(n => n.id === activeNodeId) as IliNode | undefined;
+    if (!targetNode) return;
+    applyLayout(targetNode);
+    requestFitView();
+  }, [activeNodeId, allNodes, applyLayout, requestFitView]);
+
   const handleMagicLayout = useCallback(() => {
     if (activeNodeId) {
       const currentNode = allNodes.find(node => node.id === activeNodeId);
@@ -793,6 +802,7 @@ export const useIliSchema = (
     showAssociations,
     handleToggleAssociations,
     handleMagicLayout,
+    resetCurrentLayout,
     applyLayout,
     computeLayout,
     fitViewRequest,
