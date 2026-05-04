@@ -38,7 +38,9 @@ import {
   IliEnumNode,
   IliAssociationNode,
   IliUnloadedClassNode,
-  IliDomainEnumNode
+  IliDomainEnumNode,
+  IliTopicLabelNode,
+  IliTopicFrameNode
 } from './nodes';
 import { useIliSchema } from '../hooks/useIliSchema';
 import { useDiagramExport } from '../hooks/useDiagramExport';
@@ -68,7 +70,9 @@ const nodeTypes: NodeTypes = {
   enumNode: IliEnumNode,
   domainEnumNode: IliDomainEnumNode,
   associationNode: IliAssociationNode,
-  unloadedClassNode: IliUnloadedClassNode
+  unloadedClassNode: IliUnloadedClassNode,
+  topicLabelNode: IliTopicLabelNode,
+  topicFrameNode: IliTopicFrameNode,
 };
 
 
@@ -126,6 +130,7 @@ const Flow: React.FC = () => {
     handleNodeClick: baseHandleNodeClick,
     handleReset: baseHandleReset,
     handleBack: baseHandleBack,
+    canGoBack,
     handleHierarchyToggle,
     activeNodeId,
     setActiveNodeId,
@@ -186,9 +191,10 @@ const Flow: React.FC = () => {
   const [nodePositionsHistory, setNodePositionsHistory] = useState<Map<string, { x: number; y: number }>[]>([]);
 
   const handleNodeClick = useCallback((event: React.MouseEvent, node: ReactFlowNode) => {
+    if (node.type === 'topicLabelNode' || node.type === 'topicFrameNode') return;
     if (node.id === activeNodeId) return;
-    
-   
+
+
     const nodeType = node.type || 'classNode';
     const nodeTitle = String(node.data?.label || node.data?.title || node.id);
     const isAbstract = Boolean(node.data?.isAbstract);
@@ -233,9 +239,9 @@ const Flow: React.FC = () => {
   }, [baseHandleReset, requestFitView, setMaxSubTypesPerRow]);
 
   const handleBack = useCallback(() => {
-    if (historyIndex > 0) {
-      baseHandleBack();
-
+    if (historyIndex < 0) return;
+    const went = baseHandleBack();
+    if (went && historyIndex > 0) {
       setNavigationHistory(prev => {
         const newHistory = [...prev];
         if (newHistory.length > 1) {
@@ -496,11 +502,13 @@ const Flow: React.FC = () => {
   }, []);
 
   const modelStats = useMemo(() => {
-    let classCount = 0, topicCount = 0, associationCount = 0, enumCount = 0, unitCount = 0;
+    let classCount = 0, associationCount = 0, enumCount = 0, unitCount = 0;
+    const topics = new Set<string>();
     for (const n of allNodes) {
+      const topic = (n.data as any)?.topic;
+      if (typeof topic === 'string' && topic.length > 0) topics.add(topic);
       switch (n.type) {
         case 'classNode': classCount++; break;
-        case 'topicNode': topicCount++; break;
         case 'associationNode': associationCount++; break;
         case 'enumNode': enumCount++; break;
         case 'domainEnumNode':
@@ -509,7 +517,7 @@ const Flow: React.FC = () => {
           break;
       }
     }
-    return { classCount, topicCount, associationCount, enumCount, unitCount };
+    return { classCount, topicCount: topics.size, associationCount, enumCount, unitCount };
   }, [allNodes]);
 
   const lastLoadedFileRef = useRef<string | null>(null);
@@ -657,6 +665,7 @@ const Flow: React.FC = () => {
             currentFileName={currentFileName}
             activeNodeId={activeNodeId}
             historyIndex={historyIndex}
+            canGoBack={canGoBack}
             showFullHierarchy={showFullHierarchy}
             useCurvedLines={useCurvedLines}
             exportAnchorEl={exportAnchorEl}

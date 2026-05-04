@@ -6,3 +6,5 @@ export { IliEnumNode } from './IliEnumNode';
 export { IliDomainEnumNode } from './IliDomainEnumNode';
 export { IliAssociationNode } from './IliAssociationNode';
 export { IliUnloadedClassNode } from './IliUnloadedClassNode';
+export { IliTopicLabelNode } from './IliTopicLabelNode';
+export { IliTopicFrameNode } from './IliTopicFrameNode';
