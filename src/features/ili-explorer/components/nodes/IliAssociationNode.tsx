@@ -83,12 +83,6 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
   };
 
  
-  console.log('Association Node Render:', {
-    label: data.label,
-    isSource: data.isSource,
-    association: data.association
-  });
-
   return (
     <Paper 
       elevation={2}

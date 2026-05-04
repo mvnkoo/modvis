@@ -390,7 +390,6 @@ export class IliParserService {
     visited = new Set<string>()
   ): { className: string; attributes: IliAttribute[] }[] {
     const inherited: { className: string; attributes: IliAttribute[] }[] = [];
-    console.log(`Collecting inherited attributes for ${className}`);
 
    
     const classRegex = new RegExp(`CLASS\\s+${className}\\s*(?:\\(ABSTRACT\\))?\\s*EXTENDS\\s+([\\w\\.]+)\\s*=`, 'i');
@@ -398,11 +397,9 @@ export class IliParserService {
     
     if (match) {
       const superClassName = match[1];
-      console.log(`Found superclass: ${superClassName}`);
 
      
       if (visited.has(superClassName)) {
-        console.log(`Already visited ${superClassName}, skipping`);
         return inherited;
       }
       visited.add(superClassName);
@@ -416,7 +413,6 @@ export class IliParserService {
       if (superClassMatch) {
         const superClassContent = superClassMatch[1];
         const attributes = this.parseAttributes(superClassContent);
-        console.log(`Found ${attributes.length} attributes in superclass ${superClassName}`);
         
         if (attributes.length > 0) {
          
@@ -449,7 +445,6 @@ export class IliParserService {
     let match;
     while ((match = assocRegex.exec(content)) !== null) {
       const [_, assocName, assocContent] = match;
-      console.log('Found association:', assocName);
       
      
       const refRegex = /(\w+)Ref\s*(?:\(EXTERNAL\))?\s*--\s*\{(\d+|\*|\d+\.\.\d+|\d+\.\.\*)\}\s*([\w\.]+);/g;
@@ -480,7 +475,6 @@ export class IliParserService {
           targetCardinality: target.card
         };
         
-        console.log('Created association:', association);
         
        
         this.addAssociationToClass(associations, source.class, association);
@@ -516,7 +510,6 @@ export class IliParserService {
   ) {
     const existing = associations.get(className) || [];
     associations.set(className, [...existing, association]);
-    console.log(`Added association to class ${className}:`, association);
   }
 
   /**
@@ -532,7 +525,6 @@ export class IliParserService {
      
       this.domainEnums = this.parseDomainEnums(content);
       
-      console.log('Starting to parse content...');
 
      
       const enumRegex = /ENUMERATION\s+(\w+)\s*=\s*\(([\s\S]*?)\);/g;
@@ -560,15 +552,12 @@ export class IliParserService {
         };
         
         this.nodes.set(nodeId, node);
-        console.log(`Created enum node:`, node);
       }
 
       const classRegex = /CLASS\s+(\w+)\s*(?:\(ABSTRACT\))?\s*(?:EXTENDS\s+([\w\.]+))?\s*=\s*([\s\S]*?)(?=END\s+\1;)/g;
       
      
       const associations = this.parseAssociations(content);
-      console.log('Parsed associations:', associations);
-      console.log('Association count:', associations.size);
       
      
       const topicMatch = content.match(/TOPIC\s+(\w+)\s*=/);

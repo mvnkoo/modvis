@@ -316,3 +316,61 @@ describe('NG Phase 4 — VIEW semantisch', () => {
     expect(v?.data.formation?.sources).toEqual(['A', 'B']);
   });
 });
+
+describe('NG Phase 5 — UNIT semantisch', () => {
+  it('extracts simple unit definitions with short names', () => {
+    const src = wrap(`
+  UNIT
+    Length (ABSTRACT);
+    Meter [m] EXTENDS Length;
+    Kilometer [km] EXTENDS Length = 1000 [m];`);
+    const r = new NgIliParser().parseContent(src);
+    expect(r.errors).toEqual([]);
+    const units = r.nodes.filter(n => n.type === 'UNIT');
+    expect(units.length).toBe(3);
+    const length = units.find(u => u.name === 'Length');
+    expect(length?.isAbstract).toBe(true);
+    const meter = units.find(u => u.name === 'Meter');
+    expect(meter?.data.shortName).toBe('m');
+    expect(meter?.data.extends).toBe('Length');
+  });
+
+  it('emits UNIT-EXTENDS edges for derived units', () => {
+    const src = wrap(`
+  UNIT
+    Length (ABSTRACT);
+    Meter [m] EXTENDS Length;
+    Centimeter [cm] EXTENDS Length;`);
+    const r = new NgIliParser().parseContent(src);
+    const unitExt = r.relations.filter(re =>
+      re.type === 'EXTENDS' && re.sourceId.startsWith('unit_')
+    );
+    expect(unitExt.length).toBe(2);
+  });
+
+  it('handles DerivedUnit with FUNCTION body', () => {
+    const src = wrap(`
+  UNIT
+    Pa (ABSTRACT);
+    K (ABSTRACT);
+    Decibel [dB] = FUNCTION // 10**(dB/20) * 0.00002 // [Pa];
+    Degree_Celsius [oC] = FUNCTION // oC+273.15 // [K];`);
+    const r = new NgIliParser().parseContent(src);
+    expect(r.errors).toEqual([]);
+    const units = r.nodes.filter(n => n.type === 'UNIT');
+    expect(units.find(u => u.name === 'Decibel')?.data.shortName).toBe('dB');
+  });
+
+  it('handles ComposedUnit body with paren-balanced expression', () => {
+    const src = wrap(`
+  UNIT
+    LENGTH (ABSTRACT);
+    TIME (ABSTRACT);
+    Velocity (ABSTRACT) = (LENGTH/TIME);
+    Acceleration (ABSTRACT) = (Velocity/TIME);`);
+    const r = new NgIliParser().parseContent(src);
+    expect(r.errors).toEqual([]);
+    const units = r.nodes.filter(n => n.type === 'UNIT');
+    expect(units.length).toBe(4);
+  });
+});

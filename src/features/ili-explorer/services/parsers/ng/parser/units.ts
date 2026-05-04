@@ -1,33 +1,82 @@
 import type { IliCstParserBuilder } from '../parser';
 import {
-  Unit, Semicolon, LParen, RParen,
+  Unit, Identifier, Semicolon, Equals, Extends,
+  LParen, RParen, LBracket, RBracket, Abstract, Function,
   Topic, Class, Structure, Association, Enumeration, Domain,
-  Imports, End, Function, View, Graphic, Refsystem, Parameter,
+  Imports, End, View, Graphic, Refsystem, Parameter,
 } from '../tokens';
 
 export function registerUnitsRules(p: IliCstParserBuilder): void {
   p.unitSection = p.RULE('unitSection', () => {
     p.CONSUME(Unit);
-    // Stop bei den Tokens, die einen neuen Top-Level-Konstrukt einleiten:
-    // andernfalls würde skipStatement gierig in TOPIC/CLASS/... reinfressen.
     p.MANY({
       GATE: () => {
         const t = p.LA(1).tokenType;
-        return t !== Topic && t !== Class && t !== Structure
+        return t === Identifier;
+      },
+      DEF: () => p.SUBRULE(p.unitDef),
+    });
+  });
+
+  // UnitDef = Name [ (ABSTRACT) | [ShortName] ] [ EXTENDS UnitRef ]
+  //          [ = ( DerivedUnit | ComposedUnit ) ] ;
+  // Body (DerivedUnit/ComposedUnit) bleibt Token-Salat — der semantische
+  // Wert liegt in Name, Short, ABSTRACT-Flag und EXTENDS.
+  p.unitDef = p.RULE('unitDef', () => {
+    p.CONSUME(Identifier, { LABEL: 'unitName' });
+    p.OPTION(() => p.OR([
+      {
+        ALT: () => {
+          p.CONSUME(LParen);
+          p.CONSUME(Abstract);
+          p.CONSUME(RParen);
+        },
+      },
+      {
+        ALT: () => {
+          p.CONSUME(LBracket);
+          p.CONSUME2(Identifier, { LABEL: 'shortName' });
+          p.CONSUME(RBracket);
+        },
+      },
+    ]));
+    p.OPTION2(() => {
+      p.CONSUME(Extends);
+      p.SUBRULE(p.qualifiedName, { LABEL: 'extendsRef' });
+    });
+    p.OPTION3(() => {
+      p.CONSUME(Equals);
+      p.MANY({
+        GATE: () => p.LA(1).tokenType !== Semicolon,
+        DEF: () => p.OR2([
+          {
+            ALT: () => {
+              p.CONSUME2(LParen);
+              p.SUBRULE(p.parenContents);
+              p.CONSUME2(RParen);
+            },
+          },
+          { ALT: () => p.CONSUME(Function) },
+          { ALT: () => p.SUBRULE(p.skipBodyToken) },
+        ]),
+      });
+    });
+    p.CONSUME(Semicolon);
+  });
+
+  // Legacy fallback — bleibt im Builder, falls jemand es referenziert.
+  // (Wird vom Konstruktor erwartet, dürfen wir nicht ungebunden lassen.)
+  p.skipStatement = p.RULE('skipStatement', () => {
+    p.AT_LEAST_ONE({
+      GATE: () => {
+        const t = p.LA(1).tokenType;
+        return t !== Semicolon
+          && t !== Topic && t !== Class && t !== Structure
           && t !== Association && t !== Enumeration && t !== Domain
           && t !== Imports && t !== Unit && t !== End
           && t !== Function && t !== View && t !== Graphic
           && t !== Refsystem && t !== Parameter;
       },
-      DEF: () => p.SUBRULE(p.skipStatement),
-    });
-  });
-
-  // Unit-Eintrag: bis zum nächsten ';' alle Tokens schlucken (paren-balanced).
-  // FUNCTION ist erlaubt (DerivedUnit-Form `= FUNCTION // ... // [unit]`).
-  p.skipStatement = p.RULE('skipStatement', () => {
-    p.AT_LEAST_ONE({
-      GATE: () => p.LA(1).tokenType !== Semicolon,
       DEF: () => p.OR([
         {
           ALT: () => {
@@ -36,7 +85,7 @@ export function registerUnitsRules(p: IliCstParserBuilder): void {
             p.CONSUME(RParen);
           },
         },
-        { ALT: () => p.CONSUME(Function) },
+        { ALT: () => p.CONSUME2(Function) },
         { ALT: () => p.SUBRULE(p.skipBodyToken) },
       ]),
     });

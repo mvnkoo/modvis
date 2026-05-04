@@ -94,6 +94,10 @@ export function attachClassEnums(
   const totalHeight = (totalEnums - 1) * spacingY;
   const startY = -(totalHeight / 2);
 
+  // Mehrere Attribute können denselben Domain-Enum referenzieren — pro
+  // (entity, enumNode) nur einmal eine Edge erzeugen, sonst kollidieren die
+  // Edge-Keys (`${entity.id}-${enumNodeId}-enum`).
+  const seenEnumIds = new Set<string>();
   attributes.forEach((attr, index) => {
     if (!attr.isEnum && !attr.isDomainEnum) return;
 
@@ -102,6 +106,9 @@ export function attachClassEnums(
       : attr.isInlineEnum
         ? `enum_${entity.id}_${attr.name}`
         : `enum_${attr.type}`;
+
+    if (seenEnumIds.has(enumNodeId)) return;
+    seenEnumIds.add(enumNodeId);
 
     const enumNode: IliNode = nodeMap.get(enumNodeId) || {
       id: enumNodeId,

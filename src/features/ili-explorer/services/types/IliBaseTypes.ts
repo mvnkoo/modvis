@@ -9,6 +9,7 @@ export type IliNodeType =
   | 'ENUMERATION'
   | 'FUNCTION'
   | 'VIEW'
+  | 'UNIT'
   | 'enumNode'
   | 'domainEnumNode';
 
