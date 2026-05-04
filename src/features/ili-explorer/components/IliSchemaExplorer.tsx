@@ -41,12 +41,14 @@ import {
   IliUnloadedClassNode,
   IliDomainEnumNode,
   IliTopicLabelNode,
-  IliTopicFrameNode
+  IliTopicFrameNode,
+  IliPreviewNode
 } from './nodes';
 import { useIliSchema } from '../hooks/useIliSchema';
 import { useDiagramExport } from '../hooks/useDiagramExport';
 import { LayoutSettings } from './sidebar/LayoutSettings';
 import { ModelInfoPanel } from './sidebar/ModelInfoPanel';
+import { layoutHoverPreview } from '../services/layout/previewStrategy';
 
 import '@xyflow/react/dist/style.css';
 import { debounce } from 'lodash';
@@ -74,6 +76,7 @@ const nodeTypes: NodeTypes = {
   unloadedClassNode: IliUnloadedClassNode,
   topicLabelNode: IliTopicLabelNode,
   topicFrameNode: IliTopicFrameNode,
+  previewNode: IliPreviewNode,
 };
 
 
@@ -363,7 +366,7 @@ const Flow: React.FC = () => {
   }, []);
 
  
-  const nodesWithHandlers = useMemo(() => 
+  const nodesWithHandlers = useMemo(() =>
     nodes.map(node => ({
       ...node,
       data: {
@@ -373,6 +376,42 @@ const Flow: React.FC = () => {
       }
     }))
   , [nodes, handleNodeExpand]);
+
+  const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
+  const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(true);
+
+  const isOverviewMode = useMemo(
+    () => nodes.some(n => n.type === 'topicLabelNode' || n.type === 'topicFrameNode'),
+    [nodes]
+  );
+
+  const handleNodeMouseEnter = useCallback((_e: React.MouseEvent, node: ReactFlowNode) => {
+    if (!isOverviewMode || !hoverPreviewEnabled) return;
+    if (node.type !== 'classNode') return;
+    setHoveredClassId(node.id);
+  }, [isOverviewMode, hoverPreviewEnabled]);
+
+  const handleNodeMouseLeave = useCallback(() => {
+    setHoveredClassId(null);
+  }, []);
+
+  const hoverPreview = useMemo(() => {
+    if (!isOverviewMode || !hoverPreviewEnabled || !hoveredClassId) {
+      return { nodes: [] as ReactFlowNode[], edges: [] as Edge[] };
+    }
+    const hovered = nodes.find(n => n.id === hoveredClassId);
+    if (!hovered) return { nodes: [], edges: [] };
+    return layoutHoverPreview(hovered, allNodes, allEdges, colors);
+  }, [isOverviewMode, hoverPreviewEnabled, hoveredClassId, nodes, allNodes, allEdges, colors]);
+
+  const renderedNodes = useMemo(
+    () => [...nodesWithHandlers, ...hoverPreview.nodes],
+    [nodesWithHandlers, hoverPreview.nodes]
+  );
+  const renderedEdges = useMemo(
+    () => [...edges, ...hoverPreview.edges],
+    [edges, hoverPreview.edges]
+  );
 
  
   const debouncedHandleMaxSubTypesChange = useCallback(
@@ -606,10 +645,12 @@ const Flow: React.FC = () => {
       />
 
       <ReactFlow
-        nodes={nodesWithHandlers}
-        edges={edges}
+        nodes={renderedNodes}
+        edges={renderedEdges}
         onConnect={handleConnect}
         onNodeClick={handleNodeClick as unknown as NodeMouseHandler}
+        onNodeMouseEnter={handleNodeMouseEnter as unknown as NodeMouseHandler}
+        onNodeMouseLeave={handleNodeMouseLeave as unknown as NodeMouseHandler}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         colorMode={mode}
@@ -672,6 +713,8 @@ const Flow: React.FC = () => {
           <LayoutSettings
             maxSubTypesPerRow={maxSubTypesPerRow}
             onMaxSubTypesChange={debouncedHandleMaxSubTypesChange}
+            hoverPreview={hoverPreviewEnabled}
+            onHoverPreviewChange={setHoverPreviewEnabled}
           />
           <IliSideToolbar
             currentFileName={currentFileName}

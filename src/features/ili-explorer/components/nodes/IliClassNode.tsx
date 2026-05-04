@@ -298,6 +298,12 @@ export const IliClassNode = memo<IliClassNodeProps>(({ data }) => {
       />
       <Handle
         type="source"
+        position={Position.Bottom}
+        id="bottom-source"
+        style={{ opacity: 0 }}
+      />
+      <Handle
+        type="source"
         position={Position.Left}
         id="left-source"
         style={{ opacity: 0 }}
