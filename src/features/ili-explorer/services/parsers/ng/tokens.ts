@@ -114,6 +114,26 @@ export const No = kw('No', 'NO');
 export const Format = kw('Format', 'FORMAT');
 export const In = kw('In', 'IN');
 export const Constraints = kw('Constraints', 'CONSTRAINTS');
+export const Parameter = kw('Parameter', 'PARAMETER');
+export const Symbology = kw('Symbology', 'SYMBOLOGY');
+export const Sign = kw('Sign', 'SIGN');
+export const Contracted = kw('Contracted', 'CONTRACTED');
+export const Circular = kw('Circular', 'CIRCULAR');
+export const Ordered = kw('Ordered', 'ORDERED');
+export const Projection = kw('Projection', 'PROJECTION');
+export const Join = kw('Join', 'JOIN');
+export const Union = kw('Union', 'UNION');
+export const Aggregation = kw('Aggregation', 'AGGREGATION');
+export const Inspection = kw('Inspection', 'INSPECTION');
+export const Equal = kw('Equal', 'EQUAL');
+export const By = kw('By', 'BY');
+export const Clockwise = kw('Clockwise', 'CLOCKWISE');
+export const Counterclockwise = kw('Counterclockwise', 'COUNTERCLOCKWISE');
+export const Refsys = kw('Refsys', 'REFSYS');
+export const Continuous = kw('Continuous', 'CONTINUOUS');
+export const Subdivision = kw('Subdivision', 'SUBDIVISION');
+export const Transient = kw('Transient', 'TRANSIENT');
+export const Generic = kw('Generic', 'GENERIC');
 
 export const StringLiteral = createToken({
   name: 'StringLiteral',
@@ -122,7 +142,7 @@ export const StringLiteral = createToken({
 
 export const NumberLiteral = createToken({
   name: 'NumberLiteral',
-  pattern: /[0-9]+(?:\.[0-9]+)?/,
+  pattern: /[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/,
 });
 
 export const DotDot = createToken({ name: 'DotDot', pattern: /\.\./ });
@@ -155,6 +175,7 @@ export const EqualEqual = createToken({ name: 'EqualEqual', pattern: /==/ });
 export const Less = createToken({ name: 'Less', pattern: /</ });
 export const Greater = createToken({ name: 'Greater', pattern: />/ });
 export const At2 = createToken({ name: 'At2', pattern: /@/ });
+export const Tilde = createToken({ name: 'Tilde', pattern: /~/ });
 
 export const allTokens: TokenType[] = [
   Whitespace,
@@ -167,9 +188,13 @@ export const allTokens: TokenType[] = [
   Reference, Base, Constraints, Constraint, Existence, Unique, Set, Where, Required,
   Numeric, Text, MText, Boolean, DateTime, Date,
   Coord, MultiCoord, Polyline, MultiPolyline, Surface, MultiSurface, Area, MultiArea,
-  AnyClass, AnyStructure, Translation, Attribute, At, Or, And, Not, Null, True, False,
-  Inherit, To, From, Without, With, Oid, Tid, As, Type, External, Restriction,
+  AnyClass, AnyStructure, Translation, Attribute, At, Ordered, Or, And, Not, Null, True, False,
+  Inherit, Inspection, To, From, Without, With, Oid, Tid, As, Type, External, Restriction,
   Unqualified, Basket, Depends, On, No, Format, In,
+  Projection, Join, Union, Aggregation, Equal, By,
+  Parameter, Symbology, Sign, Contracted,
+  Counterclockwise, Clockwise, Circular, Refsys,
+  Continuous, Subdivision, Transient, Generic,
 
   Identifier,
   HashIdentifier,
@@ -183,7 +208,7 @@ export const allTokens: TokenType[] = [
   ArrowLeft, ArrowRight, ArrowBoth, CompositionArrow, AggregationArrow, DashDash,
   LessEqual, GreaterEqual, NotEqual, EqualEqual,
   Less, Greater, Equals,
-  Star, Plus, Minus, Slash, At2,
+  Star, Plus, Minus, Slash, At2, Tilde,
 ];
 
 export const IliLexer = new Lexer(allTokens, {

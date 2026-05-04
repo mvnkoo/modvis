@@ -1,0 +1,91 @@
+import type { IliCstParserBuilder } from '../parser';
+import {
+  Identifier, NumberLiteral, StringLiteral, HashIdentifier,
+  Interlis, Mandatory, Constraint, Unique, Existence, Set,
+  Tid, Oid, Type, All, Reference, Bag, List,
+  Not, And, Or, True, False, Null,
+  NotEqual, EqualEqual, ColonEquals, At2,
+  With, Without, Of, To, From, As, Required, In,
+  Comma, Dot, DotDot, Minus, Plus, Star, Slash,
+  LParen, RParen, LBracket, RBracket, LBrace, RBrace,
+  ArrowLeft, ArrowRight, ArrowBoth, DashDash,
+  Less, Greater, LessEqual, GreaterEqual,
+  Equals, Colon, Semicolon,
+} from '../tokens';
+
+export function registerConstraintRules(p: IliCstParserBuilder): void {
+  p.constraintClause = p.RULE('constraintClause', () => {
+    p.OR([
+      { ALT: () => p.CONSUME(Unique) },
+      { ALT: () => p.CONSUME(Mandatory) },
+      { ALT: () => p.CONSUME(Existence) },
+      { ALT: () => p.CONSUME(Set) },
+      { ALT: () => p.CONSUME(Constraint) },
+    ]);
+    p.MANY(() => p.SUBRULE(p.geometryBodyToken));
+    p.CONSUME(Semicolon);
+  });
+
+  p.geometryBodyToken = p.RULE('geometryBodyToken', () => {
+    p.OR([
+      { ALT: () => p.CONSUME(NumberLiteral) },
+      { ALT: () => p.CONSUME(Identifier) },
+      { ALT: () => p.CONSUME(HashIdentifier) },
+      { ALT: () => p.CONSUME(StringLiteral) },
+      { ALT: () => p.CONSUME(Interlis) },
+      { ALT: () => p.CONSUME(Not) },
+      { ALT: () => p.CONSUME(And) },
+      { ALT: () => p.CONSUME(Or) },
+      { ALT: () => p.CONSUME(True) },
+      { ALT: () => p.CONSUME(False) },
+      { ALT: () => p.CONSUME(Null) },
+      { ALT: () => p.CONSUME(NotEqual) },
+      { ALT: () => p.CONSUME(EqualEqual) },
+      { ALT: () => p.CONSUME(ColonEquals) },
+      { ALT: () => p.CONSUME(At2) },
+      { ALT: () => p.CONSUME(Constraint) },
+      { ALT: () => p.CONSUME(Unique) },
+      { ALT: () => p.CONSUME(Existence) },
+      { ALT: () => p.CONSUME(Set) },
+      { ALT: () => p.CONSUME(Tid) },
+      { ALT: () => p.CONSUME(Oid) },
+      { ALT: () => p.CONSUME(Type) },
+      { ALT: () => p.CONSUME(All) },
+      { ALT: () => p.CONSUME(Reference) },
+      { ALT: () => p.CONSUME(Bag) },
+      { ALT: () => p.CONSUME(List) },
+      { ALT: () => p.CONSUME(Comma) },
+      { ALT: () => p.CONSUME(Dot) },
+      { ALT: () => p.CONSUME(DotDot) },
+      { ALT: () => p.CONSUME(Minus) },
+      { ALT: () => p.CONSUME(Plus) },
+      { ALT: () => p.CONSUME(Star) },
+      { ALT: () => p.CONSUME(Slash) },
+      { ALT: () => p.CONSUME(LParen) },
+      { ALT: () => p.CONSUME(RParen) },
+      { ALT: () => p.CONSUME(LBracket) },
+      { ALT: () => p.CONSUME(RBracket) },
+      { ALT: () => p.CONSUME(LBrace) },
+      { ALT: () => p.CONSUME(RBrace) },
+      { ALT: () => p.CONSUME(ArrowLeft) },
+      { ALT: () => p.CONSUME(ArrowRight) },
+      { ALT: () => p.CONSUME(ArrowBoth) },
+      { ALT: () => p.CONSUME(DashDash) },
+      { ALT: () => p.CONSUME(Less) },
+      { ALT: () => p.CONSUME(Greater) },
+      { ALT: () => p.CONSUME(LessEqual) },
+      { ALT: () => p.CONSUME(GreaterEqual) },
+      { ALT: () => p.CONSUME(With) },
+      { ALT: () => p.CONSUME(Without) },
+      { ALT: () => p.CONSUME(Of) },
+      { ALT: () => p.CONSUME(To) },
+      { ALT: () => p.CONSUME(From) },
+      { ALT: () => p.CONSUME(As) },
+      { ALT: () => p.CONSUME(Mandatory) },
+      { ALT: () => p.CONSUME(Equals) },
+      { ALT: () => p.CONSUME(Colon) },
+      { ALT: () => p.CONSUME(Required) },
+      { ALT: () => p.CONSUME(In) },
+    ]);
+  });
+}

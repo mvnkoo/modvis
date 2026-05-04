@@ -7,6 +7,7 @@ import { useTheme } from '../../../common/theme/ThemeContext';
 import { SearchOption } from '../types/expTypes';
 import { Upload, Delete } from '@mui/icons-material';
 import { ExpSchemaService } from '../services/expService';
+import { readFileAsText } from '../../../common/utils/readFileAsText';
 
 export const ExpSchemaExplorer: React.FC = () => {
   const { colors } = useTheme();
@@ -22,7 +23,7 @@ export const ExpSchemaExplorer: React.FC = () => {
       setErrorOpen(true);
       return;
     }
-    const content = await file.text();
+    const content = await readFileAsText(file);
     setExpressData(content);
     setFileName(file.name);
   }, []);

@@ -202,6 +202,8 @@ class IliCstToAstVisitor extends BaseVisitor {
     if (ctx.structureDef) ctx.structureDef.forEach((s: CstNode) => this.visit(s));
     if (ctx.enumerationDef) ctx.enumerationDef.forEach((e: CstNode) => this.visit(e));
     if (ctx.associationDef) ctx.associationDef.forEach((a: CstNode) => this.visit(a));
+    if (ctx.functionDef) ctx.functionDef.forEach((f: CstNode) => this.visit(f));
+    if (ctx.viewDef) ctx.viewDef.forEach((v: CstNode) => this.visit(v));
   }
 
   modelHeaderBits() {}
@@ -217,7 +219,96 @@ class IliCstToAstVisitor extends BaseVisitor {
     if (ctx.structureDef) ctx.structureDef.forEach((s: CstNode) => this.visit(s));
     if (ctx.enumerationDef) ctx.enumerationDef.forEach((e: CstNode) => this.visit(e));
     if (ctx.associationDef) ctx.associationDef.forEach((a: CstNode) => this.visit(a));
+    if (ctx.functionDef) ctx.functionDef.forEach((f: CstNode) => this.visit(f));
+    if (ctx.viewDef) ctx.viewDef.forEach((v: CstNode) => this.visit(v));
     this.state.topicName = '';
+  }
+
+  functionDef(ctx: any) {
+    const fnName = imageOf(ctx.fnName?.[0]);
+    if (!fnName) return;
+    const args = (ctx.functionArg as CstNode[] | undefined)?.map(
+      a => this.visit(a) as string,
+    ) ?? [];
+    const node: IliBaseNode = {
+      id: `fn_${fnName}`,
+      type: 'FUNCTION',
+      name: fnName,
+      position: { x: 0, y: 0 },
+      data: {
+        label: fnName,
+        functionArgs: args,
+        topic: this.state.topicName,
+        isHighlighted: false,
+        isActive: false,
+      },
+    };
+    this.state.nodes.push(node);
+  }
+
+  functionArg(ctx: any): string {
+    return imageOf(ctx.argName?.[0]);
+  }
+
+  viewDef(ctx: any) {
+    const viewName = imageOf(ctx.viewName?.[0]);
+    if (!viewName) return;
+    let formation: { kind: string; sources: string[] } | undefined;
+    if (ctx.formationDef) {
+      formation = this.visit(ctx.formationDef[0]) as typeof formation;
+    }
+    let extendsRef: string | undefined;
+    if (ctx.viewExtendsRef) {
+      extendsRef = this.visit(ctx.viewExtendsRef[0]) as string;
+    }
+    const node: IliBaseNode = {
+      id: `view_${viewName}`,
+      type: 'VIEW',
+      name: viewName,
+      position: { x: 0, y: 0 },
+      data: {
+        label: viewName,
+        formation,
+        extendsRef,
+        topic: this.state.topicName,
+        isHighlighted: false,
+        isActive: false,
+      },
+    };
+    this.state.nodes.push(node);
+
+    if (formation) {
+      for (const src of formation.sources) {
+        this.state.relations.push({
+          id: `view_${viewName}-uses-${src}`,
+          sourceId: `view_${viewName}`,
+          targetId: lastSegment(src),
+          type: 'REFERENCES',
+          role: formation.kind.toLowerCase(),
+        });
+      }
+    }
+  }
+
+  formationDef(ctx: any): { kind: string; sources: string[] } {
+    const sources: string[] = [];
+    const collect = (key: string) => {
+      const arr = ctx[key] as CstNode[] | undefined;
+      if (arr) for (const r of arr) sources.push(this.visit(r) as string);
+    };
+    collect('renamedViewableRef');
+    let kind = 'PROJECTION';
+    if (ctx.Projection) kind = 'PROJECTION';
+    else if (ctx.Join) kind = 'JOIN';
+    else if (ctx.Union) kind = 'UNION';
+    else if (ctx.Aggregation) kind = 'AGGREGATION';
+    else if (ctx.Inspection) kind = ctx.Area ? 'AREA INSPECTION' : 'INSPECTION';
+    return { kind, sources };
+  }
+
+  renamedViewableRef(ctx: any): string {
+    const qn = ctx.qualifiedName?.[0] ? this.visit(ctx.qualifiedName[0]) as string : '';
+    return qn;
   }
 
   structureDef(ctx: any) {
@@ -271,8 +362,9 @@ class IliCstToAstVisitor extends BaseVisitor {
   }
 
   referenceType(ctx: any): Partial<IliAttribute> {
-    const target = this.visit(ctx.qualifiedName[0]) as string;
-    const isExternal = !!ctx.External;
+    const target = ctx.AnyClass
+      ? 'ANYCLASS'
+      : (this.visit(ctx.qualifiedName[0]) as string);
     return {
       type: `REFERENCE TO ${target}`,
       isReference: true,
