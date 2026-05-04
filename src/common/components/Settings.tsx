@@ -15,8 +15,15 @@ import { Settings as SettingsIcon } from '@mui/icons-material';
 import { useTheme } from '../theme/ThemeContext';
 import { useSettings } from '../settings/SettingsContext';
 
+const ACCENT_PRESETS: { label: string; color: string }[] = [
+  { label: 'Orange', color: '#e65a1a' },
+  { label: 'Lila', color: '#9c27b0' },
+  { label: 'Beton', color: '#6e7378' },
+  { label: 'Haselnuss', color: '#8b5e3c' },
+];
+
 const Settings: React.FC = () => {
-  const { mode, setMode, colorScheme, setColorScheme } = useTheme();
+  const { mode, setMode, colorScheme, setColorScheme, accentColor, setAccentColor } = useTheme();
   const {
     experimentalFeatures, setExperimentalFeatures,
     parserBackend, setParserBackend,
@@ -93,9 +100,9 @@ const Settings: React.FC = () => {
                 </Box>
               }
             />
-            <FormControlLabel 
-              value="highContrast" 
-              control={<Radio size="small" />} 
+            <FormControlLabel
+              value="highContrast"
+              control={<Radio size="small" />}
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 16, height: 16, bgcolor: '#000000', borderRadius: 1 }} />
@@ -103,19 +110,57 @@ const Settings: React.FC = () => {
                 </Box>
               }
             />
-            <FormControlLabel
-              value="purple"
-              control={<Radio size="small" />}
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 16, height: 16, bgcolor: '#9d18e9', borderRadius: 1 }} />
-                  <Typography variant="body2">Violett</Typography>
-                </Box>
-              }
-            />
           </RadioGroup>
         </MenuItem>
         <Divider />
+        <MenuItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Aktiv-Farbe
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            {ACCENT_PRESETS.map(preset => {
+              const selected = accentColor.toLowerCase() === preset.color.toLowerCase();
+              return (
+                <Box
+                  key={preset.color}
+                  onClick={() => setAccentColor(preset.color)}
+                  title={preset.label}
+                  sx={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: '50%',
+                    bgcolor: preset.color,
+                    cursor: 'pointer',
+                    border: '2px solid',
+                    borderColor: selected ? 'text.primary' : 'transparent',
+                    boxShadow: '0 0 0 1px rgba(0,0,0,0.18)',
+                    transition: 'transform 120ms ease',
+                    '&:hover': { transform: 'scale(1.08)' },
+                  }}
+                />
+              );
+            })}
+            <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
+              Eigene:
+            </Typography>
+            <Box
+              component="input"
+              type="color"
+              value={accentColor}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAccentColor(e.target.value)}
+              sx={{
+                width: 26,
+                height: 26,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                bgcolor: 'transparent',
+                p: 0,
+              }}
+            />
+          </Box>
+        </MenuItem>
         <Divider />
         <MenuItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
           <Typography variant="subtitle2" gutterBottom>

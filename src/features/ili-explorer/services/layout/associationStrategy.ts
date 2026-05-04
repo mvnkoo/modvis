@@ -75,7 +75,7 @@ export function layoutAssociationCenter(
       source: sourceId,
       target: entity.id,
       type: useCurvedLines ? 'default' : 'step',
-      animated: false,
+      animated: true,
       sourceHandle: 'right-source',
       targetHandle: 'left-target',
       style: {
@@ -92,7 +92,7 @@ export function layoutAssociationCenter(
       source: entity.id,
       target: targetClass.id,
       type: useCurvedLines ? 'default' : 'step',
-      animated: false,
+      animated: true,
       sourceHandle: 'right-source',
       targetHandle: 'left-target',
       style: {
@@ -163,7 +163,7 @@ export function attachClassAssociations(
       source: isSource ? entity.id : associationNodeId,
       target: isSource ? associationNodeId : entity.id,
       type: useCurvedLines ? 'default' : 'step',
-      animated: false,
+      animated: true,
       sourceHandle: isSource ? 'left-source' : 'right-source',
       targetHandle: isSource ? 'right-target' : 'left-target',
       style: {

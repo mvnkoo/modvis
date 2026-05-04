@@ -104,6 +104,12 @@ const globalStyles = `
   .noclick {
     pointer-events: none;
   }
+  .react-flow__edge.animated path.react-flow__edge-path {
+    animation-duration: 1s;
+  }
+  body.tooltips-off .MuiTooltip-popper {
+    display: none !important;
+  }
 `;
 
 const Flow: React.FC = () => {
@@ -379,45 +385,71 @@ const Flow: React.FC = () => {
   , [nodes, handleNodeExpand]);
 
   const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
+  const [tintHoverId, setTintHoverId] = useState<string | null>(null);
   const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(true);
+  const previewDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const PREVIEW_DELAY_MS = 500;
 
-  // Beim Drill-In aus der Overview behält React den hovered-State, bis die
-  // Maus das nächste Mal bewegt wird — das Preview blitzt sonst kurz auf der
-  // neu aktiven Klasse auf. Darum bei jedem Wechsel der aktiven Klasse cleanen.
   useEffect(() => {
     setHoveredClassId(null);
+    setTintHoverId(null);
+    if (previewDelayRef.current) {
+      clearTimeout(previewDelayRef.current);
+      previewDelayRef.current = null;
+    }
   }, [activeNodeId]);
 
-  // Walk up the EXTENDS chain from the active class — every ancestor (direct
-  // parent, grandparent, …) is already represented in the current view, so
-  // hover preview on any of them would duplicate what's visible.
-  const activeSupertypeIds = useMemo(() => {
-    if (!activeNodeId) return new Set<string>();
-    const seen = new Set<string>();
+  const ancestorDepth = useMemo(() => {
+    const depths = new Map<string, number>();
+    if (!activeNodeId) return depths;
+    depths.set(activeNodeId, 0);
     const queue: string[] = [activeNodeId];
     while (queue.length > 0) {
       const id = queue.shift()!;
+      const d = depths.get(id)!;
       for (const e of allEdges) {
-        if (e.source === id && !seen.has(e.target)) {
-          seen.add(e.target);
+        if (e.source === id && !depths.has(e.target)) {
+          depths.set(e.target, d + 1);
           queue.push(e.target);
         }
       }
     }
-    return seen;
+    return depths;
   }, [activeNodeId, allEdges]);
 
+  const activeSupertypeIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const [id, d] of ancestorDepth) {
+      if (d > 0) set.add(id);
+    }
+    return set;
+  }, [ancestorDepth]);
+
   const handleNodeMouseEnter = useCallback((_e: React.MouseEvent, node: ReactFlowNode) => {
+    const tintableTypes = new Set(['classNode', 'enumNode', 'domainEnumNode', 'associationNode']);
+    if (!tintableTypes.has(node.type ?? '')) return;
+    if (node.id === activeNodeId) return;
+    setTintHoverId(node.id);
+
     if (!hoverPreviewEnabled) return;
     if (node.type !== 'classNode') return;
-    if (node.id === activeNodeId) return;
     if (activeSupertypeIds.has(node.id)) return;
     if ((node.data as { expanded?: boolean } | undefined)?.expanded) return;
-    setHoveredClassId(node.id);
+
+    if (previewDelayRef.current) clearTimeout(previewDelayRef.current);
+    previewDelayRef.current = setTimeout(() => {
+      setHoveredClassId(node.id);
+      previewDelayRef.current = null;
+    }, PREVIEW_DELAY_MS);
   }, [hoverPreviewEnabled, activeNodeId, activeSupertypeIds]);
 
   const handleNodeMouseLeave = useCallback(() => {
+    if (previewDelayRef.current) {
+      clearTimeout(previewDelayRef.current);
+      previewDelayRef.current = null;
+    }
     setHoveredClassId(null);
+    setTintHoverId(null);
   }, []);
 
   const hoverPreview = useMemo(() => {
@@ -439,10 +471,53 @@ const Flow: React.FC = () => {
     () => [...nodesWithHandlers, ...hoverPreview.nodes],
     [nodesWithHandlers, hoverPreview.nodes]
   );
-  const renderedEdges = useMemo(
-    () => [...edges, ...hoverPreview.edges],
-    [edges, hoverPreview.edges]
-  );
+  // Pick the single edge from the hovered node to its closest neighbour in the
+  // active-class hierarchy. For ancestors that's the direct child (one rank
+  // closer to active); for subtypes / enums / assocs it's active itself.
+  const tintedEdgeId = useMemo(() => {
+    if (!tintHoverId || !activeNodeId) return null;
+    let bestId: string | null = null;
+    let bestDepth = Infinity;
+    for (const e of edges) {
+      let other: string | null = null;
+      if (e.source === tintHoverId) other = e.target;
+      else if (e.target === tintHoverId) other = e.source;
+      if (other === null) continue;
+      const d = ancestorDepth.get(other);
+      if (d === undefined) continue;
+      if (d < bestDepth) {
+        bestDepth = d;
+        bestId = e.id;
+      }
+    }
+    return bestId;
+  }, [tintHoverId, activeNodeId, edges, ancestorDepth]);
+
+  const renderedEdges = useMemo(() => {
+    const strokeFade = 'stroke 1.4s ease-out';
+    const withFade = edges.map(e => ({
+      ...e,
+      style: { ...e.style, transition: strokeFade },
+    }));
+    const tinted = tintedEdgeId
+      ? withFade.map(e => {
+          if (e.id !== tintedEdgeId) return e;
+          const tintedMarkerEnd = e.markerEnd && typeof e.markerEnd === 'object'
+            ? { ...e.markerEnd, color: colors.selectedEntity }
+            : e.markerEnd;
+          return {
+            ...e,
+            style: {
+              ...e.style,
+              stroke: colors.selectedEntity,
+              transition: strokeFade,
+            },
+            markerEnd: tintedMarkerEnd,
+          };
+        })
+      : withFade;
+    return [...tinted, ...hoverPreview.edges];
+  }, [edges, hoverPreview.edges, tintedEdgeId, colors.selectedEntity]);
 
  
   const debouncedHandleMaxSubTypesChange = useCallback(
