@@ -22,7 +22,7 @@ import {
   LayoutOptions,
 } from '../services/types/IliBaseTypes';
 import { IliClassNode } from '../services/types/IliModelTypes';
-import type { IliParseError } from '../services/parsers/IliParser';
+import type { IliParseError, IliImportRef } from '../services/parsers/IliParser';
 
 export type { SearchOption };
 
@@ -32,6 +32,8 @@ interface UseIliSchemaReturn {
   error: string | null;
   parseWarnings: IliParseError[];
   dismissParseWarnings: () => void;
+  imports: IliImportRef[];
+  interlisVersion: string | undefined;
   searchValue: SearchOption | null;
   searchOptions: SearchOption[];
   currentFileName: string | null;
@@ -95,6 +97,8 @@ export const useIliSchema = (
   const [error, setError] = useState<string | null>(null);
   const [parseWarnings, setParseWarnings] = useState<IliParseError[]>([]);
   const dismissParseWarnings = useCallback(() => setParseWarnings([]), []);
+  const [imports, setImports] = useState<IliImportRef[]>([]);
+  const [interlisVersion, setInterlisVersion] = useState<string | undefined>(undefined);
   const [searchValue, setSearchValue] = useState<SearchOption | null>(null);
   const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
@@ -193,6 +197,8 @@ export const useIliSchema = (
       lastContentRef.current = { content, fileName };
       schemaServiceRef.current.parseSchema(content);
       setParseWarnings(schemaServiceRef.current.getParseErrors());
+      setImports(schemaServiceRef.current.getImports());
+      setInterlisVersion(schemaServiceRef.current.getInterlisVersion());
 
       const baseNodes = schemaServiceRef.current.getNodes();
       const relations = schemaServiceRef.current.getRelations();
@@ -458,6 +464,9 @@ export const useIliSchema = (
     setSearchValue(null);
     setCurrentFileName(null);
     setError(null);
+    setParseWarnings([]);
+    setImports([]);
+    setInterlisVersion(undefined);
     setNavigationHistory([]);
     setHistoryIndex(-1);
     setActiveNodeId(null);
@@ -675,6 +684,8 @@ export const useIliSchema = (
     isLoading,
     error,
     parseWarnings,
+    imports,
+    interlisVersion,
     dismissParseWarnings,
     searchValue,
     searchOptions,
