@@ -83,9 +83,9 @@ export function useDiagramExport(currentFileName: string | null) {
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [toastSeverity, setToastSeverity] = useState<'success' | 'error'>('success');
+  const [toastSeverity, setToastSeverity] = useState<'success' | 'info' | 'warning' | 'error'>('success');
 
-  const showToast = useCallback((message: string, severity: 'success' | 'error') => {
+  const showToast = useCallback((message: string, severity: 'success' | 'info' | 'warning' | 'error') => {
     setToastMessage(message);
     setToastSeverity(severity);
     setToastOpen(true);

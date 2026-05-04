@@ -8,7 +8,7 @@ import {
   IliTopicNode,
   IliClassNode
 } from './types/IliModelTypes';
-import type { IliParser, IliParseError } from './parsers/IliParser';
+import type { IliParser, IliParseError, IliImportRef } from './parsers/IliParser';
 import { LegacyIliParser } from './parsers/LegacyIliParser';
 import { v4 as uuid } from 'uuid';
 
@@ -17,6 +17,8 @@ export class IliSchemaService {
   private relations: Map<string, IliRelation>;
   private parser: IliParser;
   private lastErrors: IliParseError[] = [];
+  private lastImports: IliImportRef[] = [];
+  private lastInterlisVersion: string | undefined;
 
   constructor(parser: IliParser = new LegacyIliParser()) {
     this.nodes = new Map();
@@ -28,13 +30,25 @@ export class IliSchemaService {
     return this.lastErrors;
   }
 
+  public getImports(): IliImportRef[] {
+    return this.lastImports;
+  }
+
+  public getInterlisVersion(): string | undefined {
+    return this.lastInterlisVersion;
+  }
+
   public parseSchema(content: string): void {
     try {
       this.clear();
       this.lastErrors = [];
+      this.lastImports = [];
+      this.lastInterlisVersion = undefined;
 
-      const { nodes, relations, errors } = this.parser.parseContent(content);
+      const { nodes, relations, errors, imports, interlisVersion } = this.parser.parseContent(content);
       this.lastErrors = errors ?? [];
+      this.lastImports = imports ?? [];
+      this.lastInterlisVersion = interlisVersion;
       
      
       const initialClass =

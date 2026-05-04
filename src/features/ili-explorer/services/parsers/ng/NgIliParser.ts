@@ -56,6 +56,8 @@ export class NgIliParser implements IliParser {
       nodes: ast.nodes,
       relations: ast.relations,
       errors,
+      imports: ast.imports,
+      interlisVersion: ast.interlisVersion,
     };
   }
 }

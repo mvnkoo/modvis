@@ -43,6 +43,7 @@ import {
 import { useIliSchema } from '../hooks/useIliSchema';
 import { useDiagramExport } from '../hooks/useDiagramExport';
 import { LayoutSettings } from './sidebar/LayoutSettings';
+import { ModelInfoPanel } from './sidebar/ModelInfoPanel';
 
 import '@xyflow/react/dist/style.css';
 import { debounce } from 'lodash';
@@ -111,6 +112,8 @@ const Flow: React.FC = () => {
     error,
     parseWarnings,
     dismissParseWarnings,
+    imports,
+    interlisVersion,
     searchValue,
     searchOptions,
     currentFileName,
@@ -486,11 +489,46 @@ const Flow: React.FC = () => {
     const styleSheet = document.createElement('style');
     styleSheet.innerText = globalStyles;
     document.head.appendChild(styleSheet);
-    
+
     return () => {
       document.head.removeChild(styleSheet);
     };
   }, []);
+
+  const modelStats = useMemo(() => {
+    let classCount = 0, topicCount = 0, associationCount = 0, enumCount = 0, unitCount = 0;
+    for (const n of allNodes) {
+      switch (n.type) {
+        case 'classNode': classCount++; break;
+        case 'topicNode': topicCount++; break;
+        case 'associationNode': associationCount++; break;
+        case 'enumNode': enumCount++; break;
+        case 'domainEnumNode':
+          if ((n.data as any)?.type === 'UNIT') unitCount++;
+          else enumCount++;
+          break;
+      }
+    }
+    return { classCount, topicCount, associationCount, enumCount, unitCount };
+  }, [allNodes]);
+
+  const lastLoadedFileRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoading || error) return;
+    if (!currentFileName || currentFileName === lastLoadedFileRef.current) return;
+    if (allNodes.length === 0) return;
+    lastLoadedFileRef.current = currentFileName;
+    const classCount = allNodes.filter(n => n.type === 'classNode').length;
+    const warnCount = parseWarnings.length;
+    const summary = warnCount > 0
+      ? `${currentFileName} geladen — ${classCount} Klassen, ${warnCount} ${warnCount === 1 ? 'Warnung' : 'Warnungen'}`
+      : `${currentFileName} geladen — ${classCount} Klassen`;
+    showToast(summary, warnCount > 0 ? 'warning' : 'success');
+  }, [isLoading, error, currentFileName, allNodes, parseWarnings, showToast]);
+
+  useEffect(() => {
+    if (!currentFileName) lastLoadedFileRef.current = null;
+  }, [currentFileName]);
 
   return (
     <Box
@@ -517,13 +555,13 @@ const Flow: React.FC = () => {
       )}
 
       {error && (
-        <Box sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+        <Box sx={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
           <Alert severity="error">{error}</Alert>
         </Box>
       )}
 
       {parseWarnings.length > 0 && (
-        <Box sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
+        <Box sx={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
           <Alert
             severity="warning"
             onClose={dismissParseWarnings}
@@ -600,6 +638,17 @@ const Flow: React.FC = () => {
         </Panel>
 
         <Panel position="top-left" style={{ marginTop: 68, marginLeft: 16 }}>
+          <ModelInfoPanel
+            fileName={currentFileName}
+            classCount={modelStats.classCount}
+            topicCount={modelStats.topicCount}
+            associationCount={modelStats.associationCount}
+            enumCount={modelStats.enumCount}
+            unitCount={modelStats.unitCount}
+            imports={imports}
+            warningCount={parseWarnings.length}
+            interlisVersion={interlisVersion}
+          />
           <LayoutSettings
             maxSubTypesPerRow={maxSubTypesPerRow}
             onMaxSubTypesChange={debouncedHandleMaxSubTypesChange}

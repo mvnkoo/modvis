@@ -7,10 +7,17 @@ export interface IliParseError {
   column?: number;
 }
 
+export interface IliImportRef {
+  name: string;
+  unqualified?: boolean;
+}
+
 export interface IliParseResult {
   nodes: IliBaseNode[];
   relations: IliRelation[];
   errors?: IliParseError[];
+  imports?: IliImportRef[];
+  interlisVersion?: string;
 }
 
 export interface IliParser {
