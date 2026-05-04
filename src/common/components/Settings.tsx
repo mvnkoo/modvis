@@ -116,6 +116,31 @@ const Settings: React.FC = () => {
           </RadioGroup>
         </MenuItem>
         <Divider />
+        <Divider />
+        <MenuItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Parser-Backend (ILI-Explorer)
+          </Typography>
+          <RadioGroup
+            value={parserBackend}
+            onChange={(e) => setParserBackend(e.target.value as 'legacy' | 'ng')}
+          >
+            <FormControlLabel
+              value="ng"
+              control={<Radio size="small" />}
+              label={<Typography variant="body2">Chevrotain (Standard)</Typography>}
+            />
+            <FormControlLabel
+              value="legacy"
+              control={<Radio size="small" />}
+              label={<Typography variant="body2">Legacy Regex (Old)</Typography>}
+            />
+          </RadioGroup>
+          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            Modell neu laden, damit der Wechsel greift.
+          </Typography>
+        </MenuItem>
+        <Divider />
         <MenuItem>
           <FormControlLabel
             control={
@@ -128,32 +153,6 @@ const Settings: React.FC = () => {
             label="Experimentelle Features"
           />
         </MenuItem>
-        {experimentalFeatures && [
-          <Divider key="parser-divider" />,
-          <MenuItem key="parser-backend" sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Parser-Backend
-            </Typography>
-            <RadioGroup
-              value={parserBackend}
-              onChange={(e) => setParserBackend(e.target.value as 'legacy' | 'ng')}
-            >
-              <FormControlLabel
-                value="legacy"
-                control={<Radio size="small" />}
-                label={<Typography variant="body2">Legacy (Regex)</Typography>}
-              />
-              <FormControlLabel
-                value="ng"
-                control={<Radio size="small" />}
-                label={<Typography variant="body2">NG — Chevrotain (beta)</Typography>}
-              />
-            </RadioGroup>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
-              Schema neu laden, damit der Wechsel greift.
-            </Typography>
-          </MenuItem>,
-        ]}
       </Menu>
     </>
   );

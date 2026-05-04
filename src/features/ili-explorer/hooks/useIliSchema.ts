@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { Node, Edge, Connection, FitViewOptions } from '@xyflow/react';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { useSettings } from '../../../common/settings/SettingsContext';
+import { readFileAsText } from '../../../common/utils/readFileAsText';
 import { IliSchemaService } from '../services/iliSchemaService';
 import { LegacyIliParser } from '../services/parsers/LegacyIliParser';
 import { NgIliParser } from '../services/parsers/ng/NgIliParser';
@@ -21,6 +22,7 @@ import {
   LayoutOptions,
 } from '../services/types/IliBaseTypes';
 import { IliClassNode } from '../services/types/IliModelTypes';
+import type { IliParseError } from '../services/parsers/IliParser';
 
 export type { SearchOption };
 
@@ -28,6 +30,8 @@ export type { SearchOption };
 interface UseIliSchemaReturn {
   isLoading: boolean;
   error: string | null;
+  parseWarnings: IliParseError[];
+  dismissParseWarnings: () => void;
   searchValue: SearchOption | null;
   searchOptions: SearchOption[];
   currentFileName: string | null;
@@ -89,6 +93,8 @@ export const useIliSchema = (
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [parseWarnings, setParseWarnings] = useState<IliParseError[]>([]);
+  const dismissParseWarnings = useCallback(() => setParseWarnings([]), []);
   const [searchValue, setSearchValue] = useState<SearchOption | null>(null);
   const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
@@ -186,6 +192,7 @@ export const useIliSchema = (
 
       lastContentRef.current = { content, fileName };
       schemaServiceRef.current.parseSchema(content);
+      setParseWarnings(schemaServiceRef.current.getParseErrors());
 
       const baseNodes = schemaServiceRef.current.getNodes();
       const relations = schemaServiceRef.current.getRelations();
@@ -253,7 +260,7 @@ export const useIliSchema = (
   ]);
 
   const handleFileUpload = useCallback(async (file: File) => {
-    const content = await file.text();
+    const content = await readFileAsText(file);
     await loadFromContent(content, file.name);
   }, [loadFromContent]);
 
@@ -667,6 +674,8 @@ export const useIliSchema = (
   return {
     isLoading,
     error,
+    parseWarnings,
+    dismissParseWarnings,
     searchValue,
     searchOptions,
     currentFileName,

@@ -109,6 +109,8 @@ const Flow: React.FC = () => {
   const {
     isLoading,
     error,
+    parseWarnings,
+    dismissParseWarnings,
     searchValue,
     searchOptions,
     currentFileName,
@@ -517,6 +519,21 @@ const Flow: React.FC = () => {
       {error && (
         <Box sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
           <Alert severity="error">{error}</Alert>
+        </Box>
+      )}
+
+      {parseWarnings.length > 0 && (
+        <Box sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
+          <Alert
+            severity="warning"
+            onClose={dismissParseWarnings}
+            sx={{ '& .MuiAlert-message': { maxWidth: '100%' } }}
+          >
+            <strong>{parseWarnings.length} Parser-{parseWarnings.length === 1 ? 'Warnung' : 'Warnungen'}</strong>
+            {' — das Modell wurde unvollständig erfasst. '}
+            {parseWarnings[0].line ? `Erste Stelle: Zeile ${parseWarnings[0].line}. ` : ''}
+            <span style={{ opacity: 0.85 }}>{parseWarnings[0].message}</span>
+          </Alert>
         </Box>
       )}
 

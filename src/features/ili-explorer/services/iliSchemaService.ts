@@ -8,7 +8,7 @@ import {
   IliTopicNode,
   IliClassNode
 } from './types/IliModelTypes';
-import type { IliParser } from './parsers/IliParser';
+import type { IliParser, IliParseError } from './parsers/IliParser';
 import { LegacyIliParser } from './parsers/LegacyIliParser';
 import { v4 as uuid } from 'uuid';
 
@@ -16,6 +16,7 @@ export class IliSchemaService {
   private nodes: Map<string, IliBaseNode>;
   private relations: Map<string, IliRelation>;
   private parser: IliParser;
+  private lastErrors: IliParseError[] = [];
 
   constructor(parser: IliParser = new LegacyIliParser()) {
     this.nodes = new Map();
@@ -23,12 +24,18 @@ export class IliSchemaService {
     this.parser = parser;
   }
 
+  public getParseErrors(): IliParseError[] {
+    return this.lastErrors;
+  }
+
   public parseSchema(content: string): void {
     try {
       console.log('Starting schema parsing...');
       this.clear();
+      this.lastErrors = [];
 
-      const { nodes, relations } = this.parser.parseContent(content);
+      const { nodes, relations, errors } = this.parser.parseContent(content);
+      this.lastErrors = errors ?? [];
       
      
       const initialClass =

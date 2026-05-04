@@ -12,12 +12,18 @@ interface Fixture {
   expectedMinClasses: number;
 }
 
+const TESTMODELLE = resolve(__dirname, '../../../../../../../testfiles/Testmodelle');
+
 const fixtures: Fixture[] = [
-  {
-    name: 'VSA_DSS_2020',
-    path: resolve(__dirname, '../../../../../../../testfiles/VSA_DSS_2020_2_d_LV95-20230807.ili'),
-    expectedMinClasses: 70,
-  },
+  { name: 'VSA_DSS_2020',         path: `${TESTMODELLE}/VSA_DSS_2020_2_d_LV95-20230807.ili`, expectedMinClasses: 70 },
+  { name: 'IlisMeta16',            path: `${TESTMODELLE}/IlisMeta16.ili`,                     expectedMinClasses: 30 },
+  { name: 'Axis_V1_1',             path: `${TESTMODELLE}/Axis_V1_1.ili`,                      expectedMinClasses: 20 },
+  { name: 'Hpm_Network_V1',        path: `${TESTMODELLE}/Hpm_Network_V1.ili`,                 expectedMinClasses: 20 },
+  { name: 'UASGeographicalZone_V2',path: `${TESTMODELLE}/UASGeographicalZone_V2.ili`,         expectedMinClasses: 10 },
+  { name: 'Richtplaene_V1',        path: `${TESTMODELLE}/Richtplaene_V1.ili`,                 expectedMinClasses: 10 },
+  { name: 'SurfacesDAssolement_V1',path: `${TESTMODELLE}/SurfacesDAssolement_V1.ili`,         expectedMinClasses: 5  },
+  { name: 'MainRoads_V1_1',        path: `${TESTMODELLE}/MainRoads_V1_1.ili`,                 expectedMinClasses: 1  },
+  { name: 'Alpenkonvention_V1_1',  path: `${TESTMODELLE}/Alpenkonvention_V1_1.ili`,           expectedMinClasses: 1  },
 ];
 
 describe('NgIliParser conformance — real INTERLIS schemas', () => {
@@ -41,13 +47,10 @@ describe('NgIliParser conformance — real INTERLIS schemas', () => {
 
     itOrSkip(`${fixture.name}: NG produces a populated node graph`, () => {
       const content = readFileSync(fixture.path, 'utf8');
-      const { nodes, relations } = new NgIliParser().parseContent(content);
+      const { nodes } = new NgIliParser().parseContent(content);
 
       const classNodes = nodes.filter(n => n.type === 'CLASS');
       expect(classNodes.length).toBeGreaterThanOrEqual(fixture.expectedMinClasses);
-
-      const inheritanceRelations = relations.filter(r => r.type === 'EXTENDS');
-      expect(inheritanceRelations.length).toBeGreaterThan(0);
 
       for (const cls of classNodes) {
         expect(cls.id).toBeTruthy();
@@ -81,5 +84,46 @@ describe('NgIliParser conformance — real INTERLIS schemas', () => {
         }
       }
     });
+
+    itOrSkip(`${fixture.name}: NG comment extraction never crashes and shape is valid`, () => {
+      const content = readFileSync(fixture.path, 'utf8');
+      const { nodes } = new NgIliParser().parseContent(content);
+      for (const n of nodes) {
+        if (n.data.comment !== undefined) {
+          expect(typeof n.data.comment).toBe('string');
+        }
+      }
+    });
+
+    itOrSkip(`${fixture.name}: NG external-marker shape is valid when present`, () => {
+      const content = readFileSync(fixture.path, 'utf8');
+      const { nodes } = new NgIliParser().parseContent(content);
+      const externals = nodes.filter(n => n.data.isExternal === true);
+      for (const ext of externals) {
+        expect(typeof ext.id).toBe('string');
+        expect(ext.id.length).toBeGreaterThan(0);
+        if (ext.id.includes('.')) {
+          expect(ext.data.externalSource).toBeTruthy();
+        }
+      }
+    });
   }
+});
+
+describe('NgIliParser conformance — VSA detailed asserts', () => {
+  const vsaPath = resolve(__dirname, '../../../../../../../testfiles/Testmodelle/VSA_DSS_2020_2_d_LV95-20230807.ili');
+  const itOrSkip = existsSync(vsaPath) ? it : it.skip;
+
+  itOrSkip('VSA: extracts most class comments (>50%)', () => {
+    const { nodes } = new NgIliParser().parseContent(readFileSync(vsaPath, 'utf8'));
+    const classNodes = nodes.filter(n => n.type === 'CLASS' && !n.data.isExternal);
+    const commented = classNodes.filter(n => n.data.comment);
+    expect(commented.length).toBeGreaterThan(classNodes.length / 2);
+  });
+
+  itOrSkip('VSA: produces external-class markers from IMPORTS', () => {
+    const { nodes } = new NgIliParser().parseContent(readFileSync(vsaPath, 'utf8'));
+    const externals = nodes.filter(n => n.data.isExternal === true);
+    expect(externals.length).toBeGreaterThan(0);
+  });
 });

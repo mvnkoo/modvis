@@ -21,7 +21,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const [parserBackend, setParserBackend] = useState<ParserBackend>(() => {
     const stored = localStorage.getItem(PARSER_KEY);
-    return stored === 'ng' ? 'ng' : 'legacy';
+    return stored === 'legacy' ? 'legacy' : 'ng';
   });
 
   useEffect(() => {
