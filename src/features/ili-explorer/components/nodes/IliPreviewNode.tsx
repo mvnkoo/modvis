@@ -18,29 +18,31 @@ export const IliPreviewNode: React.FC<IliPreviewNodeProps> = memo(({ data }) => 
         position: 'relative',
         px: 1.25,
         py: 0.5,
-        borderRadius: 1,
-        border: `1px dashed ${colors.text}`,
+        borderRadius: 0.5,
+        border: '1px solid #555',
         bgcolor: 'background.paper',
         color: colors.text,
-        opacity: data.isPlaceholder ? 0.4 : 0.65,
         pointerEvents: 'none',
-        minWidth: 160,
-        maxWidth: 220,
+        width: 180,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        opacity: data.isPlaceholder ? 0.65 : 1,
         textAlign: 'center',
       }}
     >
-      <Handle type="target" position={Position.Top} id="preview-top" style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Left} id="preview-left" style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Bottom} id="preview-bottom" style={{ opacity: 0 }} />
       <Typography
         variant="caption"
         sx={{
           fontFamily: 'monospace',
-          fontSize: '0.7rem',
+          fontSize: '0.72rem',
+          fontWeight: data.isPlaceholder ? 400 : 500,
           fontStyle: data.isPlaceholder ? 'italic' : 'normal',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           display: 'block',
+          letterSpacing: 0.2,
         }}
       >
         {data.label}

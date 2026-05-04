@@ -12,7 +12,6 @@ import {
   Edge,
   MarkerType,
   useReactFlow,
-  useNodesInitialized,
   EdgeTypes,
   BezierEdge,
   StepEdge,
@@ -132,11 +131,10 @@ const Flow: React.FC = () => {
     handleClearFile,
     handleConnect,
     handleNodeClick: baseHandleNodeClick,
-    handleReset: baseHandleReset,
     handleBack: baseHandleBack,
     canGoBack,
     showOverview,
-    handleHierarchyToggle,
+    setFullHierarchyAndReset,
     activeNodeId,
     setActiveNodeId,
     allNodes,
@@ -168,26 +166,35 @@ const Flow: React.FC = () => {
     setUseCurvedLines(true);
   }, [handleFileUploadBase]);
 
-  const nodesInitialized = useNodesInitialized();
   const [lastFitDone, setLastFitDone] = useState(0);
   const canvasReady = fitViewRequest === 0 || lastFitDone === fitViewRequest;
 
+  // Two rAFs: first commits the new node array to the DOM, second runs after
+  // React Flow's ResizeObserver has reported dimensions for the freshly
+  // mounted nodes. fitView then has correct measurements without needing
+  // useNodesInitialized (which doesn't reliably flip when node IDs overlap
+  // between layouts).
   useEffect(() => {
     if (fitViewRequest === 0) return;
     if (lastFitDone === fitViewRequest) return;
-    if (!nodesInitialized) return;
     if (nodes.length === 0) return;
 
-    const id = requestAnimationFrame(() => {
-      fitView({
-        ...DEFAULT_FIT_VIEW_OPTIONS,
-        duration: 600,
-        padding: 0.3,
+    let raf2: number | null = null;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        fitView({
+          ...DEFAULT_FIT_VIEW_OPTIONS,
+          duration: 600,
+          padding: 0.3,
+        });
+        setLastFitDone(fitViewRequest);
       });
-      setLastFitDone(fitViewRequest);
     });
-    return () => cancelAnimationFrame(id);
-  }, [nodesInitialized, nodes.length, fitView, fitViewRequest, lastFitDone]);
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2 !== null) cancelAnimationFrame(raf2);
+    };
+  }, [nodes.length, fitView, fitViewRequest, lastFitDone]);
 
   const handleLineTypeToggle = useCallback(() => {
     const newCurvedLines = !useCurvedLines;
@@ -243,14 +250,6 @@ const Flow: React.FC = () => {
     const currentViewport = getViewport();
     baseHandleNodeClick(event, iliNode, currentViewport);
   }, [activeNodeId, baseHandleNodeClick, getViewport]);
-
-  const handleReset = useCallback(() => {
-    baseHandleReset();
-
-    setMaxSubTypesPerRow(4);
-    setUseCurvedLines(true);
-    requestFitView();
-  }, [baseHandleReset, requestFitView, setMaxSubTypesPerRow]);
 
   const handleBack = useCallback(() => {
     if (historyIndex < 0) return;
@@ -380,29 +379,52 @@ const Flow: React.FC = () => {
   const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
   const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(true);
 
-  const isOverviewMode = useMemo(
-    () => nodes.some(n => n.type === 'topicLabelNode' || n.type === 'topicFrameNode'),
-    [nodes]
-  );
+  // Walk up the EXTENDS chain from the active class — every ancestor (direct
+  // parent, grandparent, …) is already represented in the current view, so
+  // hover preview on any of them would duplicate what's visible.
+  const activeSupertypeIds = useMemo(() => {
+    if (!activeNodeId) return new Set<string>();
+    const seen = new Set<string>();
+    const queue: string[] = [activeNodeId];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      for (const e of allEdges) {
+        if (e.source === id && !seen.has(e.target)) {
+          seen.add(e.target);
+          queue.push(e.target);
+        }
+      }
+    }
+    return seen;
+  }, [activeNodeId, allEdges]);
 
   const handleNodeMouseEnter = useCallback((_e: React.MouseEvent, node: ReactFlowNode) => {
-    if (!isOverviewMode || !hoverPreviewEnabled) return;
+    if (!hoverPreviewEnabled) return;
     if (node.type !== 'classNode') return;
+    if (node.id === activeNodeId) return;
+    if (activeSupertypeIds.has(node.id)) return;
+    if ((node.data as { expanded?: boolean } | undefined)?.expanded) return;
     setHoveredClassId(node.id);
-  }, [isOverviewMode, hoverPreviewEnabled]);
+  }, [hoverPreviewEnabled, activeNodeId, activeSupertypeIds]);
 
   const handleNodeMouseLeave = useCallback(() => {
     setHoveredClassId(null);
   }, []);
 
   const hoverPreview = useMemo(() => {
-    if (!isOverviewMode || !hoverPreviewEnabled || !hoveredClassId) {
+    if (!hoverPreviewEnabled || !hoveredClassId) {
       return { nodes: [] as ReactFlowNode[], edges: [] as Edge[] };
+    }
+    if (activeSupertypeIds.has(hoveredClassId)) {
+      return { nodes: [], edges: [] };
     }
     const hovered = nodes.find(n => n.id === hoveredClassId);
     if (!hovered) return { nodes: [], edges: [] };
+    if ((hovered.data as { expanded?: boolean } | undefined)?.expanded) {
+      return { nodes: [], edges: [] };
+    }
     return layoutHoverPreview(hovered, allNodes, allEdges, colors);
-  }, [isOverviewMode, hoverPreviewEnabled, hoveredClassId, nodes, allNodes, allEdges, colors]);
+  }, [hoverPreviewEnabled, hoveredClassId, nodes, allNodes, allEdges, colors, activeSupertypeIds]);
 
   const renderedNodes = useMemo(
     () => [...nodesWithHandlers, ...hoverPreview.nodes],
@@ -715,6 +737,8 @@ const Flow: React.FC = () => {
             onMaxSubTypesChange={debouncedHandleMaxSubTypesChange}
             hoverPreview={hoverPreviewEnabled}
             onHoverPreviewChange={setHoverPreviewEnabled}
+            fullHierarchy={showFullHierarchy}
+            onFullHierarchyChange={setFullHierarchyAndReset}
           />
           <IliSideToolbar
             currentFileName={currentFileName}
@@ -722,12 +746,9 @@ const Flow: React.FC = () => {
             historyIndex={historyIndex}
             canGoBack={canGoBack}
             onShowOverview={showOverview}
-            showFullHierarchy={showFullHierarchy}
             useCurvedLines={useCurvedLines}
             exportAnchorEl={exportAnchorEl}
-            onReset={handleReset}
             onBack={handleBack}
-            onHierarchyToggle={handleHierarchyToggle}
             onLineTypeToggle={handleLineTypeToggle}
             onMagicLayout={handleMagicLayout}
             onCollapseAll={handleCollapseAll}

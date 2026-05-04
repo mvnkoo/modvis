@@ -43,10 +43,9 @@ interface UseIliSchemaReturn {
   handleClearFile: () => void;
   handleConnect: (params: Connection) => void;
   handleNodeClick: (event: React.MouseEvent, node: Node, viewport: ViewportState) => void;
-  handleReset: () => void;
   handleBack: () => boolean;
   navigationHistory: NavigationState[];
-  handleHierarchyToggle: () => void;
+  setFullHierarchyAndReset: (value: boolean) => void;
   showFullHierarchy: boolean;
   activeNodeId: string | null;
   setActiveNodeId: (id: string | null) => void;
@@ -408,58 +407,23 @@ export const useIliSchema = (
     requestFitView,
   ]);
 
-  const handleReset = useCallback(() => {
-
-    setEnumHistory(new Map());
-    setAssociationHistory(new Map());
-
-
-    setShowEnums(true);
-    setShowAssociations(true);
-
-    const relations = schemaServiceRef.current.getRelations();
-
-    if (isOverviewCandidate(allNodes as IliNode[], relations)) {
-      const overview = layoutModelOverview(allNodes as IliNode[], relations);
-      setNodes(overview.nodes as IliNode[]);
-      setEdges(overview.edges);
-      setActiveNodeId(null);
-      setNavigationHistory([]);
-      setHistoryIndex(-1);
-      setOverviewWasShown(true);
-      return;
-    }
-
-    setOverviewWasShown(false);
-    const initialClass =
-      allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
-      allNodes.find(n => n.type === 'classNode');
-
-    if (initialClass) {
-      applyLayout(initialClass as IliNode, {
-        showEnums: true,
-        showAssociations: true,
-      });
-      setActiveNodeId(initialClass.id);
-
-      const initialState: NavigationState = {
-        nodeId: initialClass.id,
-        showEnums: true,
-        showAssociations: true
-      };
-      setNavigationHistory([initialState]);
-      setHistoryIndex(0);
-    }
-  }, [allNodes, applyLayout, setNodes, setEdges]);
-
   const canGoBack = useMemo(() => {
     if (historyIndex > 0) return true;
     if (historyIndex === 0) return overviewWasShown;
     return false;
   }, [historyIndex, overviewWasShown]);
 
+  // Single entry point that returns the user to the initial state for the
+  // current model: renders the topic-grouped overview and resets all
+  // session-only toggles (enum/association history, visibility flags, max
+  // sub-types per row). Replaces the previous Reset action.
   const showOverview = useCallback(() => {
     if (allNodes.length === 0) return;
+    setEnumHistory(new Map());
+    setAssociationHistory(new Map());
+    setShowEnums(true);
+    setShowAssociations(true);
+    setMaxSubTypesPerRow(4);
     const relations = schemaServiceRef.current.getRelations();
     const overview = layoutModelOverview(allNodes as IliNode[], relations);
     setNodes(overview.nodes as IliNode[]);
@@ -546,10 +510,53 @@ export const useIliSchema = (
     setAssociationHistory(new Map());
   }, [setNodes, setEdges]);
 
-  const handleHierarchyToggle = useCallback(() => {
-    setShowFullHierarchy(prev => !prev);
-    return true;
-  }, []);
+  // Setting full-hierarchy from the layout-settings panel: flip the flag and
+  // bring the user back to the initial view (overview if multi-root, else the
+  // abstract base class) using the new value as override so the closure
+  // staleness from setShowFullHierarchy doesn't matter.
+  const setFullHierarchyAndReset = useCallback((value: boolean) => {
+    setShowFullHierarchy(value);
+    setEnumHistory(new Map());
+    setAssociationHistory(new Map());
+    setShowEnums(true);
+    setShowAssociations(true);
+
+    const relations = schemaServiceRef.current.getRelations();
+    if (isOverviewCandidate(allNodes as IliNode[], relations)) {
+      const overview = layoutModelOverview(allNodes as IliNode[], relations);
+      setNodes(overview.nodes as IliNode[]);
+      setEdges(overview.edges);
+      setActiveNodeId(null);
+      setNavigationHistory([]);
+      setHistoryIndex(-1);
+      setOverviewWasShown(true);
+      requestFitView();
+      return;
+    }
+
+    setOverviewWasShown(false);
+    const initialClass =
+      allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+      allNodes.find(n => n.type === 'classNode');
+    if (initialClass) {
+      const result = computeLayout(initialClass as IliNode, {
+        showFullHierarchy: value,
+        showEnums: true,
+        showAssociations: true,
+        maxSubTypesPerRow: 4,
+      });
+      setNodes(result.nodes);
+      setEdges(result.edges);
+      setActiveNodeId(initialClass.id);
+      setNavigationHistory([{
+        nodeId: initialClass.id,
+        showEnums: true,
+        showAssociations: true,
+      }]);
+      setHistoryIndex(0);
+      requestFitView();
+    }
+  }, [allNodes, computeLayout, setNodes, setEdges, requestFitView]);
 
   const handleToggleEnums = useCallback((visible: boolean) => {
     setShowEnums(visible);
@@ -763,12 +770,11 @@ export const useIliSchema = (
     handleClearFile,
     handleConnect,
     handleNodeClick,
-    handleReset,
     handleBack,
     canGoBack,
     showOverview,
     navigationHistory,
-    handleHierarchyToggle,
+    setFullHierarchyAndReset,
     showFullHierarchy,
     activeNodeId,
     setActiveNodeId,

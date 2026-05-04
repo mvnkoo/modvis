@@ -9,8 +9,6 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
-  AccountTree,
-  Refresh,
   ArrowBack,
   AutoFixHigh,
   ExpandMore,
@@ -26,13 +24,10 @@ interface IliSideToolbarProps {
   activeNodeId: string | null;
   historyIndex: number;
   canGoBack?: boolean;
-  showFullHierarchy: boolean;
   useCurvedLines: boolean;
   exportAnchorEl: HTMLElement | null;
   onShowOverview: () => void;
-  onReset: () => void;
   onBack: () => void;
-  onHierarchyToggle: () => void;
   onLineTypeToggle: () => void;
   onMagicLayout: () => void;
   onCollapseAll: () => void;
@@ -49,13 +44,10 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   activeNodeId,
   historyIndex,
   canGoBack,
-  showFullHierarchy,
   useCurvedLines,
   exportAnchorEl,
   onShowOverview,
-  onReset,
   onBack,
-  onHierarchyToggle,
   onLineTypeToggle,
   onMagicLayout,
   onCollapseAll,
@@ -94,18 +86,10 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
         },
       }}
     >
-      <Tooltip title="Overview" placement="right">
+      <Tooltip title="Overview / Ansicht zurücksetzen" placement="right">
         <span>
           <IconButton size="small" onClick={onShowOverview} disabled={noSchema} aria-label="Show overview">
             <GridView fontSize="small" />
-          </IconButton>
-        </span>
-      </Tooltip>
-
-      <Tooltip title="Ansicht zurücksetzen" placement="right">
-        <span>
-          <IconButton size="small" onClick={onReset} disabled={noSchema} aria-label="Reset view">
-            <Refresh fontSize="small" />
           </IconButton>
         </span>
       </Tooltip>
@@ -114,20 +98,6 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
         <span>
           <IconButton size="small" onClick={onBack} disabled={canGoBack === undefined ? historyIndex <= 0 : !canGoBack} aria-label="Go back">
             <ArrowBack fontSize="small" />
-          </IconButton>
-        </span>
-      </Tooltip>
-
-      <Tooltip title="Vollständige Hierarchie anzeigen" placement="right">
-        <span>
-          <IconButton
-            size="small"
-            onClick={onHierarchyToggle}
-            disabled={noNode}
-            sx={{ color: showFullHierarchy ? colors.active : 'default' }}
-            aria-label="Toggle hierarchy view"
-          >
-            <AccountTree fontSize="small" />
           </IconButton>
         </span>
       </Tooltip>
