@@ -24,6 +24,7 @@ interface IliSideToolbarProps {
   currentFileName: string | null;
   activeNodeId: string | null;
   historyIndex: number;
+  canGoBack?: boolean;
   showFullHierarchy: boolean;
   useCurvedLines: boolean;
   exportAnchorEl: HTMLElement | null;
@@ -45,6 +46,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   currentFileName,
   activeNodeId,
   historyIndex,
+  canGoBack,
   showFullHierarchy,
   useCurvedLines,
   exportAnchorEl,
@@ -99,7 +101,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
 
       <Tooltip title="Zurück zur vorherigen Ansicht" placement="right">
         <span>
-          <IconButton size="small" onClick={onBack} disabled={historyIndex <= 0} aria-label="Go back">
+          <IconButton size="small" onClick={onBack} disabled={canGoBack === undefined ? historyIndex <= 0 : !canGoBack} aria-label="Go back">
             <ArrowBack fontSize="small" />
           </IconButton>
         </span>

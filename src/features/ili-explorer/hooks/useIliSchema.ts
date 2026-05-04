@@ -8,6 +8,7 @@ import { IliSchemaService } from '../services/iliSchemaService';
 import { LegacyIliParser } from '../services/parsers/LegacyIliParser';
 import { NgIliParser } from '../services/parsers/ng/NgIliParser';
 import { IliLayoutService } from '../services/IliLayoutService';
+import { isOverviewCandidate, layoutModelOverview } from '../services/layout/overviewStrategy';
 import { generateSearchOptions } from '../services/searchOptions';
 import {
   flowNodeFromBaseNode,
@@ -68,6 +69,7 @@ interface UseIliSchemaReturn {
   computeLayout: (node: IliNode, override?: Partial<LayoutOptions>) => { nodes: IliNode[]; edges: Edge[] };
   fitViewRequest: number;
   requestFitView: () => void;
+  canGoBack: boolean;
 }
 
 
@@ -212,41 +214,51 @@ export const useIliSchema = (
       setSearchOptions(generateSearchOptions(baseNodes));
 
      
-      const initialClass = (
-        flowNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
-        flowNodes.find(n => n.type === 'classNode')
-      ) as IliNode | undefined;
+      const showOverview = isOverviewCandidate(flowNodes as IliNode[], relations);
 
-      if (initialClass) {
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          initialClass,
-          flowNodes as IliNode[],
-          flowEdges,
-          colors,
-          {
-            showFullHierarchy,
-            useCurvedLines,
-            showEnums,
-            showAssociations,
-            maxSubTypesPerRow: 4,
-            useMagicLayout: false,
-          }
-        );
+      if (showOverview) {
+        const overview = layoutModelOverview(flowNodes as IliNode[], relations);
+        setNodes(overview.nodes);
+        setEdges(overview.edges);
+        setActiveNodeId(null);
+        setNavigationHistory([]);
+        setHistoryIndex(-1);
+      } else {
+        const initialClass = (
+          flowNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+          flowNodes.find(n => n.type === 'classNode')
+        ) as IliNode | undefined;
 
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
-        setActiveNodeId(initialClass.id);
-        setNavigationHistory([{
-          nodeId: initialClass.id,
-          showEnums: true,
-          showAssociations: showAssociations
-        }]);
-        setHistoryIndex(0);
+        if (initialClass) {
+          const relatedNodes = IliLayoutService.getDirectRelations(
+            initialClass,
+            flowNodes as IliNode[],
+            flowEdges,
+            colors,
+            {
+              showFullHierarchy,
+              useCurvedLines,
+              showEnums,
+              showAssociations,
+              maxSubTypesPerRow: 4,
+              useMagicLayout: false,
+            }
+          );
 
-       
-        requestAnimationFrame(() => {
-          setMaxSubTypesPerRow(4);
-        });
+          setNodes(relatedNodes.nodes);
+          setEdges(relatedNodes.edges);
+          setActiveNodeId(initialClass.id);
+          setNavigationHistory([{
+            nodeId: initialClass.id,
+            showEnums: true,
+            showAssociations: showAssociations
+          }]);
+          setHistoryIndex(0);
+
+          requestAnimationFrame(() => {
+            setMaxSubTypesPerRow(4);
+          });
+        }
       }
 
     } catch (error) {
@@ -390,14 +402,26 @@ export const useIliSchema = (
   ]);
 
   const handleReset = useCallback(() => {
-   
+
     setEnumHistory(new Map());
     setAssociationHistory(new Map());
-    
-   
+
+
     setShowEnums(true);
     setShowAssociations(true);
-    
+
+    const relations = schemaServiceRef.current.getRelations();
+
+    if (isOverviewCandidate(allNodes as IliNode[], relations)) {
+      const overview = layoutModelOverview(allNodes as IliNode[], relations);
+      setNodes(overview.nodes as IliNode[]);
+      setEdges(overview.edges);
+      setActiveNodeId(null);
+      setNavigationHistory([]);
+      setHistoryIndex(-1);
+      return;
+    }
+
     const initialClass =
       allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
       allNodes.find(n => n.type === 'classNode');
@@ -417,9 +441,32 @@ export const useIliSchema = (
       setNavigationHistory([initialState]);
       setHistoryIndex(0);
     }
-  }, [allNodes, applyLayout]);
+  }, [allNodes, applyLayout, setNodes, setEdges]);
+
+  const canGoBack = useMemo(() => {
+    if (historyIndex > 0) return true;
+    if (historyIndex === 0) {
+      const relations = schemaServiceRef.current.getRelations();
+      return isOverviewCandidate(allNodes as IliNode[], relations);
+    }
+    return false;
+  }, [historyIndex, allNodes]);
 
   const handleBack = useCallback((): boolean => {
+    if (historyIndex === 0) {
+      const relations = schemaServiceRef.current.getRelations();
+      if (isOverviewCandidate(allNodes as IliNode[], relations)) {
+        const overview = layoutModelOverview(allNodes as IliNode[], relations);
+        setNodes(overview.nodes as IliNode[]);
+        setEdges(overview.edges);
+        setActiveNodeId(null);
+        setNavigationHistory([]);
+        setHistoryIndex(-1);
+        requestFitView();
+        return true;
+      }
+      return false;
+    }
     if (historyIndex > 0) {
       const previousState = navigationHistory[historyIndex - 1];
       const previousNode = allNodes.find(node => node.id === previousState.nodeId);
@@ -697,6 +744,7 @@ export const useIliSchema = (
     handleNodeClick,
     handleReset,
     handleBack,
+    canGoBack,
     navigationHistory,
     handleHierarchyToggle,
     showFullHierarchy,
