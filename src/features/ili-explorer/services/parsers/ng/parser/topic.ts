@@ -1,12 +1,15 @@
 import type { IliCstParserBuilder } from '../parser';
 import {
   Topic, End, Equals, Semicolon, Comma,
-  Identifier,
+  Identifier, View,
   Constraints, Of, Depends, On, Oid, As, Basket,
 } from '../tokens';
 
 export function registerTopicRules(p: IliCstParserBuilder): void {
   p.topicDef = p.RULE('topicDef', () => {
+    // INTERLIS 2.4 lässt `VIEW TOPIC <Name>` als Topic-Variante zu (Topic
+    // enthält dann nur Views). Das VIEW-Keyword darf hier vorne stehen.
+    p.OPTION2(() => p.CONSUME(View));
     p.CONSUME(Topic);
     p.CONSUME(Identifier, { LABEL: 'topicName' });
     p.OPTION3(() => p.SUBRULE(p.classModifier));
