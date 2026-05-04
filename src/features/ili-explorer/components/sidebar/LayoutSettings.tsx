@@ -17,11 +17,15 @@ import { useTheme } from '../../../../common/theme/ThemeContext';
 interface LayoutSettingsProps {
   maxSubTypesPerRow: number;
   onMaxSubTypesChange: (value: number) => void;
+  hoverPreview: boolean;
+  onHoverPreviewChange: (value: boolean) => void;
 }
 
 export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   maxSubTypesPerRow,
-  onMaxSubTypesChange
+  onMaxSubTypesChange,
+  hoverPreview,
+  onHoverPreviewChange,
 }) => {
   const { colors } = useTheme();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -174,7 +178,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
               step={1}
               marks={marks}
               disabled={!limitSubTypes}
-              sx={{ 
+              sx={{
                 mt: 1,
                 '& .MuiSlider-mark': {
                   height: 8,
@@ -185,6 +189,22 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
                 }
               }}
             />
+          </Box>
+
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={hoverPreview}
+                  onChange={(e) => onHoverPreviewChange(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Hover-Preview in Overview"
+            />
+            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+              Zeigt beim Überfahren einer Klasse in der Overview die nächsten zwei Subtyp-Ebenen.
+            </Typography>
           </Box>
         </Box>
       </Popover>
