@@ -7,6 +7,8 @@ export type IliNodeType =
   | 'STRUCTURE'
   | 'ASSOCIATION'
   | 'ENUMERATION'
+  | 'FUNCTION'
+  | 'VIEW'
   | 'enumNode'
   | 'domainEnumNode';
 
