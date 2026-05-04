@@ -107,6 +107,7 @@ export class IliCstParser extends CstParser {
   geometryBodyToken!: any;
 
   unitSection!: any;
+  unitDef!: any;
   skipStatement!: any;
 
   // Phase 1+ — advanced rules (skips and structured)

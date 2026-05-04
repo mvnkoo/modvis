@@ -181,19 +181,24 @@ export const IliDomainEnumNode: React.FC<IliDomainEnumNodeProps> = memo(({ data 
     >
       <ResizeHandle position="right" onMouseDown={handleResizeStart} />
       
-      <Handle 
+      <Handle
         type="target"
         position={Position.Left}
         id="left"
-        style={{ 
+        style={{
           opacity: 1,
           background: colors.typeReference,
           width: 8,
           height: 8
         }}
       />
-      
-      <Box sx={{ 
+
+      {/* Top/Bottom handles für EXTENDS-Kanten zwischen Unit-Nodes
+          (UNIT-Typ mappt auf domainEnumNode-Visual). */}
+      <Handle type="source" position={Position.Top} id="top" style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Bottom} id="bottom" style={{ opacity: 0 }} />
+
+      <Box sx={{
         bgcolor: data.isHighlighted 
           ? colors.selectedEntity 
           : alpha(colors.typeNode, 0.8),
