@@ -19,6 +19,8 @@ interface LayoutSettingsProps {
   onMaxSubTypesChange: (value: number) => void;
   hoverPreview: boolean;
   onHoverPreviewChange: (value: boolean) => void;
+  fullHierarchy: boolean;
+  onFullHierarchyChange: (value: boolean) => void;
 }
 
 export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
@@ -26,6 +28,8 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   onMaxSubTypesChange,
   hoverPreview,
   onHoverPreviewChange,
+  fullHierarchy,
+  onFullHierarchyChange,
 }) => {
   const { colors } = useTheme();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -200,10 +204,26 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
                   size="small"
                 />
               }
-              label="Hover-Preview in Overview"
+              label="Hover-Preview"
             />
             <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
-              Zeigt beim Überfahren einer Klasse in der Overview die nächsten zwei Subtyp-Ebenen.
+              Zeigt beim Überfahren einer Klasse die nächsten zwei Subtyp-Ebenen als kleine Vorschau-Boxen.
+            </Typography>
+          </Box>
+
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={fullHierarchy}
+                  onChange={(e) => onFullHierarchyChange(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Vollständige Hierarchie anzeigen"
+            />
+            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+              Beim Umschalten wird die Ansicht zurückgesetzt.
             </Typography>
           </Box>
         </Box>
