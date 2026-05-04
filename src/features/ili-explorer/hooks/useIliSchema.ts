@@ -261,6 +261,8 @@ export const useIliSchema = (
         }
       }
 
+      requestFitView();
+
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Fehler beim Laden des Schemas');
       setCurrentFileName(null);
@@ -275,6 +277,7 @@ export const useIliSchema = (
     showAssociations,
     setNodes,
     setEdges,
+    requestFitView,
   ]);
 
   const handleFileUpload = useCallback(async (file: File) => {

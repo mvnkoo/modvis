@@ -12,6 +12,7 @@ import {
   Edge,
   MarkerType,
   useReactFlow,
+  useNodesInitialized,
   EdgeTypes,
   BezierEdge,
   StepEdge,
@@ -163,17 +164,26 @@ const Flow: React.FC = () => {
     setUseCurvedLines(true);
   }, [handleFileUploadBase]);
 
+  const nodesInitialized = useNodesInitialized();
+  const [lastFitDone, setLastFitDone] = useState(0);
+  const canvasReady = fitViewRequest === 0 || lastFitDone === fitViewRequest;
+
   useEffect(() => {
     if (fitViewRequest === 0) return;
+    if (lastFitDone === fitViewRequest) return;
+    if (!nodesInitialized) return;
+    if (nodes.length === 0) return;
+
     const id = requestAnimationFrame(() => {
       fitView({
         ...DEFAULT_FIT_VIEW_OPTIONS,
-        duration: 800,
+        duration: 600,
         padding: 0.3,
       });
+      setLastFitDone(fitViewRequest);
     });
     return () => cancelAnimationFrame(id);
-  }, [fitViewRequest, fitView]);
+  }, [nodesInitialized, nodes.length, fitView, fitViewRequest, lastFitDone]);
 
   const handleLineTypeToggle = useCallback(() => {
     const newCurvedLines = !useCurvedLines;
@@ -606,6 +616,7 @@ const Flow: React.FC = () => {
         attributionPosition="bottom-right"
         minZoom={0.1}
         maxZoom={1.5}
+        style={{ opacity: canvasReady ? 1 : 0, transition: 'opacity 200ms ease-out' }}
         defaultEdgeOptions={{
           type: 'default',
           animated: false,
