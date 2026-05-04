@@ -167,13 +167,14 @@ const Flow: React.FC = () => {
   }, [handleFileUploadBase]);
 
   const [lastFitDone, setLastFitDone] = useState(0);
-  const canvasReady = fitViewRequest === 0 || lastFitDone === fitViewRequest;
+  // Fade-in only on initial fit per file; navigations within the file keep
+  // the canvas visible to avoid the brief blank between layout swaps.
+  const canvasReady = fitViewRequest === 0 || lastFitDone > 0;
 
-  // Two rAFs: first commits the new node array to the DOM, second runs after
-  // React Flow's ResizeObserver has reported dimensions for the freshly
-  // mounted nodes. fitView then has correct measurements without needing
-  // useNodesInitialized (which doesn't reliably flip when node IDs overlap
-  // between layouts).
+  useEffect(() => {
+    setLastFitDone(0);
+  }, [currentFileName]);
+
   useEffect(() => {
     if (fitViewRequest === 0) return;
     if (lastFitDone === fitViewRequest) return;
@@ -378,6 +379,13 @@ const Flow: React.FC = () => {
 
   const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
   const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(true);
+
+  // Beim Drill-In aus der Overview behält React den hovered-State, bis die
+  // Maus das nächste Mal bewegt wird — das Preview blitzt sonst kurz auf der
+  // neu aktiven Klasse auf. Darum bei jedem Wechsel der aktiven Klasse cleanen.
+  useEffect(() => {
+    setHoveredClassId(null);
+  }, [activeNodeId]);
 
   // Walk up the EXTENDS chain from the active class — every ancestor (direct
   // parent, grandparent, …) is already represented in the current view, so
