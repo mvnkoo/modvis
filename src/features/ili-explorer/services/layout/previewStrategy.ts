@@ -164,14 +164,13 @@ export function layoutHoverPreview(
   const startX = hCenterX + TRUNK_TO_BOX_GAP;
   const startY = hBottomY + FIRST_OFFSET_Y;
 
-  const lineColor = '#555';
+  const lineColor = colors.selectedEntity;
   const ctx: LayoutCtx = {
     nodeById: new Map(allNodes.map(n => [n.id, n])),
     inheritanceEdges,
     edgeStyle: {
       stroke: lineColor,
       strokeWidth: 1,
-      opacity: 0.9,
     },
     markerEnd: {
       type: MarkerType.ArrowClosed,
@@ -182,9 +181,6 @@ export function layoutHoverPreview(
     outNodes: [],
     outEdges: [],
   };
-  // colors is intentionally unused now that the preview uses a fixed dark
-  // grey — keep the parameter to preserve the call signature for callers.
-  void colors;
 
   layoutChildren(
     ctx,

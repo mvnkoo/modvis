@@ -10,6 +10,7 @@ import {
   Tooltip
 } from '@mui/material';
 import { ExpandMore, ExpandLess, ChevronRight } from '@mui/icons-material';
+import { alpha } from '@mui/material/styles';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 import { ResizeHandle } from './ResizeHandle';
 
@@ -198,8 +199,19 @@ export const IliEnumNode: React.FC<IliEnumNodeProps> = memo(({ data }) => {
         overflow: 'hidden',
         bgcolor: data.isActive ? colors.selectedNodeBg : colors.nodeContent,
         color: colors.text,
+        transition: 'box-shadow 0.2s ease-in-out, background-color 1400ms ease-out, border-color 1400ms ease-out',
+        '& .ili-node-header': {
+          transition: 'background-color 1400ms ease-out',
+        },
         '&:hover': {
-          boxShadow: colors.shadow
+          boxShadow: colors.shadow,
+          ...(data.isActive ? {} : {
+            ...(data.expanded ? {} : { bgcolor: alpha(colors.selectedEntity, 0.18) }),
+            borderColor: colors.selectedEntity,
+            '& .ili-node-header': {
+              bgcolor: colors.selectedEntity,
+            },
+          }),
         }
       }}
     >
@@ -258,7 +270,7 @@ export const IliEnumNode: React.FC<IliEnumNodeProps> = memo(({ data }) => {
           }
         }}
       >
-        <Box sx={{ 
+        <Box className="ili-node-header" sx={{
           bgcolor: data.isHighlighted ? colors.selectedEntity : colors.typeNode,
           p: 1,
           textAlign: 'center',

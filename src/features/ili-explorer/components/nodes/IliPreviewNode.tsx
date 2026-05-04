@@ -19,7 +19,7 @@ export const IliPreviewNode: React.FC<IliPreviewNodeProps> = memo(({ data }) => 
         px: 1.25,
         py: 0.5,
         borderRadius: 0.5,
-        border: '1px solid #555',
+        border: `1px solid ${colors.selectedEntity}`,
         bgcolor: 'background.paper',
         color: colors.text,
         pointerEvents: 'none',

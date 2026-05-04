@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Settings } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
+import { useSettings } from '../../../../common/settings/SettingsContext';
 
 interface LayoutSettingsProps {
   maxSubTypesPerRow: number;
@@ -31,7 +32,8 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   fullHierarchy,
   onFullHierarchyChange,
 }) => {
-  const { colors } = useTheme();
+  useTheme();
+  const { tooltipsEnabled, setTooltipsEnabled } = useSettings();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [limitSubTypes, setLimitSubTypes] = useState(true);
   const [textFieldValue, setTextFieldValue] = useState('4');
@@ -226,8 +228,24 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
               Beim Umschalten wird die Ansicht zurückgesetzt.
             </Typography>
           </Box>
+
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={tooltipsEnabled}
+                  onChange={(e) => setTooltipsEnabled(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Tooltips anzeigen"
+            />
+            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+              Hinweis-Bubbles bei Klassen, Attributen und Aufzählungen.
+            </Typography>
+          </Box>
         </Box>
       </Popover>
     </Paper>
   );
-}; 
+};

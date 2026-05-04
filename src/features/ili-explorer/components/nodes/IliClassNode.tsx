@@ -348,9 +348,19 @@ export const IliClassNode = memo<IliClassNodeProps>(({ data }) => {
           overflow: 'hidden',
           bgcolor: data.isActive ? colors.selectedNodeBg : colors.nodeContent,
           color: colors.text,
-          transition: 'box-shadow 0.2s ease-in-out',
+          transition: 'box-shadow 0.2s ease-in-out, background-color 1400ms ease-out, border-color 1400ms ease-out',
+          '& .ili-class-header': {
+            transition: 'background-color 1400ms ease-out',
+          },
           '&:hover': {
-            boxShadow: theme => theme.shadows[8]
+            boxShadow: theme => theme.shadows[8],
+            ...(data.isActive ? {} : {
+              ...(data.expanded ? {} : { bgcolor: alpha(colors.selectedEntity, 0.18) }),
+              borderColor: colors.selectedEntity,
+              '& .ili-class-header': {
+                bgcolor: colors.selectedEntity,
+              },
+            }),
           }
         }}
       >
@@ -415,11 +425,11 @@ export const IliClassNode = memo<IliClassNodeProps>(({ data }) => {
             }
           }}
         >
-          <Box sx={{ 
-            bgcolor: data.isHighlighted 
-              ? colors.selectedEntity 
+          <Box className="ili-class-header" sx={{
+            bgcolor: data.isHighlighted
+              ? colors.selectedEntity
               : data.isAbstract
-                ? colors.abstractEntity 
+                ? colors.abstractEntity
                 : colors.inheritance,
             p: 1,
             textAlign: 'center',

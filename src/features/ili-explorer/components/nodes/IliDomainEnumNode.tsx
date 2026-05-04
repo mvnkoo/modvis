@@ -174,8 +174,19 @@ export const IliDomainEnumNode: React.FC<IliDomainEnumNodeProps> = memo(({ data 
         overflow: 'hidden',
         bgcolor: data.isActive ? colors.selectedNodeBg : colors.nodeContent,
         color: colors.text,
+        transition: 'box-shadow 0.2s ease-in-out, background-color 1400ms ease-out, border-color 1400ms ease-out',
+        '& .ili-node-header': {
+          transition: 'background-color 1400ms ease-out',
+        },
         '&:hover': {
-          boxShadow: colors.shadow
+          boxShadow: colors.shadow,
+          ...(data.isActive ? {} : {
+            ...(data.expanded ? {} : { bgcolor: alpha(colors.selectedEntity, 0.18) }),
+            borderColor: colors.selectedEntity,
+            '& .ili-node-header': {
+              bgcolor: colors.selectedEntity,
+            },
+          }),
         }
       }}
     >
@@ -198,9 +209,9 @@ export const IliDomainEnumNode: React.FC<IliDomainEnumNodeProps> = memo(({ data 
       <Handle type="source" position={Position.Top} id="top" style={{ opacity: 0 }} />
       <Handle type="target" position={Position.Bottom} id="bottom" style={{ opacity: 0 }} />
 
-      <Box sx={{
-        bgcolor: data.isHighlighted 
-          ? colors.selectedEntity 
+      <Box className="ili-node-header" sx={{
+        bgcolor: data.isHighlighted
+          ? colors.selectedEntity
           : alpha(colors.typeNode, 0.8),
         p: 1,
         textAlign: 'center',
