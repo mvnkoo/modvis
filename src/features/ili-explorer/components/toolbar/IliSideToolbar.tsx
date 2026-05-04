@@ -16,6 +16,7 @@ import {
   ExpandMore,
   ExpandLess,
   FileDownload,
+  GridView,
 } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 import { CurvedIcon, StraightIcon } from '../../../exp-explorer/components/expIcons';
@@ -28,6 +29,7 @@ interface IliSideToolbarProps {
   showFullHierarchy: boolean;
   useCurvedLines: boolean;
   exportAnchorEl: HTMLElement | null;
+  onShowOverview: () => void;
   onReset: () => void;
   onBack: () => void;
   onHierarchyToggle: () => void;
@@ -50,6 +52,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   showFullHierarchy,
   useCurvedLines,
   exportAnchorEl,
+  onShowOverview,
   onReset,
   onBack,
   onHierarchyToggle,
@@ -91,6 +94,14 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
         },
       }}
     >
+      <Tooltip title="Overview" placement="right">
+        <span>
+          <IconButton size="small" onClick={onShowOverview} disabled={noSchema} aria-label="Show overview">
+            <GridView fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
+
       <Tooltip title="Ansicht zurücksetzen" placement="right">
         <span>
           <IconButton size="small" onClick={onReset} disabled={noSchema} aria-label="Reset view">
