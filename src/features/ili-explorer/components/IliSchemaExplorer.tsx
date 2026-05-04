@@ -149,6 +149,7 @@ const Flow: React.FC = () => {
     showAssociations,
     handleToggleAssociations,
     handleMagicLayout,
+    resetCurrentLayout,
     applyLayout,
     fitViewRequest,
     requestFitView,
@@ -758,6 +759,7 @@ const Flow: React.FC = () => {
             exportAnchorEl={exportAnchorEl}
             onBack={handleBack}
             onLineTypeToggle={handleLineTypeToggle}
+            onResetLayout={resetCurrentLayout}
             onMagicLayout={handleMagicLayout}
             onCollapseAll={handleCollapseAll}
             onExpandAll={handleExpandAll}
