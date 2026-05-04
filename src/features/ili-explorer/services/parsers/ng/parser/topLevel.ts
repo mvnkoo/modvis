@@ -5,6 +5,7 @@ import {
   LParen, RParen, LBracket, RBracket,
   Imports, Unqualified, Version, At, Translation, Of,
   Type, Refsystem, Symbology, Coordsystem, Contracted,
+  Topic, View,
 } from '../tokens';
 
 export function registerTopLevelRules(p: IliCstParserBuilder): void {
@@ -45,7 +46,16 @@ export function registerTopLevelRules(p: IliCstParserBuilder): void {
     p.CONSUME(Equals);
     p.MANY(() => {
       p.OR([
-        { ALT: () => p.SUBRULE(p.topicDef) },
+        // `VIEW TOPIC <Name>` muss zur topicDef-Variante, nicht zur viewDef.
+        {
+          GATE: () => {
+            const t1 = p.LA(1).tokenType;
+            if (t1 === Topic) return true;
+            if (t1 === View && p.LA(2).tokenType === Topic) return true;
+            return false;
+          },
+          ALT: () => p.SUBRULE(p.topicDef),
+        },
         { ALT: () => p.SUBRULE(p.domainSection) },
         { ALT: () => p.SUBRULE(p.importsClause) },
         { ALT: () => p.SUBRULE(p.unitSection) },
@@ -54,7 +64,10 @@ export function registerTopLevelRules(p: IliCstParserBuilder): void {
         { ALT: () => p.SUBRULE(p.enumerationDef) },
         { ALT: () => p.SUBRULE(p.associationDef) },
         { ALT: () => p.SUBRULE(p.functionDef) },
-        { ALT: () => p.SUBRULE(p.viewDef) },
+        {
+          GATE: () => p.LA(1).tokenType === View && p.LA(2).tokenType !== Topic,
+          ALT: () => p.SUBRULE(p.viewDef),
+        },
         { ALT: () => p.SUBRULE(p.graphicSkipDef) },
         { ALT: () => p.SUBRULE(p.parameterSkipDef) },
       ]);

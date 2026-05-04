@@ -586,7 +586,7 @@ const Flow: React.FC = () => {
             sx={{ '& .MuiAlert-message': { maxWidth: '100%' } }}
           >
             <strong>{parseWarnings.length} Parser-{parseWarnings.length === 1 ? 'Warnung' : 'Warnungen'}</strong>
-            {' — das Modell wurde unvollständig erfasst. '}
+            {' — einige Stellen konnten von ModVis nicht vollständig interpretiert werden, das angezeigte Diagramm ist daher möglicherweise lückenhaft. '}
             {parseWarnings[0].line ? `Erste Stelle: Zeile ${parseWarnings[0].line}. ` : ''}
             <span style={{ opacity: 0.85 }}>{parseWarnings[0].message}</span>
           </Alert>
