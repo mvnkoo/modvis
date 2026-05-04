@@ -30,7 +30,6 @@ export class IliSchemaService {
 
   public parseSchema(content: string): void {
     try {
-      console.log('Starting schema parsing...');
       this.clear();
       this.lastErrors = [];
 
@@ -43,21 +42,17 @@ export class IliSchemaService {
         nodes.find(node => node.type === 'CLASS');
 
       if (initialClass) {
-        console.log('Initial class:', initialClass);
         this.addNode(initialClass);
       }
 
       nodes.forEach(node => {
         if (node.id !== initialClass?.id) {
-          console.log('Adding node:', node);
           this.addNode(node);
         }
       });
 
-     
       relations.forEach(relation => {
         const id = `${relation.sourceId}-${relation.targetId}`;
-        console.log('Adding relation:', { id, relation });
         this.relations.set(id, relation);
       });
 

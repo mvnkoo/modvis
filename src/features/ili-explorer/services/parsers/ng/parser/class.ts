@@ -46,6 +46,9 @@ export function registerClassRules(p: IliCstParserBuilder): void {
         { ALT: () => p.SUBRULE(p.attributeDef) },
         { ALT: () => p.SUBRULE(p.constraintClause) },
         { ALT: () => p.SUBRULE(p.noOidClause) },
+        { ALT: () => p.SUBRULE(p.topicOidDecl) },
+        // ATTRIBUTE-Marker auch mitten im Body zulassen (nicht nur direkt nach `=`)
+        { ALT: () => p.CONSUME2(Attribute) },
       ]);
     });
     p.CONSUME(End);

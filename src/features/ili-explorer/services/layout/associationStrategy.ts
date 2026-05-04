@@ -36,6 +36,11 @@ export function layoutAssociationCenter(
 
   if (!targetClass && !sourceClass) return null;
 
+  // Self-association: source and target are the same class. Push the class
+  // node only once — two edges to it would otherwise render with a duplicate
+  // node id and React Flow drops one silently, leaving a dangling edge.
+  const isSelfAssoc = !!sourceClass && !!targetClass && sourceClass.id === targetClass.id;
+
   const nodes: IliNode[] = [];
   const edges: Edge[] = [];
 
@@ -55,7 +60,7 @@ export function layoutAssociationCenter(
     data: { ...entity.data, isHighlighted: true, isActive: true },
   });
 
-  if (targetClass) {
+  if (targetClass && !isSelfAssoc) {
     nodes.push({
       ...targetClass,
       position: { x: LAYOUT_CONFIG.ASSOCIATION.CLASS_SPACING, y: 0 },
@@ -81,7 +86,7 @@ export function layoutAssociationCenter(
     });
   }
 
-  if (targetClass) {
+  if (targetClass && !isSelfAssoc) {
     edges.push({
       id: `${entity.id}-${targetClass.id}-target`,
       source: entity.id,

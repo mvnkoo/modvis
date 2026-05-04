@@ -163,11 +163,14 @@ class IliCstToAstVisitor extends BaseVisitor {
       const targetNode = this.state.nodes.find(
         n => n.type === 'CLASS' && n.name === assoc.targetClass,
       ) as IliClassNode | undefined;
+      // Self-Assoc nur einmal anhängen — sonst rendert die UI zwei Edges
+      // mit identischer Key und React Flow erzeugt Geister-Edges.
+      const isSelf = sourceNode && targetNode && sourceNode.id === targetNode.id;
       if (sourceNode) {
         sourceNode.associations = [...(sourceNode.associations ?? []), assoc];
         sourceNode.data.associations = sourceNode.associations;
       }
-      if (targetNode) {
+      if (targetNode && !isSelf) {
         targetNode.associations = [...(targetNode.associations ?? []), assoc];
         targetNode.data.associations = targetNode.associations;
       }
@@ -204,6 +207,7 @@ class IliCstToAstVisitor extends BaseVisitor {
     if (ctx.associationDef) ctx.associationDef.forEach((a: CstNode) => this.visit(a));
     if (ctx.functionDef) ctx.functionDef.forEach((f: CstNode) => this.visit(f));
     if (ctx.viewDef) ctx.viewDef.forEach((v: CstNode) => this.visit(v));
+    if (ctx.unitSection) ctx.unitSection.forEach((u: CstNode) => this.visit(u));
   }
 
   modelHeaderBits() {}
@@ -466,7 +470,53 @@ class IliCstToAstVisitor extends BaseVisitor {
     }
   }
 
-  unitSection() {}
+  unitSection(ctx: any) {
+    if (ctx.unitDef) ctx.unitDef.forEach((u: CstNode) => this.visit(u));
+  }
+
+  unitDef(ctx: any) {
+    const unitName = imageOf(ctx.unitName?.[0]);
+    if (!unitName) return;
+    const isAbstract = !!ctx.Abstract;
+    const shortName = ctx.shortName?.[0] ? imageOf(ctx.shortName[0]) : undefined;
+    const comment = this.commentFor(ctx.unitName?.[0]);
+
+    let extendsRef: string | undefined;
+    if (ctx.extendsRef) {
+      extendsRef = this.visit(ctx.extendsRef[0]) as string;
+    }
+
+    const id = `unit_${unitName}`;
+    const label = shortName ? `${unitName} [${shortName}]` : unitName;
+    const node: IliBaseNode = {
+      id,
+      type: 'UNIT',
+      name: unitName,
+      isAbstract,
+      position: { x: 0, y: 0 },
+      data: {
+        label,
+        isAbstract,
+        shortName,
+        extends: extendsRef,
+        topic: this.state.topicName,
+        comment,
+        isHighlighted: false,
+        isActive: false,
+      },
+    };
+    this.state.nodes.push(node);
+
+    if (extendsRef) {
+      this.state.relations.push({
+        id: `${id}-extends-${extendsRef}`,
+        sourceId: id,
+        targetId: `unit_${lastSegment(extendsRef)}`,
+        type: 'EXTENDS',
+      });
+    }
+  }
+
   skipStatement() {}
 
   allOfClause(ctx: any): string {

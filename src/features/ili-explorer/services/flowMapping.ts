@@ -9,6 +9,7 @@ const FLOW_NODE_TYPE: Record<string, string> = {
   STRUCTURE: 'structureNode',
   ASSOCIATION: 'associationNode',
   ENUMERATION: 'enumNode',
+  UNIT: 'domainEnumNode',
   enumNode: 'enumNode',
   domainEnumNode: 'domainEnumNode',
 };
