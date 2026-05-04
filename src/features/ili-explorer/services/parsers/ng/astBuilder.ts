@@ -80,7 +80,7 @@ class IliCstToAstVisitor extends BaseVisitor {
     commentBefore: Map<number, IToken[]> = new Map(),
   ): { nodes: IliBaseNode[]; relations: IliRelation[]; imports: IliImportRef[]; interlisVersion: string | undefined } {
     this.state = {
-      topicName: '', nodes: [], relations: [], imports: [],
+      topicName: '', nodes: [], relations: [], imports: [], interlisVersion: undefined,
       domainEnumsByName: new Map(), parsedAssociations: [],
       pendingReferences: [],
     };
