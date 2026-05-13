@@ -8,6 +8,7 @@ import { IliSchemaService } from '../services/iliSchemaService';
 import { LegacyIliParser } from '../services/parsers/LegacyIliParser';
 import { NgIliParser } from '../services/parsers/ng/NgIliParser';
 import { IliLayoutService } from '../services/IliLayoutService';
+import { isOverviewCandidate, layoutModelOverview } from '../services/layout/overviewStrategy';
 import { generateSearchOptions } from '../services/searchOptions';
 import {
   flowNodeFromBaseNode,
@@ -22,7 +23,7 @@ import {
   LayoutOptions,
 } from '../services/types/IliBaseTypes';
 import { IliClassNode } from '../services/types/IliModelTypes';
-import type { IliParseError } from '../services/parsers/IliParser';
+import type { IliParseError, IliImportRef } from '../services/parsers/IliParser';
 
 export type { SearchOption };
 
@@ -32,6 +33,8 @@ interface UseIliSchemaReturn {
   error: string | null;
   parseWarnings: IliParseError[];
   dismissParseWarnings: () => void;
+  imports: IliImportRef[];
+  interlisVersion: string | undefined;
   searchValue: SearchOption | null;
   searchOptions: SearchOption[];
   currentFileName: string | null;
@@ -40,10 +43,9 @@ interface UseIliSchemaReturn {
   handleClearFile: () => void;
   handleConnect: (params: Connection) => void;
   handleNodeClick: (event: React.MouseEvent, node: Node, viewport: ViewportState) => void;
-  handleReset: () => void;
   handleBack: () => boolean;
   navigationHistory: NavigationState[];
-  handleHierarchyToggle: () => void;
+  setFullHierarchyAndReset: (value: boolean) => void;
   showFullHierarchy: boolean;
   activeNodeId: string | null;
   setActiveNodeId: (id: string | null) => void;
@@ -62,10 +64,13 @@ interface UseIliSchemaReturn {
   showAssociations: boolean;
   handleToggleAssociations: (visible: boolean) => void;
   handleMagicLayout: () => void;
+  resetCurrentLayout: () => void;
   applyLayout: (node: IliNode, override?: Partial<LayoutOptions>) => { nodes: IliNode[]; edges: Edge[] };
   computeLayout: (node: IliNode, override?: Partial<LayoutOptions>) => { nodes: IliNode[]; edges: Edge[] };
   fitViewRequest: number;
   requestFitView: () => void;
+  canGoBack: boolean;
+  showOverview: () => void;
 }
 
 
@@ -95,6 +100,9 @@ export const useIliSchema = (
   const [error, setError] = useState<string | null>(null);
   const [parseWarnings, setParseWarnings] = useState<IliParseError[]>([]);
   const dismissParseWarnings = useCallback(() => setParseWarnings([]), []);
+  const [imports, setImports] = useState<IliImportRef[]>([]);
+  const [interlisVersion, setInterlisVersion] = useState<string | undefined>(undefined);
+  const [overviewWasShown, setOverviewWasShown] = useState(false);
   const [searchValue, setSearchValue] = useState<SearchOption | null>(null);
   const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
@@ -193,6 +201,8 @@ export const useIliSchema = (
       lastContentRef.current = { content, fileName };
       schemaServiceRef.current.parseSchema(content);
       setParseWarnings(schemaServiceRef.current.getParseErrors());
+      setImports(schemaServiceRef.current.getImports());
+      setInterlisVersion(schemaServiceRef.current.getInterlisVersion());
 
       const baseNodes = schemaServiceRef.current.getNodes();
       const relations = schemaServiceRef.current.getRelations();
@@ -206,42 +216,56 @@ export const useIliSchema = (
       setSearchOptions(generateSearchOptions(baseNodes));
 
      
-      const initialClass = (
-        flowNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
-        flowNodes.find(n => n.type === 'classNode')
-      ) as IliNode | undefined;
+      const useOverviewLayout = isOverviewCandidate(flowNodes as IliNode[], relations);
 
-      if (initialClass) {
-        const relatedNodes = IliLayoutService.getDirectRelations(
-          initialClass,
-          flowNodes as IliNode[],
-          flowEdges,
-          colors,
-          {
-            showFullHierarchy,
-            useCurvedLines,
-            showEnums,
-            showAssociations,
-            maxSubTypesPerRow: 4,
-            useMagicLayout: false,
-          }
-        );
+      if (useOverviewLayout) {
+        const overview = layoutModelOverview(flowNodes as IliNode[], relations);
+        setNodes(overview.nodes);
+        setEdges(overview.edges);
+        setActiveNodeId(null);
+        setNavigationHistory([]);
+        setHistoryIndex(-1);
+        setOverviewWasShown(true);
+      } else {
+        setOverviewWasShown(false);
+        const initialClass = (
+          flowNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+          flowNodes.find(n => n.type === 'classNode')
+        ) as IliNode | undefined;
 
-        setNodes(relatedNodes.nodes);
-        setEdges(relatedNodes.edges);
-        setActiveNodeId(initialClass.id);
-        setNavigationHistory([{
-          nodeId: initialClass.id,
-          showEnums: true,
-          showAssociations: showAssociations
-        }]);
-        setHistoryIndex(0);
+        if (initialClass) {
+          const relatedNodes = IliLayoutService.getDirectRelations(
+            initialClass,
+            flowNodes as IliNode[],
+            flowEdges,
+            colors,
+            {
+              showFullHierarchy,
+              useCurvedLines,
+              showEnums,
+              showAssociations,
+              maxSubTypesPerRow: 4,
+              useMagicLayout: false,
+            }
+          );
 
-       
-        requestAnimationFrame(() => {
-          setMaxSubTypesPerRow(4);
-        });
+          setNodes(relatedNodes.nodes);
+          setEdges(relatedNodes.edges);
+          setActiveNodeId(initialClass.id);
+          setNavigationHistory([{
+            nodeId: initialClass.id,
+            showEnums: true,
+            showAssociations: showAssociations
+          }]);
+          setHistoryIndex(0);
+
+          requestAnimationFrame(() => {
+            setMaxSubTypesPerRow(4);
+          });
+        }
       }
+
+      requestFitView();
 
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Fehler beim Laden des Schemas');
@@ -257,6 +281,7 @@ export const useIliSchema = (
     showAssociations,
     setNodes,
     setEdges,
+    requestFitView,
   ]);
 
   const handleFileUpload = useCallback(async (file: File) => {
@@ -383,37 +408,49 @@ export const useIliSchema = (
     requestFitView,
   ]);
 
-  const handleReset = useCallback(() => {
-   
+  const canGoBack = useMemo(() => {
+    if (historyIndex > 0) return true;
+    if (historyIndex === 0) return overviewWasShown;
+    return false;
+  }, [historyIndex, overviewWasShown]);
+
+  // Single entry point that returns the user to the initial state for the
+  // current model: renders the topic-grouped overview and resets all
+  // session-only toggles (enum/association history, visibility flags, max
+  // sub-types per row). Replaces the previous Reset action.
+  const showOverview = useCallback(() => {
+    if (allNodes.length === 0) return;
     setEnumHistory(new Map());
     setAssociationHistory(new Map());
-    
-   
     setShowEnums(true);
     setShowAssociations(true);
-    
-    const initialClass =
-      allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
-      allNodes.find(n => n.type === 'classNode');
-
-    if (initialClass) {
-      applyLayout(initialClass as IliNode, {
-        showEnums: true,
-        showAssociations: true,
-      });
-      setActiveNodeId(initialClass.id);
-
-      const initialState: NavigationState = {
-        nodeId: initialClass.id,
-        showEnums: true,
-        showAssociations: true
-      };
-      setNavigationHistory([initialState]);
-      setHistoryIndex(0);
-    }
-  }, [allNodes, applyLayout]);
+    setMaxSubTypesPerRow(4);
+    const relations = schemaServiceRef.current.getRelations();
+    const overview = layoutModelOverview(allNodes as IliNode[], relations);
+    setNodes(overview.nodes as IliNode[]);
+    setEdges(overview.edges);
+    setActiveNodeId(null);
+    setNavigationHistory([]);
+    setHistoryIndex(-1);
+    setOverviewWasShown(true);
+    requestFitView();
+  }, [allNodes, setNodes, setEdges, requestFitView]);
 
   const handleBack = useCallback((): boolean => {
+    if (historyIndex === 0) {
+      if (overviewWasShown) {
+        const relations = schemaServiceRef.current.getRelations();
+        const overview = layoutModelOverview(allNodes as IliNode[], relations);
+        setNodes(overview.nodes as IliNode[]);
+        setEdges(overview.edges);
+        setActiveNodeId(null);
+        setNavigationHistory([]);
+        setHistoryIndex(-1);
+        requestFitView();
+        return true;
+      }
+      return false;
+    }
     if (historyIndex > 0) {
       const previousState = navigationHistory[historyIndex - 1];
       const previousNode = allNodes.find(node => node.id === previousState.nodeId);
@@ -447,7 +484,7 @@ export const useIliSchema = (
       }
     }
     return false;
-  }, [historyIndex, navigationHistory, allNodes, applyLayout, requestFitView]);
+  }, [historyIndex, navigationHistory, allNodes, applyLayout, requestFitView, overviewWasShown, setNodes, setEdges]);
 
   const handleClearFile = useCallback(() => {
     setNodes([]);
@@ -458,6 +495,10 @@ export const useIliSchema = (
     setSearchValue(null);
     setCurrentFileName(null);
     setError(null);
+    setParseWarnings([]);
+    setImports([]);
+    setInterlisVersion(undefined);
+    setOverviewWasShown(false);
     setNavigationHistory([]);
     setHistoryIndex(-1);
     setActiveNodeId(null);
@@ -470,10 +511,53 @@ export const useIliSchema = (
     setAssociationHistory(new Map());
   }, [setNodes, setEdges]);
 
-  const handleHierarchyToggle = useCallback(() => {
-    setShowFullHierarchy(prev => !prev);
-    return true;
-  }, []);
+  // Setting full-hierarchy from the layout-settings panel: flip the flag and
+  // bring the user back to the initial view (overview if multi-root, else the
+  // abstract base class) using the new value as override so the closure
+  // staleness from setShowFullHierarchy doesn't matter.
+  const setFullHierarchyAndReset = useCallback((value: boolean) => {
+    setShowFullHierarchy(value);
+    setEnumHistory(new Map());
+    setAssociationHistory(new Map());
+    setShowEnums(true);
+    setShowAssociations(true);
+
+    const relations = schemaServiceRef.current.getRelations();
+    if (isOverviewCandidate(allNodes as IliNode[], relations)) {
+      const overview = layoutModelOverview(allNodes as IliNode[], relations);
+      setNodes(overview.nodes as IliNode[]);
+      setEdges(overview.edges);
+      setActiveNodeId(null);
+      setNavigationHistory([]);
+      setHistoryIndex(-1);
+      setOverviewWasShown(true);
+      requestFitView();
+      return;
+    }
+
+    setOverviewWasShown(false);
+    const initialClass =
+      allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+      allNodes.find(n => n.type === 'classNode');
+    if (initialClass) {
+      const result = computeLayout(initialClass as IliNode, {
+        showFullHierarchy: value,
+        showEnums: true,
+        showAssociations: true,
+        maxSubTypesPerRow: 4,
+      });
+      setNodes(result.nodes);
+      setEdges(result.edges);
+      setActiveNodeId(initialClass.id);
+      setNavigationHistory([{
+        nodeId: initialClass.id,
+        showEnums: true,
+        showAssociations: true,
+      }]);
+      setHistoryIndex(0);
+      requestFitView();
+    }
+  }, [allNodes, computeLayout, setNodes, setEdges, requestFitView]);
 
   const handleToggleEnums = useCallback((visible: boolean) => {
     setShowEnums(visible);
@@ -531,6 +615,7 @@ export const useIliSchema = (
 
  
   useEffect(() => {
+    if (overviewWasShown) return;
     if (!activeNodeId && allNodes.length > 0) {
       const firstAbstractClass = allNodes.find(n =>
         n.type === 'classNode' && n.data.isAbstract
@@ -546,7 +631,7 @@ export const useIliSchema = (
         setHistoryIndex(0);
       }
     }
-  }, [activeNodeId, allNodes, applyLayout]);
+  }, [activeNodeId, allNodes, applyLayout, overviewWasShown]);
 
  
   useEffect(() => {
@@ -610,6 +695,14 @@ export const useIliSchema = (
       }
     }
   }, [activeNodeId, allNodes, applyLayout, navigationHistory, historyIndex]);
+
+  const resetCurrentLayout = useCallback(() => {
+    if (!activeNodeId) return;
+    const targetNode = allNodes.find(n => n.id === activeNodeId) as IliNode | undefined;
+    if (!targetNode) return;
+    applyLayout(targetNode);
+    requestFitView();
+  }, [activeNodeId, allNodes, applyLayout, requestFitView]);
 
   const handleMagicLayout = useCallback(() => {
     if (activeNodeId) {
@@ -675,6 +768,8 @@ export const useIliSchema = (
     isLoading,
     error,
     parseWarnings,
+    imports,
+    interlisVersion,
     dismissParseWarnings,
     searchValue,
     searchOptions,
@@ -684,10 +779,11 @@ export const useIliSchema = (
     handleClearFile,
     handleConnect,
     handleNodeClick,
-    handleReset,
     handleBack,
+    canGoBack,
+    showOverview,
     navigationHistory,
-    handleHierarchyToggle,
+    setFullHierarchyAndReset,
     showFullHierarchy,
     activeNodeId,
     setActiveNodeId,
@@ -706,6 +802,7 @@ export const useIliSchema = (
     showAssociations,
     handleToggleAssociations,
     handleMagicLayout,
+    resetCurrentLayout,
     applyLayout,
     computeLayout,
     fitViewRequest,

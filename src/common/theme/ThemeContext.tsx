@@ -43,8 +43,13 @@ export interface ThemeContextType {
   setMode: (mode: 'light' | 'dark') => void;
   colorScheme: string;
   setColorScheme: (scheme: string) => void;
+  accentColor: string;
+  setAccentColor: (color: string) => void;
   colors: ThemeColors;
 }
+
+const DEFAULT_ACCENT_COLOR = '#9c27b0';
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -52,8 +57,10 @@ interface ThemeProviderProps {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const HIDDEN_SCHEMES = new Set(['purple']);
+
 function normalizeColorScheme(scheme: string | null): string {
-  if (!scheme || !colorSchemes[scheme]) {
+  if (!scheme || !colorSchemes[scheme] || HIDDEN_SCHEMES.has(scheme)) {
     return 'default';
   }
   return scheme;
@@ -273,6 +280,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     return normalized;
   });
 
+  const [accentColor, setAccentColor] = useState<string>(() => {
+    const saved = localStorage.getItem('accentColor');
+    return saved && HEX_COLOR_RE.test(saved) ? saved : DEFAULT_ACCENT_COLOR;
+  });
+
   useEffect(() => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
@@ -280,6 +292,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     localStorage.setItem('colorScheme', colorScheme);
   }, [colorScheme]);
+
+  useEffect(() => {
+    localStorage.setItem('accentColor', accentColor);
+  }, [accentColor]);
 
   const processColorValue = useCallback((value: any): string => {
     if (typeof value === 'function') {
@@ -291,7 +307,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const colors = useMemo(() => {
     const schemeKey = colorSchemes[colorScheme] ? colorScheme : 'default';
     const scheme = colorSchemes[schemeKey];
-    return Object.keys(scheme).reduce<Partial<ThemeColors>>((acc, key) => {
+    const resolved = Object.keys(scheme).reduce<Partial<ThemeColors>>((acc, key) => {
       const value = scheme[key];
       if (typeof value === 'object' && value !== null) {
         acc[key as keyof ThemeColors] = Object.keys(value).reduce((subAcc: any, subKey) => {
@@ -303,13 +319,17 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       }
       return acc;
     }, {}) as ThemeColors;
-  }, [colorScheme, processColorValue]);
+    resolved.selectedEntity = accentColor;
+    return resolved;
+  }, [colorScheme, processColorValue, accentColor]);
 
   const value = {
     mode,
     setMode,
     colorScheme,
     setColorScheme,
+    accentColor,
+    setAccentColor,
     colors
   };
 

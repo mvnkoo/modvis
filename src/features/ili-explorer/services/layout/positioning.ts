@@ -11,7 +11,7 @@ export function calculateSubtypePosition(
     const startX = -(totalWidth / 2);
     return {
       x: startX + index * LAYOUT_CONFIG.SPACING.HORIZONTAL,
-      y: LAYOUT_CONFIG.SPACING.VERTICAL * (useMagicLayout ? 2 : 1),
+      y: LAYOUT_CONFIG.SPACING.VERTICAL * (useMagicLayout ? LAYOUT_CONFIG.MAGIC.SUBTYPE_VERTICAL : 1),
     };
   }
 
@@ -27,10 +27,10 @@ export function calculateSubtypePosition(
   const startX = -(rowWidth / 2);
 
   const verticalSpacing = useMagicLayout
-    ? LAYOUT_CONFIG.SPACING.VERTICAL * 2
+    ? LAYOUT_CONFIG.SPACING.VERTICAL * LAYOUT_CONFIG.MAGIC.SUBTYPE_VERTICAL
     : LAYOUT_CONFIG.SPACING.VERTICAL;
   const rowSpacing = useMagicLayout
-    ? LAYOUT_CONFIG.SPACING.ROW * 2
+    ? LAYOUT_CONFIG.SPACING.ROW * LAYOUT_CONFIG.MAGIC.SUBTYPE_ROW
     : LAYOUT_CONFIG.SPACING.ROW;
 
   return {

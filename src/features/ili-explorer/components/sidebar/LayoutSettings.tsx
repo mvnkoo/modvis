@@ -13,17 +13,27 @@ import {
 } from '@mui/material';
 import { Settings } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
+import { useSettings } from '../../../../common/settings/SettingsContext';
 
 interface LayoutSettingsProps {
   maxSubTypesPerRow: number;
   onMaxSubTypesChange: (value: number) => void;
+  hoverPreview: boolean;
+  onHoverPreviewChange: (value: boolean) => void;
+  fullHierarchy: boolean;
+  onFullHierarchyChange: (value: boolean) => void;
 }
 
 export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   maxSubTypesPerRow,
-  onMaxSubTypesChange
+  onMaxSubTypesChange,
+  hoverPreview,
+  onHoverPreviewChange,
+  fullHierarchy,
+  onFullHierarchyChange,
 }) => {
-  const { colors } = useTheme();
+  useTheme();
+  const { tooltipsEnabled, setTooltipsEnabled } = useSettings();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [limitSubTypes, setLimitSubTypes] = useState(true);
   const [textFieldValue, setTextFieldValue] = useState('4');
@@ -174,7 +184,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
               step={1}
               marks={marks}
               disabled={!limitSubTypes}
-              sx={{ 
+              sx={{
                 mt: 1,
                 '& .MuiSlider-mark': {
                   height: 8,
@@ -186,8 +196,56 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
               }}
             />
           </Box>
+
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={hoverPreview}
+                  onChange={(e) => onHoverPreviewChange(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Hover-Preview"
+            />
+            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+              Zeigt beim Überfahren einer Klasse die nächsten zwei Subtyp-Ebenen als kleine Vorschau-Boxen.
+            </Typography>
+          </Box>
+
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={fullHierarchy}
+                  onChange={(e) => onFullHierarchyChange(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Vollständige Hierarchie anzeigen"
+            />
+            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+              Beim Umschalten wird die Ansicht zurückgesetzt.
+            </Typography>
+          </Box>
+
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={tooltipsEnabled}
+                  onChange={(e) => setTooltipsEnabled(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Tooltips anzeigen"
+            />
+            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+              Hinweis-Bubbles bei Klassen, Attributen und Aufzählungen.
+            </Typography>
+          </Box>
         </Box>
       </Popover>
     </Paper>
   );
-}; 
+};

@@ -98,8 +98,19 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
         overflow: 'hidden',
         bgcolor: data.isActive ? colors.selectedNodeBg : colors.nodeContent,
         color: colors.text,
+        transition: 'box-shadow 0.2s ease-in-out, background-color 1400ms ease-out, border-color 1400ms ease-out',
+        '& .ili-node-header': {
+          transition: 'background-color 1400ms ease-out',
+        },
         '&:hover': {
-          boxShadow: colors.shadow
+          boxShadow: colors.shadow,
+          ...(data.isActive ? {} : {
+            ...(expanded ? {} : { bgcolor: alpha(colors.selectedEntity, 0.18) }),
+            borderColor: colors.selectedEntity,
+            '& .ili-node-header': {
+              bgcolor: colors.selectedEntity,
+            },
+          }),
         }
       }}
     >
@@ -155,11 +166,11 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
           }
         }}
       >
-        <Box sx={{ 
+        <Box className="ili-node-header" sx={{
           bgcolor: data.isActive || data.isHighlighted
-            ? colors.selectedEntity 
-            : data.isSource 
-              ? alpha(colors.relationship, 0.8) 
+            ? colors.selectedEntity
+            : data.isSource
+              ? alpha(colors.relationship, 0.8)
               : alpha(colors.relationship, 0.5),
           p: 1,
           textAlign: 'center',
@@ -238,9 +249,9 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
                 }
               }}
             >
-              <Box sx={{ 
+              <Box sx={{
                 display: 'grid',
-                gridTemplateColumns: '1fr auto',
+                gridTemplateColumns: 'minmax(0, 1fr) max-content',
                 gap: 2,
                 alignItems: 'start'
               }}>
@@ -267,12 +278,12 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
                   )}
                 </Box>
                 {data.association.sourceCardinality && (
-                  <Typography 
-                    variant="body2" 
+                  <Typography
+                    variant="body2"
                     color={colors.propertyText}
-                    sx={{ 
+                    sx={{
                       fontFamily: 'monospace',
-                      minWidth: '60px',
+                      whiteSpace: 'nowrap',
                       textAlign: 'right',
                       bgcolor: alpha(colors.primary, 0.1),
                       px: 1,
@@ -322,9 +333,9 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
                 }
               }}
             >
-              <Box sx={{ 
+              <Box sx={{
                 display: 'grid',
-                gridTemplateColumns: '1fr auto',
+                gridTemplateColumns: 'minmax(0, 1fr) max-content',
                 gap: 2,
                 alignItems: 'start'
               }}>
@@ -351,12 +362,12 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
                   )}
                 </Box>
                 {data.association.targetCardinality && (
-                  <Typography 
-                    variant="body2" 
+                  <Typography
+                    variant="body2"
                     color={colors.propertyText}
-                    sx={{ 
+                    sx={{
                       fontFamily: 'monospace',
-                      minWidth: '60px',
+                      whiteSpace: 'nowrap',
                       textAlign: 'right',
                       bgcolor: alpha(colors.primary, 0.1),
                       px: 1,

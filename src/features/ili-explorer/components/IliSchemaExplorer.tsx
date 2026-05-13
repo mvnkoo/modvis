@@ -38,11 +38,16 @@ import {
   IliEnumNode,
   IliAssociationNode,
   IliUnloadedClassNode,
-  IliDomainEnumNode
+  IliDomainEnumNode,
+  IliTopicLabelNode,
+  IliTopicFrameNode,
+  IliPreviewNode
 } from './nodes';
 import { useIliSchema } from '../hooks/useIliSchema';
 import { useDiagramExport } from '../hooks/useDiagramExport';
 import { LayoutSettings } from './sidebar/LayoutSettings';
+import { ModelInfoPanel } from './sidebar/ModelInfoPanel';
+import { layoutHoverPreview } from '../services/layout/previewStrategy';
 
 import '@xyflow/react/dist/style.css';
 import { debounce } from 'lodash';
@@ -67,7 +72,10 @@ const nodeTypes: NodeTypes = {
   enumNode: IliEnumNode,
   domainEnumNode: IliDomainEnumNode,
   associationNode: IliAssociationNode,
-  unloadedClassNode: IliUnloadedClassNode
+  unloadedClassNode: IliUnloadedClassNode,
+  topicLabelNode: IliTopicLabelNode,
+  topicFrameNode: IliTopicFrameNode,
+  previewNode: IliPreviewNode,
 };
 
 
@@ -96,6 +104,12 @@ const globalStyles = `
   .noclick {
     pointer-events: none;
   }
+  .react-flow__edge.animated path.react-flow__edge-path {
+    animation-duration: 1s;
+  }
+  body.tooltips-off .MuiTooltip-popper {
+    display: none !important;
+  }
 `;
 
 const Flow: React.FC = () => {
@@ -111,6 +125,8 @@ const Flow: React.FC = () => {
     error,
     parseWarnings,
     dismissParseWarnings,
+    imports,
+    interlisVersion,
     searchValue,
     searchOptions,
     currentFileName,
@@ -121,9 +137,10 @@ const Flow: React.FC = () => {
     handleClearFile,
     handleConnect,
     handleNodeClick: baseHandleNodeClick,
-    handleReset: baseHandleReset,
     handleBack: baseHandleBack,
-    handleHierarchyToggle,
+    canGoBack,
+    showOverview,
+    setFullHierarchyAndReset,
     activeNodeId,
     setActiveNodeId,
     allNodes,
@@ -138,6 +155,7 @@ const Flow: React.FC = () => {
     showAssociations,
     handleToggleAssociations,
     handleMagicLayout,
+    resetCurrentLayout,
     applyLayout,
     fitViewRequest,
     requestFitView,
@@ -155,17 +173,36 @@ const Flow: React.FC = () => {
     setUseCurvedLines(true);
   }, [handleFileUploadBase]);
 
+  const [lastFitDone, setLastFitDone] = useState(0);
+  // Fade-in only on initial fit per file; navigations within the file keep
+  // the canvas visible to avoid the brief blank between layout swaps.
+  const canvasReady = fitViewRequest === 0 || lastFitDone > 0;
+
+  useEffect(() => {
+    setLastFitDone(0);
+  }, [currentFileName]);
+
   useEffect(() => {
     if (fitViewRequest === 0) return;
-    const id = requestAnimationFrame(() => {
-      fitView({
-        ...DEFAULT_FIT_VIEW_OPTIONS,
-        duration: 800,
-        padding: 0.3,
+    if (lastFitDone === fitViewRequest) return;
+    if (nodes.length === 0) return;
+
+    let raf2: number | null = null;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        fitView({
+          ...DEFAULT_FIT_VIEW_OPTIONS,
+          duration: 600,
+          padding: 0.3,
+        });
+        setLastFitDone(fitViewRequest);
       });
     });
-    return () => cancelAnimationFrame(id);
-  }, [fitViewRequest, fitView]);
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2 !== null) cancelAnimationFrame(raf2);
+    };
+  }, [nodes.length, fitView, fitViewRequest, lastFitDone]);
 
   const handleLineTypeToggle = useCallback(() => {
     const newCurvedLines = !useCurvedLines;
@@ -183,9 +220,10 @@ const Flow: React.FC = () => {
   const [nodePositionsHistory, setNodePositionsHistory] = useState<Map<string, { x: number; y: number }>[]>([]);
 
   const handleNodeClick = useCallback((event: React.MouseEvent, node: ReactFlowNode) => {
+    if (node.type === 'topicLabelNode' || node.type === 'topicFrameNode') return;
     if (node.id === activeNodeId) return;
-    
-   
+
+
     const nodeType = node.type || 'classNode';
     const nodeTitle = String(node.data?.label || node.data?.title || node.id);
     const isAbstract = Boolean(node.data?.isAbstract);
@@ -221,18 +259,10 @@ const Flow: React.FC = () => {
     baseHandleNodeClick(event, iliNode, currentViewport);
   }, [activeNodeId, baseHandleNodeClick, getViewport]);
 
-  const handleReset = useCallback(() => {
-    baseHandleReset();
-
-    setMaxSubTypesPerRow(4);
-    setUseCurvedLines(true);
-    requestFitView();
-  }, [baseHandleReset, requestFitView, setMaxSubTypesPerRow]);
-
   const handleBack = useCallback(() => {
-    if (historyIndex > 0) {
-      baseHandleBack();
-
+    if (historyIndex < 0) return;
+    const went = baseHandleBack();
+    if (went && historyIndex > 0) {
       setNavigationHistory(prev => {
         const newHistory = [...prev];
         if (newHistory.length > 1) {
@@ -343,7 +373,7 @@ const Flow: React.FC = () => {
   }, []);
 
  
-  const nodesWithHandlers = useMemo(() => 
+  const nodesWithHandlers = useMemo(() =>
     nodes.map(node => ({
       ...node,
       data: {
@@ -353,6 +383,141 @@ const Flow: React.FC = () => {
       }
     }))
   , [nodes, handleNodeExpand]);
+
+  const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
+  const [tintHoverId, setTintHoverId] = useState<string | null>(null);
+  const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(true);
+  const previewDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const PREVIEW_DELAY_MS = 500;
+
+  useEffect(() => {
+    setHoveredClassId(null);
+    setTintHoverId(null);
+    if (previewDelayRef.current) {
+      clearTimeout(previewDelayRef.current);
+      previewDelayRef.current = null;
+    }
+  }, [activeNodeId]);
+
+  const ancestorDepth = useMemo(() => {
+    const depths = new Map<string, number>();
+    if (!activeNodeId) return depths;
+    depths.set(activeNodeId, 0);
+    const queue: string[] = [activeNodeId];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      const d = depths.get(id)!;
+      for (const e of allEdges) {
+        if (e.source === id && !depths.has(e.target)) {
+          depths.set(e.target, d + 1);
+          queue.push(e.target);
+        }
+      }
+    }
+    return depths;
+  }, [activeNodeId, allEdges]);
+
+  const activeSupertypeIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const [id, d] of ancestorDepth) {
+      if (d > 0) set.add(id);
+    }
+    return set;
+  }, [ancestorDepth]);
+
+  const handleNodeMouseEnter = useCallback((_e: React.MouseEvent, node: ReactFlowNode) => {
+    const tintableTypes = new Set(['classNode', 'enumNode', 'domainEnumNode', 'associationNode']);
+    if (!tintableTypes.has(node.type ?? '')) return;
+    if (node.id === activeNodeId) return;
+    setTintHoverId(node.id);
+
+    if (!hoverPreviewEnabled) return;
+    if (node.type !== 'classNode') return;
+    if (activeSupertypeIds.has(node.id)) return;
+    if ((node.data as { expanded?: boolean } | undefined)?.expanded) return;
+
+    if (previewDelayRef.current) clearTimeout(previewDelayRef.current);
+    previewDelayRef.current = setTimeout(() => {
+      setHoveredClassId(node.id);
+      previewDelayRef.current = null;
+    }, PREVIEW_DELAY_MS);
+  }, [hoverPreviewEnabled, activeNodeId, activeSupertypeIds]);
+
+  const handleNodeMouseLeave = useCallback(() => {
+    if (previewDelayRef.current) {
+      clearTimeout(previewDelayRef.current);
+      previewDelayRef.current = null;
+    }
+    setHoveredClassId(null);
+    setTintHoverId(null);
+  }, []);
+
+  const hoverPreview = useMemo(() => {
+    if (!hoverPreviewEnabled || !hoveredClassId) {
+      return { nodes: [] as ReactFlowNode[], edges: [] as Edge[] };
+    }
+    if (activeSupertypeIds.has(hoveredClassId)) {
+      return { nodes: [], edges: [] };
+    }
+    const hovered = nodes.find(n => n.id === hoveredClassId);
+    if (!hovered) return { nodes: [], edges: [] };
+    if ((hovered.data as { expanded?: boolean } | undefined)?.expanded) {
+      return { nodes: [], edges: [] };
+    }
+    return layoutHoverPreview(hovered, allNodes, allEdges, colors);
+  }, [hoverPreviewEnabled, hoveredClassId, nodes, allNodes, allEdges, colors, activeSupertypeIds]);
+
+  const renderedNodes = useMemo(
+    () => [...nodesWithHandlers, ...hoverPreview.nodes],
+    [nodesWithHandlers, hoverPreview.nodes]
+  );
+  // Pick the single edge from the hovered node to its closest neighbour in the
+  // active-class hierarchy. For ancestors that's the direct child (one rank
+  // closer to active); for subtypes / enums / assocs it's active itself.
+  const tintedEdgeId = useMemo(() => {
+    if (!tintHoverId || !activeNodeId) return null;
+    let bestId: string | null = null;
+    let bestDepth = Infinity;
+    for (const e of edges) {
+      let other: string | null = null;
+      if (e.source === tintHoverId) other = e.target;
+      else if (e.target === tintHoverId) other = e.source;
+      if (other === null) continue;
+      const d = ancestorDepth.get(other);
+      if (d === undefined) continue;
+      if (d < bestDepth) {
+        bestDepth = d;
+        bestId = e.id;
+      }
+    }
+    return bestId;
+  }, [tintHoverId, activeNodeId, edges, ancestorDepth]);
+
+  const renderedEdges = useMemo(() => {
+    const strokeFade = 'stroke 1.4s ease-out';
+    const withFade = edges.map(e => ({
+      ...e,
+      style: { ...e.style, transition: strokeFade },
+    }));
+    const tinted = tintedEdgeId
+      ? withFade.map(e => {
+          if (e.id !== tintedEdgeId) return e;
+          const tintedMarkerEnd = e.markerEnd && typeof e.markerEnd === 'object'
+            ? { ...e.markerEnd, color: colors.selectedEntity }
+            : e.markerEnd;
+          return {
+            ...e,
+            style: {
+              ...e.style,
+              stroke: colors.selectedEntity,
+              transition: strokeFade,
+            },
+            markerEnd: tintedMarkerEnd,
+          };
+        })
+      : withFade;
+    return [...tinted, ...hoverPreview.edges];
+  }, [edges, hoverPreview.edges, tintedEdgeId, colors.selectedEntity]);
 
  
   const debouncedHandleMaxSubTypesChange = useCallback(
@@ -486,11 +651,48 @@ const Flow: React.FC = () => {
     const styleSheet = document.createElement('style');
     styleSheet.innerText = globalStyles;
     document.head.appendChild(styleSheet);
-    
+
     return () => {
       document.head.removeChild(styleSheet);
     };
   }, []);
+
+  const modelStats = useMemo(() => {
+    let classCount = 0, associationCount = 0, enumCount = 0, unitCount = 0;
+    const topics = new Set<string>();
+    for (const n of allNodes) {
+      const topic = (n.data as any)?.topic;
+      if (typeof topic === 'string' && topic.length > 0) topics.add(topic);
+      switch (n.type) {
+        case 'classNode': classCount++; break;
+        case 'associationNode': associationCount++; break;
+        case 'enumNode': enumCount++; break;
+        case 'domainEnumNode':
+          if ((n.data as any)?.type === 'UNIT') unitCount++;
+          else enumCount++;
+          break;
+      }
+    }
+    return { classCount, topicCount: topics.size, associationCount, enumCount, unitCount };
+  }, [allNodes]);
+
+  const lastLoadedFileRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoading || error) return;
+    if (!currentFileName || currentFileName === lastLoadedFileRef.current) return;
+    if (allNodes.length === 0) return;
+    lastLoadedFileRef.current = currentFileName;
+    const classCount = allNodes.filter(n => n.type === 'classNode').length;
+    const warnCount = parseWarnings.length;
+    const summary = warnCount > 0
+      ? `${currentFileName} geladen — ${classCount} Klassen, ${warnCount} ${warnCount === 1 ? 'Warnung' : 'Warnungen'}`
+      : `${currentFileName} geladen — ${classCount} Klassen`;
+    showToast(summary, warnCount > 0 ? 'warning' : 'success');
+  }, [isLoading, error, currentFileName, allNodes, parseWarnings, showToast]);
+
+  useEffect(() => {
+    if (!currentFileName) lastLoadedFileRef.current = null;
+  }, [currentFileName]);
 
   return (
     <Box
@@ -517,20 +719,20 @@ const Flow: React.FC = () => {
       )}
 
       {error && (
-        <Box sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+        <Box sx={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
           <Alert severity="error">{error}</Alert>
         </Box>
       )}
 
       {parseWarnings.length > 0 && (
-        <Box sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
+        <Box sx={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
           <Alert
             severity="warning"
             onClose={dismissParseWarnings}
             sx={{ '& .MuiAlert-message': { maxWidth: '100%' } }}
           >
             <strong>{parseWarnings.length} Parser-{parseWarnings.length === 1 ? 'Warnung' : 'Warnungen'}</strong>
-            {' — das Modell wurde unvollständig erfasst. '}
+            {' — einige Stellen konnten von ModVis nicht vollständig interpretiert werden, das angezeigte Diagramm ist daher möglicherweise lückenhaft. '}
             {parseWarnings[0].line ? `Erste Stelle: Zeile ${parseWarnings[0].line}. ` : ''}
             <span style={{ opacity: 0.85 }}>{parseWarnings[0].message}</span>
           </Alert>
@@ -549,10 +751,12 @@ const Flow: React.FC = () => {
       />
 
       <ReactFlow
-        nodes={nodesWithHandlers}
-        edges={edges}
+        nodes={renderedNodes}
+        edges={renderedEdges}
         onConnect={handleConnect}
         onNodeClick={handleNodeClick as unknown as NodeMouseHandler}
+        onNodeMouseEnter={handleNodeMouseEnter as unknown as NodeMouseHandler}
+        onNodeMouseLeave={handleNodeMouseLeave as unknown as NodeMouseHandler}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         colorMode={mode}
@@ -560,6 +764,7 @@ const Flow: React.FC = () => {
         attributionPosition="bottom-right"
         minZoom={0.1}
         maxZoom={1.5}
+        style={{ opacity: canvasReady ? 1 : 0, transition: 'opacity 200ms ease-out' }}
         defaultEdgeOptions={{
           type: 'default',
           animated: false,
@@ -600,21 +805,36 @@ const Flow: React.FC = () => {
         </Panel>
 
         <Panel position="top-left" style={{ marginTop: 68, marginLeft: 16 }}>
+          <ModelInfoPanel
+            fileName={currentFileName}
+            classCount={modelStats.classCount}
+            topicCount={modelStats.topicCount}
+            associationCount={modelStats.associationCount}
+            enumCount={modelStats.enumCount}
+            unitCount={modelStats.unitCount}
+            imports={imports}
+            warningCount={parseWarnings.length}
+            interlisVersion={interlisVersion}
+          />
           <LayoutSettings
             maxSubTypesPerRow={maxSubTypesPerRow}
             onMaxSubTypesChange={debouncedHandleMaxSubTypesChange}
+            hoverPreview={hoverPreviewEnabled}
+            onHoverPreviewChange={setHoverPreviewEnabled}
+            fullHierarchy={showFullHierarchy}
+            onFullHierarchyChange={setFullHierarchyAndReset}
           />
           <IliSideToolbar
             currentFileName={currentFileName}
             activeNodeId={activeNodeId}
             historyIndex={historyIndex}
-            showFullHierarchy={showFullHierarchy}
+            canGoBack={canGoBack}
+            onShowOverview={showOverview}
             useCurvedLines={useCurvedLines}
             exportAnchorEl={exportAnchorEl}
-            onReset={handleReset}
             onBack={handleBack}
-            onHierarchyToggle={handleHierarchyToggle}
             onLineTypeToggle={handleLineTypeToggle}
+            onResetLayout={resetCurrentLayout}
             onMagicLayout={handleMagicLayout}
             onCollapseAll={handleCollapseAll}
             onExpandAll={handleExpandAll}

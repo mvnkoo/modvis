@@ -3,6 +3,7 @@ import type {
   IliBaseNode, IliRelation, IliAttribute, IliEnumValue, IliAssociation,
 } from '../../types/IliBaseTypes';
 import type { IliClassNode, IliStructureNode } from '../../types/IliModelTypes';
+import type { IliImportRef } from '../IliParser';
 import { cstParserInstance } from './parser';
 
 const BaseVisitor = cstParserInstance.getBaseCstVisitorConstructorWithDefaults();
@@ -11,6 +12,8 @@ interface VisitState {
   topicName: string;
   nodes: IliBaseNode[];
   relations: IliRelation[];
+  imports: IliImportRef[];
+  interlisVersion: string | undefined;
   domainEnumsByName: Map<string, IliEnumValue[]>;
   parsedAssociations: IliAssociation[];
   pendingReferences: { sourceClass: string; targetQualified: string; attrName: string; isExternal: boolean }[];
@@ -22,6 +25,24 @@ function lastSegment(qualified: string): string {
 
 function imageOf(token: IToken | undefined): string {
   return token ? token.image : '';
+}
+
+function firstTokenOf(node: CstNode): IToken | undefined {
+  let earliest: IToken | undefined;
+  const walk = (n: CstNode) => {
+    for (const key of Object.keys(n.children)) {
+      for (const child of n.children[key]) {
+        if ((child as IToken).image !== undefined) {
+          const tok = child as IToken;
+          if (!earliest || tok.startOffset < earliest.startOffset) earliest = tok;
+        } else {
+          walk(child as CstNode);
+        }
+      }
+    }
+  };
+  walk(node);
+  return earliest;
 }
 
 function extractCommentText(token: IToken): string | null {
@@ -43,7 +64,7 @@ function extractCommentText(token: IToken): string | null {
 
 class IliCstToAstVisitor extends BaseVisitor {
   private state: VisitState = {
-    topicName: '', nodes: [], relations: [],
+    topicName: '', nodes: [], relations: [], imports: [], interlisVersion: undefined,
     domainEnumsByName: new Map(), parsedAssociations: [],
     pendingReferences: [],
   };
@@ -57,9 +78,9 @@ class IliCstToAstVisitor extends BaseVisitor {
   build(
     cst: CstNode,
     commentBefore: Map<number, IToken[]> = new Map(),
-  ): { nodes: IliBaseNode[]; relations: IliRelation[] } {
+  ): { nodes: IliBaseNode[]; relations: IliRelation[]; imports: IliImportRef[]; interlisVersion: string | undefined } {
     this.state = {
-      topicName: '', nodes: [], relations: [],
+      topicName: '', nodes: [], relations: [], imports: [], interlisVersion: undefined,
       domainEnumsByName: new Map(), parsedAssociations: [],
       pendingReferences: [],
     };
@@ -70,7 +91,12 @@ class IliCstToAstVisitor extends BaseVisitor {
     this.decorateReferences();
     this.decorateInheritedAttributes();
     this.decorateExternalNodes();
-    return { nodes: this.state.nodes, relations: this.state.relations };
+    return {
+      nodes: this.state.nodes,
+      relations: this.state.relations,
+      imports: this.state.imports,
+      interlisVersion: this.state.interlisVersion,
+    };
   }
 
   private decorateExternalNodes(): void {
@@ -195,10 +221,12 @@ class IliCstToAstVisitor extends BaseVisitor {
   }
 
   iliFile(ctx: any) {
+    if (ctx.interlisVersionDecl) ctx.interlisVersionDecl.forEach((v: CstNode) => this.visit(v));
     if (ctx.modelDef) ctx.modelDef.forEach((m: CstNode) => this.visit(m));
   }
 
   modelDef(ctx: any) {
+    if (ctx.importsClause) ctx.importsClause.forEach((i: CstNode) => this.visit(i));
     if (ctx.domainSection) ctx.domainSection.forEach((d: CstNode) => this.visit(d));
     if (ctx.topicDef) ctx.topicDef.forEach((t: CstNode) => this.visit(t));
     if (ctx.classDef) ctx.classDef.forEach((c: CstNode) => this.visit(c));
@@ -213,7 +241,27 @@ class IliCstToAstVisitor extends BaseVisitor {
   modelHeaderBits() {}
   languageTag() {}
   versionClause() {}
-  interlisVersionDecl() {}
+  interlisVersionDecl(ctx: any) {
+    const numTok = ctx.NumberLiteral?.[0] as IToken | undefined;
+    if (numTok) this.state.interlisVersion = numTok.image;
+  }
+
+  importsClause(ctx: any) {
+    const names = (ctx.qualifiedName as CstNode[] | undefined) ?? [];
+    const unqualifiedOffsets = new Set<number>(
+      ((ctx.Unqualified as IToken[] | undefined) ?? []).map(t => t.startOffset),
+    );
+    for (const nameNode of names) {
+      const name = this.visit(nameNode) as string;
+      if (!name) continue;
+      const firstTok = firstTokenOf(nameNode);
+      const unqualified = firstTok
+        ? [...unqualifiedOffsets].some(off => off < firstTok.startOffset && firstTok.startOffset - off < 64)
+        : false;
+      if (this.state.imports.some(im => im.name === name)) continue;
+      this.state.imports.push({ name, unqualified });
+    }
+  }
 
   topicDef(ctx: any) {
     const topicName = imageOf(ctx.topicName?.[0]);
