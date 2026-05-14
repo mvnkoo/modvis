@@ -170,6 +170,11 @@ export const useIliSchema = (
     [computeLayout, setNodes, setEdges]
   );
 
+  const applyLayoutRef = useRef(applyLayout);
+  useEffect(() => {
+    applyLayoutRef.current = applyLayout;
+  });
+
   const filterNodesAndEdges = useCallback((nodeId: string | null = null) => {
     const targetNode = nodeId
       ? (allNodes.find(n => n.id === nodeId) as IliNode | undefined)
@@ -289,15 +294,20 @@ export const useIliSchema = (
     await loadFromContent(content, file.name);
   }, [loadFromContent]);
 
+  const loadFromContentRef = useRef(loadFromContent);
+  useEffect(() => {
+    loadFromContentRef.current = loadFromContent;
+  });
+
   useEffect(() => {
     schemaServiceRef.current = new IliSchemaService(
       parserBackend === 'ng' ? new NgIliParser() : new LegacyIliParser()
     );
     const cached = lastContentRef.current;
     if (cached) {
-      void loadFromContent(cached.content, cached.fileName);
+      void loadFromContentRef.current(cached.content, cached.fileName);
     }
-  }, [parserBackend, loadFromContent]);
+  }, [parserBackend]);
 
   const handleSearchChange = useCallback((option: SearchOption | null) => {
     setSearchValue(option);
@@ -621,7 +631,7 @@ export const useIliSchema = (
         n.type === 'classNode' && n.data.isAbstract
       );
       if (firstAbstractClass) {
-        applyLayout(firstAbstractClass as IliNode, { maxSubTypesPerRow: 4 });
+        applyLayoutRef.current(firstAbstractClass as IliNode, { maxSubTypesPerRow: 4 });
         setActiveNodeId(firstAbstractClass.id);
         setNavigationHistory([{
           nodeId: firstAbstractClass.id,
@@ -631,19 +641,19 @@ export const useIliSchema = (
         setHistoryIndex(0);
       }
     }
-  }, [activeNodeId, allNodes, applyLayout, overviewWasShown]);
+  }, [activeNodeId, allNodes, overviewWasShown]);
 
- 
+
   useEffect(() => {
     if (activeNodeId && allNodes.length > 0) {
       const currentNode = allNodes.find(node => node.id === activeNodeId);
       if (currentNode) {
-        const relatedNodes = applyLayout(currentNode as IliNode);
+        const relatedNodes = applyLayoutRef.current(currentNode as IliNode);
         setCurrentNodes(relatedNodes.nodes);
         setCurrentEdges(relatedNodes.edges);
       }
     }
-  }, [activeNodeId, allNodes, applyLayout]);
+  }, [activeNodeId, allNodes]);
 
   const handleLineTypeToggle = useCallback(() => {
     setUseCurvedLines(prev => {
