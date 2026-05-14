@@ -26,7 +26,6 @@ const Settings: React.FC = () => {
   const { mode, setMode, colorScheme, setColorScheme, accentColor, setAccentColor } = useTheme();
   const {
     experimentalFeatures, setExperimentalFeatures,
-    parserBackend, setParserBackend,
   } = useSettings();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
@@ -160,30 +159,6 @@ const Settings: React.FC = () => {
               }}
             />
           </Box>
-        </MenuItem>
-        <Divider />
-        <MenuItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Parser-Backend (ILI-Explorer)
-          </Typography>
-          <RadioGroup
-            value={parserBackend}
-            onChange={(e) => setParserBackend(e.target.value as 'legacy' | 'ng')}
-          >
-            <FormControlLabel
-              value="ng"
-              control={<Radio size="small" />}
-              label={<Typography variant="body2">Chevrotain (Standard)</Typography>}
-            />
-            <FormControlLabel
-              value="legacy"
-              control={<Radio size="small" />}
-              label={<Typography variant="body2">Legacy Regex (Old)</Typography>}
-            />
-          </RadioGroup>
-          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Modell neu laden, damit der Wechsel greift.
-          </Typography>
         </MenuItem>
         <Divider />
         <MenuItem>
