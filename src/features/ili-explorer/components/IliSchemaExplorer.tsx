@@ -22,7 +22,6 @@ import { useTheme } from '../../../common/theme/ThemeContext';
 import {
   IliNode,
   SearchOption,
-  NavigationState,
 } from '../services/types/IliBaseTypes';
 
 import { IliToolbar } from './toolbar/IliToolbar';
@@ -137,17 +136,19 @@ const Flow: React.FC = () => {
     handleClearFile,
     handleConnect,
     handleNodeClick: baseHandleNodeClick,
-    handleBack: baseHandleBack,
+    navigateToNode,
+    handleBack,
+    handleForward,
+    jumpToHistoryIndex,
     canGoBack,
+    canGoForward,
     showOverview,
+    navigationHistory,
+    overviewWasShown,
     setFullHierarchyAndReset,
     activeNodeId,
-    setActiveNodeId,
     allNodes,
     allEdges,
-    navigationHistory,
-    setNavigationHistory,
-    setHistoryIndex,
     showEnums,
     handleToggleEnums,
     maxSubTypesPerRow,
@@ -158,7 +159,6 @@ const Flow: React.FC = () => {
     resetCurrentLayout,
     applyLayout,
     fitViewRequest,
-    requestFitView,
   } = useIliSchema(
     setNodes, 
     setEdges, 
@@ -223,27 +223,6 @@ const Flow: React.FC = () => {
     if (node.type === 'topicLabelNode' || node.type === 'topicFrameNode') return;
     if (node.id === activeNodeId) return;
 
-
-    const nodeType = node.type || 'classNode';
-    const nodeTitle = String(node.data?.label || node.data?.title || node.id);
-    const isAbstract = Boolean(node.data?.isAbstract);
-    
-   
-    setNavigationHistory(prev => {
-      const newEntry: NavigationState = {
-        nodeId: node.id,
-        showEnums: true,
-        showAssociations: true,
-        label: nodeTitle,
-        type: nodeType,
-        isAbstract: isAbstract,
-        timestamp: Date.now(),
-      };
-
-      const filteredHistory = prev.filter(entry => entry.nodeId !== node.id);
-      return [newEntry, ...filteredHistory].slice(0, 7);
-    });
-
     const iliNode: IliNode = {
       ...node,
       type: node.type || 'classNode',
@@ -258,21 +237,6 @@ const Flow: React.FC = () => {
     const currentViewport = getViewport();
     baseHandleNodeClick(event, iliNode, currentViewport);
   }, [activeNodeId, baseHandleNodeClick, getViewport]);
-
-  const handleBack = useCallback(() => {
-    if (historyIndex < 0) return;
-    const went = baseHandleBack();
-    if (went && historyIndex > 0) {
-      setNavigationHistory(prev => {
-        const newHistory = [...prev];
-        if (newHistory.length > 1) {
-          const [first, ...rest] = newHistory;
-          return [...rest, first];
-        }
-        return newHistory;
-      });
-    }
-  }, [baseHandleBack, historyIndex, setNavigationHistory]);
 
   const handleMaxSubTypesChange = useCallback((value: number) => {
     setMaxSubTypesPerRow(value);
@@ -313,35 +277,9 @@ const Flow: React.FC = () => {
 
   const handleSearchSelect = useCallback((selectedNode: SearchOption) => {
     if (selectedNode) {
-      const newState: NavigationState = {
-        nodeId: selectedNode.id,
-        showEnums,
-        showAssociations
-      };
-      
-      const newHistory = [...navigationHistory.slice(0, historyIndex + 1), newState];
-      setNavigationHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-      
-      const currentNode = allNodes.find(node => node.id === selectedNode.id);
-      if (currentNode) {
-        applyLayout(currentNode as IliNode);
-        setActiveNodeId(selectedNode.id);
-        requestFitView();
-      }
+      navigateToNode(selectedNode.id);
     }
-  }, [
-    navigationHistory,
-    historyIndex,
-    showEnums,
-    showAssociations,
-    allNodes,
-    applyLayout,
-    setNavigationHistory,
-    setHistoryIndex,
-    setActiveNodeId,
-    requestFitView,
-  ]);
+  }, [navigateToNode]);
 
  
   const handleCollapseAll = useCallback(() => {
@@ -834,10 +772,15 @@ const Flow: React.FC = () => {
             activeNodeId={activeNodeId}
             historyIndex={historyIndex}
             canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            navigationHistory={navigationHistory}
+            overviewWasShown={overviewWasShown}
+            onJumpToHistoryIndex={jumpToHistoryIndex}
             onShowOverview={showOverview}
             useCurvedLines={useCurvedLines}
             exportAnchorEl={exportAnchorEl}
             onBack={handleBack}
+            onForward={handleForward}
             onLineTypeToggle={handleLineTypeToggle}
             onResetLayout={resetCurrentLayout}
             onMagicLayout={handleMagicLayout}
