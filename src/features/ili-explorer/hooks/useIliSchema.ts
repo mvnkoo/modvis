@@ -281,26 +281,6 @@ export const useIliSchema = (
 
   const handleFileUpload = loadFromFile;
 
-  const handleSearchChange = useCallback((option: SearchOption | null) => {
-    setSearchValue(option);
-    if (!option) {
-      const fallback = (allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
-        allNodes.find(n => n.type === 'classNode')) as IliNode | undefined;
-      if (fallback) displayNode({ kind: 'node', node: fallback, override: { maxSubTypesPerRow: 4 } });
-      return;
-    }
-    const nodeId = option.type === 'ATTRIBUTE' ? option.id.split('.')[0] : option.id;
-    const processedNode = {
-      ...option,
-      id: nodeId,
-      type: option.type === 'ENUMERATION' ? 'enumNode' : 'CLASS',
-      position: { x: 0, y: 0 },
-      data: { ...option, isHighlighted: false, isActive: false },
-    } as unknown as IliNode;
-    displayNode({ kind: 'node', node: processedNode });
-    setSearchValue(null);
-  }, [allNodes, displayNode]);
-
   const handleConnect = useCallback((params: Connection) => {
     if (params.source && params.target) {
       const newEdge = {
@@ -368,6 +348,19 @@ export const useIliSchema = (
     pushHistory(entry);
     return true;
   }, [allNodes, activeNodeId, showEnums, showAssociations, navigateToEntry, pushHistory]);
+
+  const handleSearchChange = useCallback((option: SearchOption | null) => {
+    setSearchValue(option);
+    if (!option) {
+      const fallback = (allNodes.find(n => n.type === 'classNode' && n.data.isAbstract) ??
+        allNodes.find(n => n.type === 'classNode')) as IliNode | undefined;
+      if (fallback) displayNode({ kind: 'node', node: fallback, override: { maxSubTypesPerRow: 4 } });
+      return;
+    }
+    const nodeId = option.type === 'ATTRIBUTE' ? option.id.split('.')[0] : option.id;
+    navigateToNode(nodeId);
+    setSearchValue(null);
+  }, [allNodes, displayNode, navigateToNode]);
 
   const canGoBack = nav.canGoBack;
   const canGoForward = nav.canGoForward;
