@@ -19,10 +19,7 @@ import {
 } from '@xyflow/react';
 import { Box, Alert, CircularProgress, Snackbar } from '@mui/material';
 import { useTheme } from '../../../common/theme/ThemeContext';
-import {
-  IliNode,
-  SearchOption,
-} from '../services/types/IliBaseTypes';
+import { IliNode } from '../services/types/IliBaseTypes';
 
 import { IliToolbar } from './toolbar/IliToolbar';
 import { IliSideToolbar } from './toolbar/IliSideToolbar';
@@ -136,7 +133,6 @@ const Flow: React.FC = () => {
     handleClearFile,
     handleConnect,
     handleNodeClick: baseHandleNodeClick,
-    navigateToNode,
     handleBack,
     handleForward,
     jumpToHistoryIndex,
@@ -250,13 +246,6 @@ const Flow: React.FC = () => {
     }
   }), [colors]);
 
-  const handleSearchSelect = useCallback((selectedNode: SearchOption) => {
-    if (selectedNode) {
-      navigateToNode(selectedNode.id);
-    }
-  }, [navigateToNode]);
-
- 
   const handleCollapseAll = useCallback(() => {
     setNodes(currentNodes => 
       currentNodes.map(node => ({
