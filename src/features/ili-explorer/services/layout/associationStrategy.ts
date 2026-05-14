@@ -126,7 +126,9 @@ export function attachClassAssociations(
   });
 
   const baseX = LAYOUT_CONFIG.ASSOCIATION.OFFSET_X;
-  const activeNodeY = entity.position.y;
+  // Active node is positioned at the origin by getDirectRelations; center
+  // associations around y=0 instead of the incoming click position.
+  const activeNodeY = 0;
   const totalAssociations = sortedAssociations.length;
   const spacingY = useMagicLayout
     ? LAYOUT_CONFIG.ASSOCIATION.SPACING_Y * LAYOUT_CONFIG.MAGIC.ASSOCIATION

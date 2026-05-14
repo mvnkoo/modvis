@@ -9,7 +9,7 @@ import {
   IliClassNode
 } from './types/IliModelTypes';
 import type { IliParser, IliParseError, IliImportRef } from './parsers/IliParser';
-import { LegacyIliParser } from './parsers/LegacyIliParser';
+import { NgIliParser } from './parsers/ng/NgIliParser';
 import { v4 as uuid } from 'uuid';
 
 export class IliSchemaService {
@@ -20,7 +20,7 @@ export class IliSchemaService {
   private lastImports: IliImportRef[] = [];
   private lastInterlisVersion: string | undefined;
 
-  constructor(parser: IliParser = new LegacyIliParser()) {
+  constructor(parser: IliParser = new NgIliParser()) {
     this.nodes = new Map();
     this.relations = new Map();
     this.parser = parser;
