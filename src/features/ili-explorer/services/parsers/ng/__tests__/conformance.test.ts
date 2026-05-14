@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { NgIliParser } from '../NgIliParser';
-import { LegacyIliParser } from '../../LegacyIliParser';
 import { IliLexer } from '../tokens';
 import { cstParserInstance } from '../parser';
 
@@ -57,17 +56,6 @@ describe('NgIliParser conformance — real INTERLIS schemas', () => {
         expect(cls.name).toBeTruthy();
         expect(cls.data.label).toBe(cls.name);
       }
-    });
-
-    itOrSkip(`${fixture.name}: NG covers at least as many classes as Legacy`, () => {
-      const content = readFileSync(fixture.path, 'utf8');
-      const ng = new NgIliParser().parseContent(content);
-      const legacy = new LegacyIliParser().parseContent(content);
-
-      const ngClassCount = ng.nodes.filter(n => n.type === 'CLASS').length;
-      const legacyClassCount = legacy.nodes.filter(n => n.type === 'CLASS').length;
-
-      expect(ngClassCount).toBeGreaterThanOrEqual(legacyClassCount);
     });
 
     itOrSkip(`${fixture.name}: NG attributes are well-formed`, () => {

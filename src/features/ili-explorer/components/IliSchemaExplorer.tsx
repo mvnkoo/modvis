@@ -112,7 +112,7 @@ const globalStyles = `
 `;
 
 const Flow: React.FC = () => {
-  const { fitView, getViewport } = useReactFlow();
+  const { fitView } = useReactFlow();
   const { colors, mode } = useTheme();
   const [useCurvedLines, setUseCurvedLines] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -157,14 +157,14 @@ const Flow: React.FC = () => {
     handleToggleAssociations,
     handleMagicLayout,
     resetCurrentLayout,
-    applyLayout,
+    handleMaxSubTypesChange,
     fitViewRequest,
   } = useIliSchema(
-    setNodes, 
-    setEdges, 
-    useCurvedLines, 
-    setUseCurvedLines,
-    fitView
+    nodes,
+    setNodes,
+    setEdges,
+    useCurvedLines,
+    setUseCurvedLines
   );
 
   const handleFileUpload = useCallback((file: File) => {
@@ -234,19 +234,8 @@ const Flow: React.FC = () => {
       }
     };
 
-    const currentViewport = getViewport();
-    baseHandleNodeClick(event, iliNode, currentViewport);
-  }, [activeNodeId, baseHandleNodeClick, getViewport]);
-
-  const handleMaxSubTypesChange = useCallback((value: number) => {
-    setMaxSubTypesPerRow(value);
-    if (activeNodeId) {
-      const currentNode = allNodes.find(n => n.id === activeNodeId);
-      if (currentNode) {
-        applyLayout(currentNode as IliNode, { maxSubTypesPerRow: value });
-      }
-    }
-  }, [activeNodeId, allNodes, applyLayout, setMaxSubTypesPerRow]);
+    baseHandleNodeClick(event, iliNode);
+  }, [activeNodeId, baseHandleNodeClick]);
 
   const controlsStyle = useMemo(() => ({
     backgroundColor: colors.paper,
@@ -260,20 +249,6 @@ const Flow: React.FC = () => {
       }
     }
   }), [colors]);
-
-  const applyLayoutRef = useRef(applyLayout);
-  useEffect(() => {
-    applyLayoutRef.current = applyLayout;
-  });
-
-  useEffect(() => {
-    if (activeNodeId && allNodes.length > 0) {
-      const currentNode = allNodes.find(node => node.id === activeNodeId);
-      if (currentNode) {
-        applyLayoutRef.current(currentNode as IliNode);
-      }
-    }
-  }, [maxSubTypesPerRow, activeNodeId, allNodes]);
 
   const handleSearchSelect = useCallback((selectedNode: SearchOption) => {
     if (selectedNode) {
@@ -463,17 +438,9 @@ const Flow: React.FC = () => {
   }, [edges, hoverPreview.edges, tintedEdgeId, colors.selectedEntity]);
 
  
-  const debouncedHandleMaxSubTypesChange = useCallback(
-    debounce((value: number) => {
-      setMaxSubTypesPerRow(value);
-      if (activeNodeId) {
-        const currentNode = allNodes.find(n => n.id === activeNodeId);
-        if (currentNode) {
-          applyLayout(currentNode as IliNode, { maxSubTypesPerRow: value });
-        }
-      }
-    }, 150),
-    [activeNodeId, allNodes, applyLayout, setMaxSubTypesPerRow]
+  const debouncedHandleMaxSubTypesChange = useMemo(
+    () => debounce((value: number) => handleMaxSubTypesChange(value), 150),
+    [handleMaxSubTypesChange]
   );
 
 
