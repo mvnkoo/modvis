@@ -1,19 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="/favicon/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="modvis - Model Visualisation" />
+    <meta name="theme-color" content="#613F82" />
+
+    <title>ILI Explorer · INTERLIS-Schemas visualisieren</title>
+    <meta name="description" content="ILI Explorer (modvis) zeigt INTERLIS-Modelle (.ili) als interaktiven Graph: Klassen, Vererbung, Aufzählungen, Assoziationen. Browserbasiert, ohne Upload, ohne Registrierung." />
+    <meta name="keywords" content="INTERLIS, ILI, ili2c, INTERLIS Modell, Modellvisualisierung, Schema Viewer, swisstopo, SIA405, AV93, MGDM, GIS Schweiz" />
+    <link rel="canonical" href="https://www.iliexplorer.ch/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ILI Explorer" />
+    <meta property="og:title" content="ILI Explorer · INTERLIS-Schemas visualisieren" />
+    <meta property="og:description" content="INTERLIS-Modelle (.ili) als interaktiver Graph: Klassen, Vererbung, Aufzählungen, Assoziationen. Browserbasiert, ohne Upload." />
+    <meta property="og:url" content="https://www.iliexplorer.ch/" />
+    <meta property="og:image" content="https://www.iliexplorer.ch/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="de_CH" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ILI Explorer · INTERLIS-Schemas visualisieren" />
+    <meta name="twitter:description" content="INTERLIS-Modelle (.ili) als interaktiver Graph. Browserbasiert, ohne Upload." />
+    <meta name="twitter:image" content="https://www.iliexplorer.ch/og-image.png" />
+
+    <link rel="icon" href="/favicon/favicon.ico" />
     <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <title>modvis</title>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "ILI Explorer",
+      "alternateName": "modvis",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "description": "Web-Anwendung zur Visualisierung von INTERLIS-Schemas als interaktiver Graph. Parst .ili-Dateien lokal im Browser, stellt Klassen, Vererbung, Aufzählungen und Assoziationen dar.",
+      "url": "https://www.iliexplorer.ch/",
+      "inLanguage": "de",
+      "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "CHF"
+      },
+      "keywords": "INTERLIS, ILI, modvis, Schema Viewer, GIS"
+    }
+    </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <h1>ILI Explorer · modvis</h1>
+      <p>
+        Interaktiver Viewer für <strong>INTERLIS</strong>-Schemas.
+        Lädt <code>.ili</code>-Dateien lokal im Browser und stellt Klassen, Vererbung,
+        Aufzählungen und Assoziationen als Graph dar — ohne Upload, ohne Registrierung.
+      </p>
+      <p>
+        Diese Anwendung benötigt JavaScript. Bitte aktiviere JavaScript, um den Explorer zu nutzen.
+      </p>
+      <p>Lizenz: AGPL-3.0-or-later.</p>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>

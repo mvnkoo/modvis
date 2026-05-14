@@ -1,6 +1,8 @@
 {
-  "name": "modvis",
-  "short_name": "modvis",
+  "name": "ILI Explorer · modvis",
+  "short_name": "ILI Explorer",
+  "description": "Interaktiver Viewer für INTERLIS-Schemas.",
+  "lang": "de",
   "icons": [
     {
       "src": "/favicon/android-chrome-192x192.png",
@@ -13,7 +15,8 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#ffffff",
+  "theme_color": "#613F82",
   "background_color": "#ffffff",
-  "display": "standalone"
-} 
+  "display": "standalone",
+  "categories": ["productivity", "developer", "utilities"]
+}
