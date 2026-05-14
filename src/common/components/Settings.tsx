@@ -17,7 +17,7 @@ import { useSettings } from '../settings/SettingsContext';
 
 const ACCENT_PRESETS: { label: string; color: string }[] = [
   { label: 'Orange', color: '#e65a1a' },
-  { label: 'Lila', color: '#9c27b0' },
+  { label: 'Lila', color: '#613F82' },
   { label: 'Beton', color: '#6e7378' },
   { label: 'Haselnuss', color: '#8b5e3c' },
 ];

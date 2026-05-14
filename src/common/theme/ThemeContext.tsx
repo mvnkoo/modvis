@@ -48,7 +48,7 @@ export interface ThemeContextType {
   colors: ThemeColors;
 }
 
-const DEFAULT_ACCENT_COLOR = '#9c27b0';
+const DEFAULT_ACCENT_COLOR = '#613F82';
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
 interface ThemeProviderProps {
@@ -71,7 +71,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     // Schema Explorer Farben (default)
     entity: '#2196f3',          
     abstractEntity: '#1565c0',  
-    selectedEntity: '#9c27b0',   
+    selectedEntity: '#613F82',   
     typeNode: '#ff4081',        
     inheritance: '#2196f3',     
     typeReference: '#ff4081',   
@@ -122,7 +122,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     // Schema Explorer Farben
     entity: '#2196f3',          
     abstractEntity: '#1565c0',  
-    selectedEntity: '#9c27b0',   
+    selectedEntity: '#613F82',   
     typeNode: '#ff4081',        
     inheritance: '#2196f3',     
     typeReference: '#ff4081', 
@@ -181,7 +181,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     // Schema Explorer Farben
     entity: '#2196f3',          
     abstractEntity: '#1565c0',  
-    selectedEntity: '#9c27b0',   
+    selectedEntity: '#613F82',   
     typeNode: '#ff4081',        
     inheritance: '#2196f3',     
     typeReference: '#ff4081',     
