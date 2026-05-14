@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Paper,
   IconButton,
@@ -6,29 +6,82 @@ import {
   Divider,
   Menu,
   MenuItem,
+  ListItemText,
+  Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
   ArrowBack,
+  ArrowForward,
   AutoFixHigh,
   ExpandMore,
   ExpandLess,
   FileDownload,
   GridView,
   RestartAlt,
+  GridView as OverviewIcon,
 } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 import { CurvedIcon, StraightIcon } from '../../../exp-explorer/components/expIcons';
+import type { NavigationState } from '../../services/types/IliBaseTypes';
+
+const LONG_PRESS_MS = 380;
+
+type HistoryDirection = 'back' | 'forward';
+
+function describeEntry(entry: NavigationState): { kind: string; label: string } {
+  if (entry.isOverview) {
+    return { kind: 'OVERVIEW', label: 'Übersicht' };
+  }
+  const node = entry.node;
+  const label = String(node?.data?.label ?? entry.label ?? entry.nodeId);
+  const flowType = node?.type ?? entry.type;
+  const isAbstract = node?.data?.isAbstract ?? entry.isAbstract;
+  let kind: string;
+  switch (flowType) {
+    case 'classNode':
+    case 'CLASS':
+      kind = isAbstract ? 'ABSTRACT CLASS' : 'CLASS';
+      break;
+    case 'structureNode':
+    case 'STRUCTURE':
+      kind = 'STRUCTURE';
+      break;
+    case 'enumNode':
+    case 'ENUMERATION':
+      kind = 'ENUMERATION';
+      break;
+    case 'domainEnumNode':
+      kind = node?.data?.isDomainEnum ? 'DOMAIN ENUMERATION' : 'ENUMERATION';
+      break;
+    case 'associationNode':
+    case 'ASSOCIATION':
+      kind = 'ASSOCIATION';
+      break;
+    case 'topicNode':
+    case 'TOPIC':
+      kind = 'TOPIC';
+      break;
+    default:
+      kind = String(flowType ?? 'NODE').toUpperCase();
+  }
+  return { kind, label };
+}
 
 interface IliSideToolbarProps {
   currentFileName: string | null;
   activeNodeId: string | null;
   historyIndex: number;
   canGoBack?: boolean;
+  canGoForward?: boolean;
+  navigationHistory: NavigationState[];
+  overviewWasShown: boolean;
+  onJumpToHistoryIndex: (targetIndex: number) => boolean;
   useCurvedLines: boolean;
   exportAnchorEl: HTMLElement | null;
   onShowOverview: () => void;
   onBack: () => void;
+  onForward: () => void;
   onLineTypeToggle: () => void;
   onResetLayout: () => void;
   onMagicLayout: () => void;
@@ -46,10 +99,15 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   activeNodeId,
   historyIndex,
   canGoBack,
+  canGoForward,
+  navigationHistory,
+  overviewWasShown,
+  onJumpToHistoryIndex,
   useCurvedLines,
   exportAnchorEl,
   onShowOverview,
   onBack,
+  onForward,
   onLineTypeToggle,
   onResetLayout,
   onMagicLayout,
@@ -64,6 +122,60 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   const { colors } = useTheme();
   const noSchema = !currentFileName;
   const noNode = !currentFileName || !activeNodeId;
+
+  const [historyMenu, setHistoryMenu] = useState<{ anchor: HTMLElement; direction: HistoryDirection } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current !== null) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const startLongPress = (direction: HistoryDirection) => (event: React.PointerEvent<HTMLElement>) => {
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
+    longPressFiredRef.current = false;
+    const target = event.currentTarget;
+    cancelLongPress();
+    longPressTimer.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      longPressTimer.current = null;
+      setHistoryMenu({ anchor: target, direction });
+    }, LONG_PRESS_MS);
+  };
+
+  const handleNavClick = (direction: HistoryDirection) => () => {
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+    cancelLongPress();
+    if (direction === 'back') onBack();
+    else onForward();
+  };
+
+  const closeHistoryMenu = () => setHistoryMenu(null);
+
+  const jumpAndClose = (targetIndex: number) => () => {
+    onJumpToHistoryIndex(targetIndex);
+    closeHistoryMenu();
+  };
+
+  const backMenuItems: { index: number; entry: NavigationState }[] = [];
+  if (historyMenu?.direction === 'back') {
+    for (let i = historyIndex - 1; i >= 0; i--) {
+      backMenuItems.push({ index: i, entry: navigationHistory[i] });
+    }
+  }
+
+  const forwardMenuItems: { index: number; entry: NavigationState }[] = [];
+  if (historyMenu?.direction === 'forward') {
+    for (let i = historyIndex + 1; i < navigationHistory.length; i++) {
+      forwardMenuItems.push({ index: i, entry: navigationHistory[i] });
+    }
+  }
 
   return (
     <Paper
@@ -97,13 +209,98 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
         </span>
       </Tooltip>
 
-      <Tooltip title="Zurück zur vorherigen Ansicht" placement="right">
+      <Tooltip title="Zurück (lang drücken für Verlauf)" placement="right">
         <span>
-          <IconButton size="small" onClick={onBack} disabled={canGoBack === undefined ? historyIndex <= 0 : !canGoBack} aria-label="Go back">
+          <IconButton
+            size="small"
+            onClick={handleNavClick('back')}
+            onPointerDown={startLongPress('back')}
+            onPointerUp={cancelLongPress}
+            onPointerLeave={cancelLongPress}
+            onPointerCancel={cancelLongPress}
+            disabled={canGoBack === undefined ? historyIndex <= 0 : !canGoBack}
+            aria-label="Go back"
+          >
             <ArrowBack fontSize="small" />
           </IconButton>
         </span>
       </Tooltip>
+
+      <Tooltip title="Vorwärts (lang drücken für Verlauf)" placement="right">
+        <span>
+          <IconButton
+            size="small"
+            onClick={handleNavClick('forward')}
+            onPointerDown={startLongPress('forward')}
+            onPointerUp={cancelLongPress}
+            onPointerLeave={cancelLongPress}
+            onPointerCancel={cancelLongPress}
+            disabled={!canGoForward}
+            aria-label="Go forward"
+          >
+            <ArrowForward fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
+
+      <Menu
+        anchorEl={historyMenu?.anchor ?? null}
+        open={historyMenu !== null}
+        onClose={closeHistoryMenu}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            sx: {
+              maxWidth: 360,
+              minWidth: 220,
+              maxHeight: 'min(80vh, 720px)',
+              overflowY: 'auto',
+            },
+          },
+        }}
+      >
+        {historyMenu?.direction === 'back' && backMenuItems.map(({ index, entry }) => {
+          const desc = describeEntry(entry);
+          const isOv = entry.isOverview;
+          return (
+            <MenuItem key={`b-${index}`} onClick={jumpAndClose(index)} sx={isOv ? { gap: 1 } : undefined}>
+              {isOv && <OverviewIcon fontSize="small" sx={{ color: 'text.secondary' }} />}
+              <ListItemText
+                primary={desc.label}
+                secondary={desc.kind}
+                primaryTypographyProps={{ noWrap: true }}
+                secondaryTypographyProps={{ noWrap: true, variant: 'caption' }}
+              />
+            </MenuItem>
+          );
+        })}
+        {historyMenu?.direction === 'forward' && forwardMenuItems.map(({ index, entry }) => {
+          const desc = describeEntry(entry);
+          const isOv = entry.isOverview;
+          return (
+            <MenuItem key={`f-${index}`} onClick={jumpAndClose(index)} sx={isOv ? { gap: 1 } : undefined}>
+              {isOv && <OverviewIcon fontSize="small" sx={{ color: 'text.secondary' }} />}
+              <ListItemText
+                primary={desc.label}
+                secondary={desc.kind}
+                primaryTypographyProps={{ noWrap: true }}
+                secondaryTypographyProps={{ noWrap: true, variant: 'caption' }}
+              />
+            </MenuItem>
+          );
+        })}
+        {historyMenu?.direction === 'back' && backMenuItems.length === 0 && (
+          <MenuItem disabled>
+            <Typography variant="caption">Kein Verlauf</Typography>
+          </MenuItem>
+        )}
+        {historyMenu?.direction === 'forward' && forwardMenuItems.length === 0 && (
+          <MenuItem disabled>
+            <Typography variant="caption">Kein Verlauf</Typography>
+          </MenuItem>
+        )}
+      </Menu>
 
       <Divider sx={{ my: 0.5 }} />
 

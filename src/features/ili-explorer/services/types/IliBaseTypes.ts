@@ -118,6 +118,8 @@ export interface IliEnumDefinition {
 
 export interface NavigationState {
   nodeId: string;
+  node?: IliNode;
+  isOverview?: boolean;
   showEnums: boolean;
   showAssociations: boolean;
   label?: string;
