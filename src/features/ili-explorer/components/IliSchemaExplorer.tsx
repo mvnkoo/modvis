@@ -297,14 +297,19 @@ const Flow: React.FC = () => {
     }
   }), [colors]);
 
+  const applyLayoutRef = useRef(applyLayout);
+  useEffect(() => {
+    applyLayoutRef.current = applyLayout;
+  });
+
   useEffect(() => {
     if (activeNodeId && allNodes.length > 0) {
       const currentNode = allNodes.find(node => node.id === activeNodeId);
       if (currentNode) {
-        applyLayout(currentNode as IliNode);
+        applyLayoutRef.current(currentNode as IliNode);
       }
     }
-  }, [maxSubTypesPerRow, activeNodeId, allNodes, applyLayout]);
+  }, [maxSubTypesPerRow, activeNodeId, allNodes]);
 
   const handleSearchSelect = useCallback((selectedNode: SearchOption) => {
     if (selectedNode) {
