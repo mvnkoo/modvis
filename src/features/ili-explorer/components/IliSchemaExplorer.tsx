@@ -386,7 +386,7 @@ const Flow: React.FC = () => {
 
   const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
   const [tintHoverId, setTintHoverId] = useState<string | null>(null);
-  const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(true);
+  const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(false);
   const previewDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const PREVIEW_DELAY_MS = 500;
 
