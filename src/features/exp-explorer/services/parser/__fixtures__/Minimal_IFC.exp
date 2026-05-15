@@ -1,0 +1,80 @@
+SCHEMA Minimal_IFC;
+
+(* Synthetisches EXPRESS-Fragment, IFC-Stil. Deckt alle vom Parser
+   unterstützten Konstrukte ab. Keine externen Imports. *)
+
+TYPE IfcLabel = STRING;
+END_TYPE;
+
+TYPE IfcReal = REAL;
+END_TYPE;
+
+TYPE IfcRoleEnum = ENUMERATION OF
+  (SUPPLIER
+  ,MANUFACTURER
+  ,CONTRACTOR
+  ,USERDEFINED
+  ,NOTDEFINED);
+END_TYPE;
+
+TYPE IfcActorSelect = SELECT
+  (IfcOrganization
+  ,IfcPerson);
+END_TYPE;
+
+ENTITY IfcRoot
+ ABSTRACT SUPERTYPE OF (ONEOF (IfcObjectDefinition, IfcRelationship));
+  GlobalId : IfcLabel;
+  OwnerHistory : OPTIONAL IfcOwnerHistory;
+  Name : OPTIONAL IfcLabel;
+  Description : OPTIONAL IfcLabel;
+END_ENTITY;
+
+ENTITY IfcObjectDefinition
+ ABSTRACT SUPERTYPE
+ SUBTYPE OF (IfcRoot);
+END_ENTITY;
+
+ENTITY IfcRelationship
+ ABSTRACT SUPERTYPE
+ SUBTYPE OF (IfcRoot);
+END_ENTITY;
+
+ENTITY IfcObject
+ SUBTYPE OF (IfcObjectDefinition);
+  ObjectType : OPTIONAL IfcLabel;
+ INVERSE
+  IsDeclaredBy : SET OF IfcRelDefinesByObject FOR RelatedObjects;
+END_ENTITY;
+
+ENTITY IfcOwnerHistory;
+  OwningUser : IfcPerson;
+  CreationDate : IfcReal;
+END_ENTITY;
+
+ENTITY IfcPerson;
+  Identification : OPTIONAL IfcLabel;
+  Roles : OPTIONAL LIST [1:?] OF IfcRoleEnum;
+END_ENTITY;
+
+ENTITY IfcOrganization;
+  Identification : OPTIONAL IfcLabel;
+  Name : IfcLabel;
+END_ENTITY;
+
+ENTITY IfcRelDefinesByObject
+ SUBTYPE OF (IfcRelationship);
+  RelatedObjects : SET [1:?] OF IfcObject;
+END_ENTITY;
+
+ENTITY IfcWall
+ SUBTYPE OF (IfcObject);
+  Name : IfcLabel;
+END_ENTITY;
+
+ENTITY IfcWallType
+ SUBTYPE OF (IfcObject);
+  Description : OPTIONAL IfcLabel;
+END_ENTITY;
+
+END_SCHEMA;
