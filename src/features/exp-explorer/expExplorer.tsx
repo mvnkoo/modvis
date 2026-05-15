@@ -1,8 +1,8 @@
 import React from 'react';
-import { ExpSchemaExplorer } from './components/expExplorerLayout';
+import { ExpressSchemaExplorer } from './components/ExpressSchemaExplorer';
 
 const ExpExplorer: React.FC = () => {
-  return <ExpSchemaExplorer />;
+  return <ExpressSchemaExplorer />;
 };
 
-export { ExpExplorer }; 
+export { ExpExplorer };
