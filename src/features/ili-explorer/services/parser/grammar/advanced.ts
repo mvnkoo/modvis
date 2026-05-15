@@ -1,4 +1,4 @@
-import type { IliCstParserBuilder } from '../parser';
+import type { IliCstParserBuilder } from '../cstParser';
 import {
   Function, View, Graphic, Refsystem, Sign, Parameter,
   Projection, Join, Union, Aggregation, Inspection, Equal, By,

@@ -13,7 +13,7 @@ import {
   NavigationState,
   LayoutOptions,
 } from '../services/types/IliBaseTypes';
-import type { IliParseError, IliImportRef } from '../services/parsers/IliParser';
+import type { IliParseError, IliImportRef } from '../services/parser/types';
 
 export type { SearchOption };
 

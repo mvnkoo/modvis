@@ -1,13 +1,13 @@
 import { CstParser, IToken } from 'chevrotain';
 import { allTokens } from './tokens';
-import { registerTopLevelRules } from './parser/topLevel';
-import { registerTopicRules } from './parser/topic';
-import { registerClassRules } from './parser/class';
-import { registerAttributeRules } from './parser/attribute';
-import { registerDomainRules } from './parser/domain';
-import { registerConstraintRules } from './parser/constraints';
-import { registerUnitsRules } from './parser/units';
-import { registerAdvancedRules } from './parser/advanced';
+import { registerTopLevelRules } from './grammar/topLevel';
+import { registerTopicRules } from './grammar/topic';
+import { registerClassRules } from './grammar/class';
+import { registerAttributeRules } from './grammar/attribute';
+import { registerDomainRules } from './grammar/domain';
+import { registerConstraintRules } from './grammar/constraints';
+import { registerUnitsRules } from './grammar/units';
+import { registerAdvancedRules } from './grammar/advanced';
 
 // Public-facing builder type for use by registerXxxRules helpers.
 // Chevrotain's RULE/OPTION/SUBRULE/CONSUME/OR/MANY/LA are protected on CstParser,

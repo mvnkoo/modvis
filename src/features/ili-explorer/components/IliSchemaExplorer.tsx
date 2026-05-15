@@ -558,21 +558,30 @@ const Flow: React.FC = () => {
 
   const modelStats = useMemo(() => {
     let classCount = 0, associationCount = 0, enumCount = 0, unitCount = 0;
+    let inlineEnumCount = 0;
     const topics = new Set<string>();
     for (const n of allNodes) {
-      const topic = (n.data as any)?.topic;
+      const data = n.data as any;
+      const topic = data?.topic;
       if (typeof topic === 'string' && topic.length > 0) topics.add(topic);
       switch (n.type) {
         case 'classNode': classCount++; break;
         case 'associationNode': associationCount++; break;
         case 'enumNode': enumCount++; break;
         case 'domainEnumNode':
-          if ((n.data as any)?.type === 'UNIT') unitCount++;
+          if (data?.type === 'UNIT') unitCount++;
           else enumCount++;
           break;
+        case 'structureNode': break;
+      }
+      // Inline-Enums leben als Attribut-Property auf CLASS/STRUCTURE-Knoten,
+      // nicht als eigene Knoten — separat zählen für ehrliche Statistik.
+      if (n.type === 'classNode' || n.type === 'structureNode') {
+        const attrs = (data?.attributes ?? []) as { isInlineEnum?: boolean }[];
+        for (const a of attrs) if (a.isInlineEnum) inlineEnumCount++;
       }
     }
-    return { classCount, topicCount: topics.size, associationCount, enumCount, unitCount };
+    return { classCount, topicCount: topics.size, associationCount, enumCount, inlineEnumCount, unitCount };
   }, [allNodes]);
 
   const lastLoadedFileRef = useRef<string | null>(null);
@@ -710,6 +719,7 @@ const Flow: React.FC = () => {
             topicCount={modelStats.topicCount}
             associationCount={modelStats.associationCount}
             enumCount={modelStats.enumCount}
+            inlineEnumCount={modelStats.inlineEnumCount}
             unitCount={modelStats.unitCount}
             imports={imports}
             warningCount={parseWarnings.length}

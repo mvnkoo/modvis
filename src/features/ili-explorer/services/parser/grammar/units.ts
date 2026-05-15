@@ -1,4 +1,4 @@
-import type { IliCstParserBuilder } from '../parser';
+import type { IliCstParserBuilder } from '../cstParser';
 import {
   Unit, Identifier, Semicolon, Equals, Extends,
   LParen, RParen, LBracket, RBracket, Abstract, Function,

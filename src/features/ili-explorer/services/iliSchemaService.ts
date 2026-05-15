@@ -8,8 +8,8 @@ import {
   IliTopicNode,
   IliClassNode
 } from './types/IliModelTypes';
-import type { IliParser, IliParseError, IliImportRef } from './parsers/IliParser';
-import { NgIliParser } from './parsers/ng/NgIliParser';
+import type { IliParseError, IliImportRef } from './parser/types';
+import { IliParser } from './parser/IliParser';
 import { v4 as uuid } from 'uuid';
 
 export class IliSchemaService {
@@ -20,10 +20,10 @@ export class IliSchemaService {
   private lastImports: IliImportRef[] = [];
   private lastInterlisVersion: string | undefined;
 
-  constructor(parser: IliParser = new NgIliParser()) {
+  constructor() {
     this.nodes = new Map();
     this.relations = new Map();
-    this.parser = parser;
+    this.parser = new IliParser();
   }
 
   public getParseErrors(): IliParseError[] {
@@ -74,31 +74,6 @@ export class IliSchemaService {
       console.error('Error parsing schema:', error);
       throw error;
     }
-  }
-
-  private extractInheritanceRelations(content: string): IliRelation[] {
-    const relations: IliRelation[] = [];
-    const extendsRegex = /CLASS\s+(\w+)\s*(?:\(ABSTRACT\))?\s*EXTENDS\s+([\w\.]+)/g;
-    let match;
-
-    while ((match = extendsRegex.exec(content)) !== null) {
-      const [_, subType, superType] = match;
-      
-     
-      const sourceId = subType;
-      const targetId = superType.includes('.') 
-        ? superType.split('.').pop() || superType
-        : superType;
-      
-      relations.push({
-        id: `${sourceId}-${targetId}`,
-        sourceId: sourceId,
-        targetId: targetId,
-        type: 'EXTENDS'
-      });
-    }
-
-    return relations;
   }
 
   public getNode(id: string): IliBaseNode | undefined {

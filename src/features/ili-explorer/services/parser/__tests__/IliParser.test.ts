@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { NgIliParser } from '../NgIliParser';
-import type { IliClassNode } from '../../../types/IliModelTypes';
+import { IliParser } from '../IliParser';
+import type { IliClassNode } from '../../types/IliModelTypes';
 
 function parse(content: string) {
-  return new NgIliParser().parseContent(content);
+  return new IliParser().parseContent(content);
 }
 
-describe('NgIliParser (Chevrotain backend)', () => {
+describe('IliParser (Chevrotain backend)', () => {
   it('returns empty result for empty input', () => {
     const r = parse('');
     expect(r.nodes).toEqual([]);

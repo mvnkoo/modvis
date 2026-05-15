@@ -1,4 +1,4 @@
-import type { IliCstParserBuilder } from '../parser';
+import type { IliCstParserBuilder } from '../cstParser';
 import {
   Domain, Enumeration, All, Of,
   Identifier, StringLiteral,

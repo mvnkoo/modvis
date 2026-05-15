@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NgIliParser } from '../NgIliParser';
+import { IliParser } from '../IliParser';
 
 const wrap = (body: string) =>
   `INTERLIS 2.4;
@@ -18,13 +18,13 @@ END M.`;
 describe('NG Phase 1 — universal coverage / crash-free skips', () => {
   it('FUNCTION at MODEL level parses without error', () => {
     const src = wrap('  FUNCTION foo(a: NUMERIC; b: TEXT): NUMERIC;');
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
   it('FUNCTION at TOPIC level parses without error', () => {
     const src = wrapTopic('    FUNCTION bar(x: TEXT): BOOLEAN;');
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -33,7 +33,7 @@ describe('NG Phase 1 — universal coverage / crash-free skips', () => {
     VIEW V
       PROJECTION OF C;
       = END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -44,7 +44,7 @@ describe('NG Phase 1 — universal coverage / crash-free skips', () => {
       WHERE A.x = B.x;
       =
       END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -53,7 +53,7 @@ describe('NG Phase 1 — universal coverage / crash-free skips', () => {
     GRAPHIC G BASED ON V =
       rule OF SignClass: (param := value);
     END G;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -61,7 +61,7 @@ describe('NG Phase 1 — universal coverage / crash-free skips', () => {
     const src = `INTERLIS 2.4;
 REFSYSTEM MODEL M AT "x" VERSION "1" =
 END M.`;
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -69,7 +69,7 @@ END M.`;
     const src = `INTERLIS 2.4;
 TYPE MODEL M AT "x" VERSION "1" =
 END M.`;
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -77,7 +77,7 @@ END M.`;
     const src = `INTERLIS 2.4;
 SYMBOLOGY MODEL M AT "x" VERSION "1" =
 END M.`;
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -85,7 +85,7 @@ END M.`;
     const src = `INTERLIS 2.4;
 CONTRACTED MODEL M AT "x" VERSION "1" =
 END M.`;
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -94,21 +94,21 @@ END M.`;
     PARAMETER
       maxScale : NUMERIC;
       label : TEXT*40;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
   it('REFSYSTEM BASKET in TOPIC parses without error', () => {
     const src = wrapTopic(`
     REFSYSTEM BASKET CHLV95 ~ Coords.LV95;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
   it('SIGN BASKET in TOPIC parses without error', () => {
     const src = wrapTopic(`
     SIGN BASKET DefaultSigns ~ Symbology.Sigs;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -116,7 +116,7 @@ END M.`;
     const src = wrap(`
   DOMAIN
     R = 1.0e-6 .. 1.5E+9;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 });
@@ -126,7 +126,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
     const src = wrap(`
   DOMAIN
     Angle = 0.0 .. 359.9 CIRCULAR [Units.Grad] REFSYS "EPSG:4326";`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -135,7 +135,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
   DOMAIN
     Heading1 = -180.0 .. 180.0 CLOCKWISE;
     Heading2 = -180.0 .. 180.0 COUNTERCLOCKWISE;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -144,7 +144,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
     CLASS C =
       r : REFERENCE TO ANYCLASS RESTRICTION (X; Y);
     END C;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -155,7 +155,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
       b (EXTENDED, TRANSIENT) : NUMERIC;
       c (FINAL) : BOOLEAN;
     END C;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -165,7 +165,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
       CONTINUOUS SUBDIVISION geom : SURFACE;
       SUBDIVISION geom2 : AREA;
     END C;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -174,7 +174,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
     CLASS C EXTENDS Base.A =
       x : MANDATORY;
     END C;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -184,7 +184,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
     AbsType (ABSTRACT) = NUMERIC;
     GenType (GENERIC) = NUMERIC;
     FinType (FINAL) EXTENDS AbsType = 0 .. 100;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -192,7 +192,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
     const src = wrap(`
   DOMAIN
     Pos = NUMERIC CONSTRAINTS positive : THIS > 0;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 
@@ -201,7 +201,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
     CLASS C =
       x : NUMERIC := 1, 2, 3;
     END C;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
 });
@@ -209,7 +209,7 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
 describe('NG Phase 3 — FUNCTION semantisch', () => {
   it('FUNCTION at MODEL level produces a Function node with name and args', () => {
     const src = wrap('  FUNCTION foo(a: NUMERIC; b: TEXT): NUMERIC;');
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const fn = r.nodes.find(n => n.type === 'FUNCTION');
     expect(fn).toBeDefined();
@@ -219,7 +219,7 @@ describe('NG Phase 3 — FUNCTION semantisch', () => {
 
   it('FUNCTION with zero arguments', () => {
     const src = wrap('  FUNCTION pi(): NUMERIC;');
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const fn = r.nodes.find(n => n.type === 'FUNCTION');
     expect(fn?.name).toBe('pi');
@@ -228,7 +228,7 @@ describe('NG Phase 3 — FUNCTION semantisch', () => {
 
   it('FUNCTION at TOPIC level inherits topic context', () => {
     const src = wrapTopic('    FUNCTION bar(x: TEXT): BOOLEAN;');
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const fn = r.nodes.find(n => n.type === 'FUNCTION');
     expect(fn?.name).toBe('bar');
@@ -242,7 +242,7 @@ describe('NG Phase 4 — VIEW semantisch', () => {
     VIEW V
       PROJECTION OF C;
       = END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const v = r.nodes.find(n => n.type === 'VIEW');
     expect(v?.name).toBe('V');
@@ -255,7 +255,7 @@ describe('NG Phase 4 — VIEW semantisch', () => {
     VIEW V
       JOIN OF A, B, C;
       = END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const v = r.nodes.find(n => n.type === 'VIEW');
     expect(v?.data.formation?.kind).toBe('JOIN');
@@ -267,7 +267,7 @@ describe('NG Phase 4 — VIEW semantisch', () => {
     VIEW V
       UNION OF X, Y;
       = END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const v = r.nodes.find(n => n.type === 'VIEW');
     expect(v?.data.formation?.kind).toBe('UNION');
@@ -278,7 +278,7 @@ describe('NG Phase 4 — VIEW semantisch', () => {
     VIEW V
       AGGREGATION OF C ALL;
       = END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const v = r.nodes.find(n => n.type === 'VIEW');
     expect(v?.data.formation?.kind).toBe('AGGREGATION');
@@ -289,7 +289,7 @@ describe('NG Phase 4 — VIEW semantisch', () => {
     VIEW V
       AREA INSPECTION OF C -> attr1 -> attr2;
       = END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const v = r.nodes.find(n => n.type === 'VIEW');
     expect(v?.data.formation?.kind).toBe('AREA INSPECTION');
@@ -299,7 +299,7 @@ describe('NG Phase 4 — VIEW semantisch', () => {
     const src = wrapTopic(`
     VIEW V EXTENDS Other.V
       = END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const v = r.nodes.find(n => n.type === 'VIEW');
     expect(v?.data.extendsRef).toBe('Other.V');
@@ -310,7 +310,7 @@ describe('NG Phase 4 — VIEW semantisch', () => {
     VIEW V
       JOIN OF a ~ A, b ~ B;
       = END V;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const v = r.nodes.find(n => n.type === 'VIEW');
     expect(v?.data.formation?.sources).toEqual(['A', 'B']);
@@ -324,7 +324,7 @@ describe('NG Phase 5 — UNIT semantisch', () => {
     Length (ABSTRACT);
     Meter [m] EXTENDS Length;
     Kilometer [km] EXTENDS Length = 1000 [m];`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const units = r.nodes.filter(n => n.type === 'UNIT');
     expect(units.length).toBe(3);
@@ -341,7 +341,7 @@ describe('NG Phase 5 — UNIT semantisch', () => {
     Length (ABSTRACT);
     Meter [m] EXTENDS Length;
     Centimeter [cm] EXTENDS Length;`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     const unitExt = r.relations.filter(re =>
       re.type === 'EXTENDS' && re.sourceId.startsWith('unit_')
     );
@@ -355,7 +355,7 @@ describe('NG Phase 5 — UNIT semantisch', () => {
     K (ABSTRACT);
     Decibel [dB] = FUNCTION // 10**(dB/20) * 0.00002 // [Pa];
     Degree_Celsius [oC] = FUNCTION // oC+273.15 // [K];`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const units = r.nodes.filter(n => n.type === 'UNIT');
     expect(units.find(u => u.name === 'Decibel')?.data.shortName).toBe('dB');
@@ -368,7 +368,7 @@ describe('NG Phase 5 — UNIT semantisch', () => {
     TIME (ABSTRACT);
     Velocity (ABSTRACT) = (LENGTH/TIME);
     Acceleration (ABSTRACT) = (Velocity/TIME);`);
-    const r = new NgIliParser().parseContent(src);
+    const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
     const units = r.nodes.filter(n => n.type === 'UNIT');
     expect(units.length).toBe(4);
