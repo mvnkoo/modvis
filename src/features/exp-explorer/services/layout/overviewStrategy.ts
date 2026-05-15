@@ -173,7 +173,7 @@ function domainCardNode(bucket: DomainBucket): ExpressFlowNode {
       count: bucket.members.length,
       examples: sortedMembers.slice(0, 6).map((n) => n.data.label),
       targetId: target.id,
-    } as any,
+    },
   };
 }
 

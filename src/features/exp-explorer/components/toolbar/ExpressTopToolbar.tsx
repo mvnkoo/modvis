@@ -194,7 +194,7 @@ export const ExpressTopToolbar: React.FC<Props> = ({
           getOptionLabel={(option) => option.label}
           isOptionEqualToValue={(o, v) => o.id === v.id}
           renderOption={(props, option) => {
-            const { key, ...rest } = props as React.HTMLAttributes<HTMLLIElement> & { key: string };
+            const { key: _key, ...rest } = props as React.HTMLAttributes<HTMLLIElement> & { key: string };
             return (
               <li key={option.id} {...rest}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>

@@ -32,7 +32,7 @@ import { ExpressInfoPanel } from './sidebar/ExpressInfoPanel';
 import { ExpressSettings } from './sidebar/ExpressSettings';
 import { useExpressSchema } from '../hooks/useExpressSchema';
 import { useExpressLoader } from '../hooks/useExpressLoader';
-import { useNavigationHistory } from '../hooks/useNavigationHistory';
+import { useNavigationHistory, type ExpressNavEntry } from '../hooks/useNavigationHistory';
 import { useExpressDiagramExport } from '../hooks/useExpressDiagramExport';
 import type {
   ExpressFlowNode,
@@ -118,7 +118,7 @@ const ExpressSchemaExplorerInner: React.FC = () => {
     schema.focusNode(node.id);
   }, [schema]);
 
-  const applyNavEntry = useCallback((entry: ReturnType<typeof history.back>) => {
+  const applyNavEntry = useCallback((entry: ExpressNavEntry | null) => {
     if (!entry) return;
     if (entry.isOverview) schema.showOverview();
     else schema.focusNode(entry.nodeId);
