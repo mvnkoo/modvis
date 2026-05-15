@@ -18,10 +18,6 @@ export function registerUnitsRules(p: IliCstParserBuilder): void {
     });
   });
 
-  // UnitDef = Name [ (ABSTRACT) | [ShortName] ] [ EXTENDS UnitRef ]
-  //          [ = ( DerivedUnit | ComposedUnit ) ] ;
-  // Body (DerivedUnit/ComposedUnit) bleibt Token-Salat — der semantische
-  // Wert liegt in Name, Short, ABSTRACT-Flag und EXTENDS.
   p.unitDef = p.RULE('unitDef', () => {
     p.CONSUME(Identifier, { LABEL: 'unitName' });
     p.OPTION(() => p.OR([
@@ -64,8 +60,6 @@ export function registerUnitsRules(p: IliCstParserBuilder): void {
     p.CONSUME(Semicolon);
   });
 
-  // Legacy fallback — bleibt im Builder, falls jemand es referenziert.
-  // (Wird vom Konstruktor erwartet, dürfen wir nicht ungebunden lassen.)
   p.skipStatement = p.RULE('skipStatement', () => {
     p.AT_LEAST_ONE({
       GATE: () => {
