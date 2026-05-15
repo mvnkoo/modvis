@@ -97,8 +97,10 @@ export const IliToolbar: React.FC<IliToolbarProps> = ({
  
   const sortedOptions = [...searchOptions].sort((a, b) => {
     if (a.category !== b.category) {
-      const categoryOrder = ['Classes', 'Topics', 'Structures', 'Enumerations', 'Attributes'];
-      return categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+      const categoryOrder = ['Classes', 'Topics', 'Structures', 'Enumerations', 'Associations', 'Attributes'];
+      const ai = categoryOrder.indexOf(a.category);
+      const bi = categoryOrder.indexOf(b.category);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
     }
     return a.label.localeCompare(b.label);
   });

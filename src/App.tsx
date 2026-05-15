@@ -191,9 +191,9 @@ function App() {
                 alignItems: 'center', 
                 gap: 2
               }}>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
+                <Typography
+                  variant="caption"
+                  sx={{
                     color: '#ffffff',
                     fontSize: '0.7rem',
                     userSelect: 'none',

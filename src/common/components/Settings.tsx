@@ -11,7 +11,8 @@ import {
   Radio,
   RadioGroup
 } from '@mui/material';
-import { Settings as SettingsIcon } from '@mui/icons-material';
+import { Settings as SettingsIcon, GitHub } from '@mui/icons-material';
+import { Link as MuiLink } from '@mui/material';
 import { useTheme } from '../theme/ThemeContext';
 import { useSettings } from '../settings/SettingsContext';
 
@@ -172,6 +173,26 @@ const Settings: React.FC = () => {
             }
             label="Experimentelle Features"
           />
+        </MenuItem>
+        <Divider />
+        <MenuItem sx={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            modvis V{__APP_VERSION__} · AGPL-3.0
+          </Typography>
+          <MuiLink
+            href={`${__SOURCE_REPO__}/tree/main`}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.5,
+              fontSize: '0.8rem',
+            }}
+          >
+            <GitHub fontSize="inherit" />
+            Source-Code auf GitHub
+          </MuiLink>
         </MenuItem>
       </Menu>
     </>

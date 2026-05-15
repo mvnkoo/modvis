@@ -4,10 +4,12 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8')) as { version: string };
+const sourceRepo = process.env.VITE_SOURCE_REPO ?? 'https://github.com/mvnkoo/modvis';
 
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __SOURCE_REPO__: JSON.stringify(sourceRepo),
   },
   plugins: [react()],
   resolve: {
