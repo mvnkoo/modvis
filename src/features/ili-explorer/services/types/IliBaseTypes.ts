@@ -56,7 +56,13 @@ export interface IliAttribute {
   comment?: string;
   attributeGroup?: string;
   domainEnumRef?: string;
+  isStructValue?: boolean;
+  structRef?: string;
+  structKind?: 'single' | 'bag' | 'list';
+  restriction?: string[];
 }
+
+export type IliAssociationKind = 'plain' | 'aggregation' | 'composition';
 
 export interface IliAssociation {
   id: string;
@@ -68,6 +74,8 @@ export interface IliAssociation {
   sourceCardinality?: string;
   targetCardinality?: string;
   comment?: string;
+  kind?: IliAssociationKind;
+  targetAlternatives?: string[];
 }
 
 export interface IliBaseNodeData {
@@ -96,11 +104,12 @@ export interface IliBaseNode {
   data: IliBaseNodeData;
 }
 
-export type IliRelationType = 
-  | 'EXTENDS' 
-  | 'DEPENDS' 
+export type IliRelationType =
+  | 'EXTENDS'
+  | 'DEPENDS'
   | 'ASSOCIATES'
-  | 'REFERENCES';
+  | 'REFERENCES'
+  | 'CONTAINS';
 
 export interface IliRelation {
   id: string;

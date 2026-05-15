@@ -28,6 +28,7 @@ export const mockColors: ThemeColors = {
   shadow: '#000',
   relationship: '#000',
   reference: '#000',
+  containment: '#000',
   selectedNodeBg: '#000',
   nodeHeaderText: '#000',
 };

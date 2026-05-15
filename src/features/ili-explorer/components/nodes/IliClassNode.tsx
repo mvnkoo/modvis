@@ -108,13 +108,25 @@ const AttributeRow: React.FC<AttributeRowProps> = memo(({ attribute }) => {
 
       {!attribute.isEnum && !attribute.isDomainEnum && attribute.type.includes('..') && (
         <Box sx={{ mt: attribute.comment ? 1 : 0 }}>
-          <Typography variant="caption" sx={{ 
-            fontWeight: 'bold', 
+          <Typography variant="caption" sx={{
+            fontWeight: 'bold',
             display: 'block',
             fontFamily: 'monospace'
           }}>
             {attribute.type}
           </Typography>
+        </Box>
+      )}
+      {attribute.restriction && attribute.restriction.length > 0 && (
+        <Box sx={{ mt: attribute.comment ? 1 : 0 }}>
+          <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>
+            RESTRICTION:
+          </Typography>
+          {attribute.restriction.map((r, i) => (
+            <Typography key={i} variant="caption" sx={{ display: 'block', fontFamily: 'monospace', ml: 1 }}>
+              • {r}
+            </Typography>
+          ))}
         </Box>
       )}
     </Box>
@@ -186,11 +198,15 @@ const AttributeRow: React.FC<AttributeRowProps> = memo(({ attribute }) => {
           }
         }}
       >
-        <Typography 
-          sx={{ 
+        <Typography
+          sx={{
             fontFamily: 'monospace',
             fontSize: '0.75rem',
-            color: attribute.isEnum || attribute.isDomainEnum ? colors.typeReference : colors.propertyText,
+            color: attribute.isEnum || attribute.isDomainEnum
+              ? colors.typeReference
+              : attribute.isStructValue
+                ? colors.containment
+                : colors.propertyText,
             lineHeight: 1.4,
             cursor: 'help',
             wordBreak: 'break-word'

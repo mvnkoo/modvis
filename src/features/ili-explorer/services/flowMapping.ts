@@ -47,10 +47,65 @@ export function inheritanceEdgesFromRelations(
       target: relation.targetId,
       type: useCurvedLines ? 'default' : 'step',
       animated: false,
+      data: { relationType: 'EXTENDS' },
       style: { stroke: colors.inheritance, strokeWidth: 2 },
       markerEnd: {
         type: MarkerType.Arrow,
         color: colors.inheritance,
+      },
+    }));
+}
+
+export function containmentEdgesFromRelations(
+  relations: IliRelation[],
+  colors: ThemeColors,
+  useCurvedLines: boolean,
+): Edge[] {
+  return relations
+    .filter(relation => relation.type === 'CONTAINS')
+    .map(relation => ({
+      id: relation.id,
+      source: relation.sourceId,
+      target: relation.targetId,
+      type: useCurvedLines ? 'default' : 'step',
+      animated: false,
+      label: relation.role,
+      data: { relationType: 'CONTAINS' },
+      style: { stroke: colors.containment, strokeWidth: 2 },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: colors.containment,
+        width: 18,
+        height: 18,
+      },
+    }));
+}
+
+export function referenceEdgesFromRelations(
+  relations: IliRelation[],
+  colors: ThemeColors,
+  useCurvedLines: boolean,
+): Edge[] {
+  return relations
+    .filter(relation => relation.type === 'REFERENCES')
+    .map(relation => ({
+      id: relation.id,
+      source: relation.sourceId,
+      target: relation.targetId,
+      type: useCurvedLines ? 'default' : 'step',
+      animated: false,
+      label: relation.role,
+      data: { relationType: 'REFERENCES' },
+      style: {
+        stroke: colors.reference,
+        strokeWidth: 2,
+        strokeDasharray: '5,5',
+      },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: colors.reference,
+        width: 18,
+        height: 18,
       },
     }));
 }

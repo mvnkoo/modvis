@@ -44,6 +44,10 @@ export function getDirectRelations(
   const superTypeChain = new Set<string>();
   const subTypeChain = new Set<string>();
   const enumTypes = new Set<string>();
+  const containedStructs = new Set<string>();
+  const structureOwners = new Set<string>();
+  const referenceTargets = new Set<string>();
+  const referenceSources = new Set<string>();
   const enumEdges: Edge[] = [];
   let enhancedNodes: IliNode[] = [];
 
@@ -93,12 +97,27 @@ export function getDirectRelations(
   );
 
   for (const edge of allEdges) {
-    if (edge.target === entity.id) {
-      const sourceNode = nodeMap.get(edge.source);
-      if (sourceNode) {
-        subTypeChain.add(edge.source);
-        relatedNodeIds.add(edge.source);
-      }
+    if (edge.target !== entity.id) continue;
+    const rt = (edge.data as { relationType?: string } | undefined)?.relationType;
+    if (rt !== undefined && rt !== 'EXTENDS') continue;
+    const sourceNode = nodeMap.get(edge.source);
+    if (sourceNode) {
+      subTypeChain.add(edge.source);
+      relatedNodeIds.add(edge.source);
+    }
+  }
+
+  for (const edge of allEdges) {
+    const rt = (edge.data as { relationType?: string } | undefined)?.relationType;
+    if (rt !== 'REFERENCES' && rt !== 'CONTAINS') continue;
+    if (edge.source === entity.id) {
+      relatedNodeIds.add(edge.target);
+      if (rt === 'CONTAINS') containedStructs.add(edge.target);
+      else if (rt === 'REFERENCES') referenceTargets.add(edge.target);
+    } else if (edge.target === entity.id) {
+      relatedNodeIds.add(edge.source);
+      if (rt === 'CONTAINS') structureOwners.add(edge.source);
+      else if (rt === 'REFERENCES') referenceSources.add(edge.source);
     }
   }
 
@@ -145,11 +164,44 @@ export function getDirectRelations(
       const isSuperType = superTypeChain.has(id);
       const isSubType = subTypeChain.has(id);
       const isEnum = enumTypes.has(id);
+      const isContainedStruct = containedStructs.has(id);
+      const isStructureOwner = structureOwners.has(id);
+      const isReferenceTarget = referenceTargets.has(id);
+      const isReferenceSource = referenceSources.has(id);
       const isClassUsingEnum = entity.type === 'enumNode' && originalNode.type === 'classNode';
+
+      const leftColumnOrder: string[] = [
+        ...Array.from(structureOwners),
+        ...Array.from(referenceSources),
+      ];
+      const rightColumnOrder: string[] = [
+        ...Array.from(referenceTargets),
+        ...Array.from(enumTypes),
+        ...Array.from(containedStructs),
+      ];
+      const sideSpacingY = useMagicLayout
+        ? LAYOUT_CONFIG.ENUM.SPACING_Y * LAYOUT_CONFIG.MAGIC.ENUM
+        : LAYOUT_CONFIG.ENUM.SPACING_Y;
+      const rightTotalHeight = (rightColumnOrder.length - 1) * sideSpacingY;
+      const rightStartY = -(rightTotalHeight / 2);
+      const rightIndex = rightColumnOrder.indexOf(id);
+      const leftTotalHeight = (leftColumnOrder.length - 1) * sideSpacingY;
+      const leftStartY = -(leftTotalHeight / 2);
+      const leftIndex = leftColumnOrder.indexOf(id);
 
       let position = { x: 0, y: 0 };
 
-      if (isClassUsingEnum) {
+      if (isStructureOwner || isReferenceSource) {
+        position = {
+          x: -LAYOUT_CONFIG.ENUM.OFFSET_X,
+          y: leftStartY + leftIndex * sideSpacingY,
+        };
+      } else if (isReferenceTarget || isContainedStruct) {
+        position = {
+          x: LAYOUT_CONFIG.ENUM.OFFSET_X,
+          y: rightStartY + rightIndex * sideSpacingY,
+        };
+      } else if (isClassUsingEnum) {
         const classArray = Array.from(relatedNodeIds).filter(nid => {
           const node = nodeMap.get(nid);
           return node && node.type === 'classNode';
@@ -167,17 +219,9 @@ export function getDirectRelations(
         if (entity.type === 'enumNode') {
           position = { x: 0, y: 0 };
         } else {
-          const enumArray = Array.from(enumTypes);
-          const index = enumArray.indexOf(id);
-          const totalEnums = enumArray.length;
-          const spacingY = useMagicLayout
-            ? LAYOUT_CONFIG.ENUM.SPACING_Y * LAYOUT_CONFIG.MAGIC.ENUM
-            : LAYOUT_CONFIG.ENUM.SPACING_Y;
-          const totalHeight = (totalEnums - 1) * spacingY;
-          const startY = -(totalHeight / 2);
           position = {
             x: LAYOUT_CONFIG.ENUM.OFFSET_X,
-            y: startY + index * spacingY,
+            y: rightStartY + rightIndex * sideSpacingY,
           };
         }
       } else if (isSuperType) {
@@ -198,14 +242,26 @@ export function getDirectRelations(
   const allEdgesResult: Edge[] = [
     ...allEdges
       .filter(edge => relatedNodeIds.has(edge.source) && relatedNodeIds.has(edge.target))
-      .map(edge => ({
-        ...edge,
-        type: useCurvedLines ? 'default' : 'step',
-        animated: false,
-        sourceHandle: 'top',
-        targetHandle: 'bottom',
-        style: { stroke: colors.inheritance, strokeWidth: 2 },
-      })),
+      .map(edge => {
+        const rt = (edge.data as { relationType?: string } | undefined)?.relationType;
+        if (rt === 'REFERENCES' || rt === 'CONTAINS') {
+          return {
+            ...edge,
+            type: useCurvedLines ? 'default' : 'step',
+            animated: false,
+            sourceHandle: 'right-source',
+            targetHandle: 'left-target',
+          };
+        }
+        return {
+          ...edge,
+          type: useCurvedLines ? 'default' : 'step',
+          animated: false,
+          sourceHandle: 'top',
+          targetHandle: 'bottom',
+          style: { stroke: colors.inheritance, strokeWidth: 2 },
+        };
+      }),
 
     ...enumEdges.filter(edge => edge.id.endsWith('-enum')).map(edge => ({
       ...edge,
