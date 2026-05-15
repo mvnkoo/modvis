@@ -10,11 +10,7 @@ const HOVERED_W_FALLBACK = 400;
 const HOVERED_H_FALLBACK = 150;
 const MAX_PER_LEVEL = 8;
 const MAX_DEPTH = 2;
-// Trunk emerges from the hovered class's bottom-center; boxes sit clearly to
-// the right of that trunk so the L-corner has room to breathe.
 const TRUNK_TO_BOX_GAP = 70;
-// Level-N child must start to the right of its parent's bottom-center
-// (= parent.x + PREVIEW_W/2), otherwise the L-edge bends backwards.
 const INDENT_X = PREVIEW_W / 2 + TRUNK_TO_BOX_GAP;
 const PREVIEW_Z_INDEX = 1000;
 

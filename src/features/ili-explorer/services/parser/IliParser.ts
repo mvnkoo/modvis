@@ -4,8 +4,6 @@ import { cstParserInstance } from './cstParser';
 import { astVisitor } from './astBuilder';
 import type { IliParseResult, IliParseError } from './types';
 
-// Strip leading whitespace and comments to look at the first significant token.
-// INTERLIS 1 files start with `TRANSFER`, INTERLIS 2 with `INTERLIS 2.x;`.
 const LEADING_NOISE = /^(?:\s+|!![^\n]*\n?|\/\*[\s\S]*?\*\/)*/;
 
 export class IliParser {

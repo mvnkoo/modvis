@@ -731,8 +731,17 @@ class IliCstToAstVisitor extends BaseVisitor {
         enumValues: values,
       };
     }
+    if (ctx.formatType) return { type: this.visit(ctx.formatType[0]) as string };
     if (ctx.qualifiedName) return { type: this.visit(ctx.qualifiedName[0]) as string };
     return { type: '' };
+  }
+
+  formatType(ctx: any): string {
+    const base = ctx.qualifiedName?.[0] ? this.visit(ctx.qualifiedName[0]) as string : '';
+    const min = ctx.minVal?.[0]?.image;
+    const max = ctx.maxVal?.[0]?.image;
+    const range = min && max ? ` ${min}..${max}` : '';
+    return `FORMAT ${base}${range}`;
   }
 
   mtextType(ctx: any): string {

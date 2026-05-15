@@ -7,8 +7,6 @@ import {
 
 export function registerTopicRules(p: IliCstParserBuilder): void {
   p.topicDef = p.RULE('topicDef', () => {
-    // INTERLIS 2.4 lässt `VIEW TOPIC <Name>` als Topic-Variante zu (Topic
-    // enthält dann nur Views). Das VIEW-Keyword darf hier vorne stehen.
     p.OPTION2(() => p.CONSUME(View));
     p.CONSUME(Topic);
     p.CONSUME(Identifier, { LABEL: 'topicName' });

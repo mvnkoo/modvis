@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Node, Edge, Connection } from '@xyflow/react';
 import { useTheme } from '../../../common/theme/ThemeContext';
-import { IliLayoutService } from '../services/IliLayoutService';
+import { getDirectRelations } from '../services/layout/getDirectRelations';
 import { isOverviewCandidate, layoutModelOverview } from '../services/layout/overviewStrategy';
 import { useNavigationHistory } from './useNavigationHistory';
 import { useIliLoader, type LoadResult } from './useIliLoader';
@@ -173,7 +173,7 @@ export const useIliSchema = (
         useMagicLayout: false,
         ...override,
       };
-      return IliLayoutService.getDirectRelations(node, allNodes, allEdges, colors, opts);
+      return getDirectRelations(node, allNodes, allEdges, colors, opts);
     },
     [
       allNodes,
@@ -243,7 +243,7 @@ export const useIliSchema = (
     ) as IliNode | undefined;
     if (!initialClass) return;
 
-    const layoutResult = IliLayoutService.getDirectRelations(
+    const layoutResult = getDirectRelations(
       initialClass,
       result.flowNodes as IliNode[],
       result.flowEdges,

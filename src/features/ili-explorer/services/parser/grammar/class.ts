@@ -9,9 +9,6 @@ import {
   Ordered,
 } from '../tokens';
 
-// Disambiguator for associationDef body: peek forward, paren-balanced, to see
-// whether the next "Identifier ..." item is a roleDef (terminates at -- / -<> / -<#>)
-// or an attributeDef (terminates at ':').
 function isRoleAhead(p: IliCstParserBuilder): boolean {
   let i = 1;
   let depth = 0;

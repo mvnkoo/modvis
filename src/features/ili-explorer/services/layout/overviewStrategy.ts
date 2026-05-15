@@ -26,10 +26,6 @@ function collectRootClasses(allNodes: IliNode[], allRelations: IliRelation[]): I
   const externalIds = new Set(
     allNodes.filter(n => (n.data as { isExternal?: boolean } | undefined)?.isExternal).map(n => n.id),
   );
-  // A class counts as a root if it does NOT extend something that is part of
-  // this model. Classes that only extend external (imported) classes are still
-  // shown as roots — the external supertype isn't really part of this model's
-  // structure, so the local class is the actual entry point.
   const extendsToInternal = new Set<string>();
   for (const rel of allRelations) {
     if (rel.type !== 'EXTENDS') continue;
