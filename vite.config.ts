@@ -6,7 +6,7 @@ import path from 'node:path';
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8')) as { version: string };
 const sourceRepo = process.env.VITE_SOURCE_REPO ?? 'https://github.com/mvnkoo/modvis';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __SOURCE_REPO__: JSON.stringify(sourceRepo),
@@ -28,4 +28,8 @@ export default defineConfig({
   build: {
     outDir: 'build',
   },
-});
+  esbuild: {
+    // Production-Build: console.* + debugger entfernen. Dev bleibt unverändert.
+    drop: command === 'build' ? ['console', 'debugger'] : [],
+  },
+}));

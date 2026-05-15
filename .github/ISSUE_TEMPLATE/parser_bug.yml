@@ -1,0 +1,57 @@
+name: Parser-Problem
+description: Eine .ili-Datei wird falsch geparst oder gibt Warnungen/Fehler aus.
+title: "[Parser] "
+labels: ["bug", "parser"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Parser-Bugs sind besonders wertvoll für uns — sie decken Grammar-Lücken
+        oder Edge-Cases auf. Bitte häng wenn möglich ein **minimales Repro-
+        `.ili`-Snippet** an.
+
+  - type: input
+    id: source
+    attributes:
+      label: Modell-Quelle
+      description: URL, Verzeichnis oder "eigenes Modell"
+      placeholder: "https://models.geo.admin.ch/.../Foo.ili"
+    validations:
+      required: false
+
+  - type: textarea
+    id: ili-snippet
+    attributes:
+      label: Minimales .ili-Snippet
+      description: |
+        Das kleinste Fragment, das den Bug noch zeigt. Idealerweise ein
+        vollständiges `MODEL ... END M.`.
+      render: ili
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+      placeholder: "Sollte X parsen, keine Warnungen, Klasse Y im Graph sichtbar"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+      placeholder: "Errors / Warnings / falsche Kanten / fehlende Knoten"
+    validations:
+      required: true
+
+  - type: textarea
+    id: spec-ref
+    attributes:
+      label: Spec-Referenz (optional)
+      description: |
+        Falls du weisst, dass eine bestimmte Refhb-/eCH-0031-Klausel betroffen
+        ist (z.B. "Refhb 3.5.3" oder "eCH-0031 §4.4"), nenn sie hier.
+    validations:
+      required: false

@@ -1,0 +1,37 @@
+name: Feature Request
+description: Vorschlag für eine neue Funktion oder Verbesserung.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem löst das?
+      description: |
+        Beschreib den Use-Case, der dich gerade ausbremst. (Nicht: "Wäre cool,
+        wenn ..." — sondern: "Ich versuche X zu tun und stosse an Y.")
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Vorschlag
+      description: Wie könnte modvis dem helfen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen
+      description: Hast du andere Ansätze überlegt? Warum sind die schlechter?
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext / Screenshots
+    validations:
+      required: false
