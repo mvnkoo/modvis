@@ -125,7 +125,7 @@ export class IliCstParser extends CstParser {
   constructor() {
     super(allTokens, {
       recoveryEnabled: true,
-      maxLookahead: 4,
+      maxLookahead: 2,
     });
 
     const b = this as unknown as IliCstParserBuilder;

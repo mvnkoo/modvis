@@ -1,0 +1,57 @@
+name: Bug Report
+description: Etwas funktioniert nicht wie erwartet.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fürs Reporten! Je präziser das Repro, desto schneller der Fix.
+
+  - type: input
+    id: version
+    attributes:
+      label: modvis-Version
+      description: In der App unten links zu sehen, oder aus `package.json`.
+      placeholder: "0.8.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Was ist passiert?
+      description: Was hast du erwartet, was hat tatsächlich stattgefunden?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Schritte zur Reproduktion
+      placeholder: |
+        1. Datei XY geladen
+        2. Auf Klasse Z geklickt
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Umgebung
+      placeholder: |
+        - Browser: Firefox 128
+        - OS: Linux
+        - Deployment: dev.modvis.ch / lokal / Fork
+    validations:
+      required: false
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console-Output / Stacktrace
+      description: Browser-Dev-Tools → Konsole. Wichtig bei Crashes.
+      render: shell
+    validations:
+      required: false
