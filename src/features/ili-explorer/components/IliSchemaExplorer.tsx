@@ -558,7 +558,7 @@ const Flow: React.FC = () => {
 
   const modelStats = useMemo(() => {
     let classCount = 0, associationCount = 0, enumCount = 0, unitCount = 0;
-    let inlineEnumCount = 0;
+    let inlineEnumCount = 0, structureCount = 0;
     const topics = new Set<string>();
     for (const n of allNodes) {
       const data = n.data as any;
@@ -572,7 +572,7 @@ const Flow: React.FC = () => {
           if (data?.type === 'UNIT') unitCount++;
           else enumCount++;
           break;
-        case 'structureNode': break;
+        case 'structureNode': structureCount++; break;
       }
       // Inline-Enums leben als Attribut-Property auf CLASS/STRUCTURE-Knoten,
       // nicht als eigene Knoten — separat zählen für ehrliche Statistik.
@@ -581,7 +581,15 @@ const Flow: React.FC = () => {
         for (const a of attrs) if (a.isInlineEnum) inlineEnumCount++;
       }
     }
-    return { classCount, topicCount: topics.size, associationCount, enumCount, inlineEnumCount, unitCount };
+    return {
+      classCount,
+      structureCount,
+      topicCount: topics.size,
+      associationCount,
+      enumCount,
+      inlineEnumCount,
+      unitCount,
+    };
   }, [allNodes]);
 
   const lastLoadedFileRef = useRef<string | null>(null);
@@ -716,6 +724,7 @@ const Flow: React.FC = () => {
           <ModelInfoPanel
             fileName={currentFileName}
             classCount={modelStats.classCount}
+            structureCount={modelStats.structureCount}
             topicCount={modelStats.topicCount}
             associationCount={modelStats.associationCount}
             enumCount={modelStats.enumCount}

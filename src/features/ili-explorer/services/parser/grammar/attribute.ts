@@ -5,7 +5,7 @@ import {
   LParen, RParen, LBrace, RBrace, LBracket, RBracket,
   Mandatory, Extended, Abstract, Final, Transient,
   Text, MText, Numeric, Boolean, Date, DateTime,
-  Reference, To, External, AnyClass,
+  Reference, To, External, AnyClass, AnyStructure,
   Bag, List, Of,
   Coord, MultiCoord, Polyline, MultiPolyline,
   Surface, MultiSurface, Area, MultiArea,
@@ -108,7 +108,11 @@ export function registerAttributeRules(p: IliCstParserBuilder): void {
     ]);
     p.OPTION(() => p.SUBRULE(p.cardinality));
     p.CONSUME(Of);
-    p.SUBRULE(p.qualifiedName);
+    p.OR2([
+      { ALT: () => p.CONSUME(AnyStructure) },
+      { ALT: () => p.SUBRULE(p.qualifiedName) },
+    ]);
+    p.OPTION2(() => p.SUBRULE(p.restrictionClause));
   });
 
   p.textType = p.RULE('textType', () => {

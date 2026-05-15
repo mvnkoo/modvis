@@ -47,12 +47,16 @@
 !!       SURFACE, MULTISURFACE, AREA (with body), MULTIAREA
 !!     - REFERENCE TO, REFERENCE TO ANYCLASS RESTRICTION
 !!     - BAG / LIST OF with cardinality
+!!     - BAG OF ANYSTRUCTURE, LIST OF Struct RESTRICTION (Refhb 3.6 P1.3)
+!!     - single Strukturattribut (Refhb 3.6 P1.2) — CONTAINS-Relation
 !!     - multi-property (ABSTRACT, EXTENDED, TRANSIENT, FINAL)
 !!     - MANDATORY without explicit type
 !!     - default-value list (:= 1, 2, 3)
 !!     - 5 inline enumerations across two classes
 !!   ASSOCIATIONS
 !!     - 2-role, self-association, cross-topic
+!!     - Composition `-<#>`, Aggregation `-<>` (Refhb 3.7 P1.5)
+!!     - OR-Alternative im targetClass (Refhb 3.7 P1.6)
 !!
 !! License
 !!   MIT — original work, modvis project. Free to use, modify, redistribute.
@@ -231,6 +235,8 @@ MODEL Conformance_Synthetic_V1 (en)
       d : MANDATORY;
       e : REFERENCE TO ANYCLASS RESTRICTION (ClsBravo1; ClsBravo2);
       F08 : NUMERIC := 1, 2, 3;
+      !! Refhb 3.6 Strukturattribut — single embedded Structure (P1.2 CONTAINS)
+      Embedded : MANDATORY TopicAlpha.StructAlpha1;
       !! inline enums — 3 separate Aufzählungen as AttrTypeDef
       InlineE1 : (k_alpha, k_bravo, k_charlie);
       InlineE2 : (k_x, k_y, k_z);
@@ -238,6 +244,16 @@ MODEL Conformance_Synthetic_V1 (en)
       !! class-level UNIQUE constraint (constraintClause inside body)
       UNIQUE F08;
     END ClsBravo8;
+
+    !!@ comment="P1.3 collection edge-cases: ANYSTRUCTURE, RESTRICTION"
+    CLASS ClsBravo9 =
+      F01 : MANDATORY TEXT*40;
+      !! Refhb 3.6: BAG OF ANYSTRUCTURE — heterogene Strukturwerte
+      Payload  : BAG {0..*} OF ANYSTRUCTURE;
+      !! Refhb 3.6: BAG OF Struct RESTRICTION (...) — eingegrenzte Struct-Auswahl
+      Restrict : LIST {1..*} OF TopicAlpha.StructAlpha1
+                   RESTRICTION (TopicAlpha.StructAlpha1; TopicAlpha.StructAlpha2);
+    END ClsBravo9;
 
     !! standard 2-role association
     ASSOCIATION AssocBravo01 =
@@ -250,6 +266,24 @@ MODEL Conformance_Synthetic_V1 (en)
       Side1 -- {0..*} ClsBravo1;
       Side2 -- {0..*} ClsBravo1;
     END AssocBravo02;
+
+    !! Refhb 3.7 P1.5 — Composition `-<#>` (filled diamond, strong ownership)
+    ASSOCIATION AssocBravo03 =
+      Owner -<#> {1} ClsBravo1;
+      Part  -- {0..*} ClsBravo3;
+    END AssocBravo03;
+
+    !! Refhb 3.7 P1.5 — Aggregation `-<>` (open diamond, weak ownership)
+    ASSOCIATION AssocBravo04 =
+      Whole -<> {1} ClsBravo1;
+      Item  -- {0..*} ClsBravo2;
+    END AssocBravo04;
+
+    !! Refhb 3.7 P1.6 — Rollen-Target mit OR-Alternative (polymorph)
+    ASSOCIATION AssocBravo05 =
+      RefA -- {1} ClsBravo1;
+      RefB -- {0..*} ClsBravo2 OR ClsBravo3;
+    END AssocBravo05;
 
     !! topic-level CONSTRAINTS OF block targeting a class
     CONSTRAINTS OF ClsBravo1 =

@@ -4,7 +4,12 @@ import type { ThemeColors } from '../../../common/theme/ThemeContext';
 import { readFileAsText } from '../../../common/utils/readFileAsText';
 import { IliSchemaService } from '../services/iliSchemaService';
 import { generateSearchOptions } from '../services/searchOptions';
-import { flowNodeFromBaseNode, inheritanceEdgesFromRelations } from '../services/flowMapping';
+import {
+  flowNodeFromBaseNode,
+  inheritanceEdgesFromRelations,
+  referenceEdgesFromRelations,
+  containmentEdgesFromRelations,
+} from '../services/flowMapping';
 import type { IliRelation, SearchOption } from '../services/types/IliBaseTypes';
 import type { IliParseError, IliImportRef } from '../services/parser/types';
 
@@ -75,11 +80,23 @@ export function useIliLoader(options: UseIliLoaderOptions): UseIliLoaderReturn {
       const baseNodes = schemaServiceRef.current.getNodes();
       const parsedRelations = schemaServiceRef.current.getRelations();
       const flowNodes = baseNodes.map(flowNodeFromBaseNode);
-      const flowEdges = inheritanceEdgesFromRelations(
-        parsedRelations,
-        colorsRef.current,
-        useCurvedLinesRef.current
-      );
+      const flowEdges = [
+        ...inheritanceEdgesFromRelations(
+          parsedRelations,
+          colorsRef.current,
+          useCurvedLinesRef.current
+        ),
+        ...referenceEdgesFromRelations(
+          parsedRelations,
+          colorsRef.current,
+          useCurvedLinesRef.current
+        ),
+        ...containmentEdgesFromRelations(
+          parsedRelations,
+          colorsRef.current,
+          useCurvedLinesRef.current
+        ),
+      ];
 
       setParseWarnings(schemaServiceRef.current.getParseErrors());
       setImports(schemaServiceRef.current.getImports());

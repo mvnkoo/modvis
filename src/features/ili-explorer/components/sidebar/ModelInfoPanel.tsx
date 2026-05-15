@@ -26,6 +26,7 @@ import type { IliImportRef } from '../../services/parser/types';
 interface ModelInfoPanelProps {
   fileName: string | null;
   classCount: number;
+  structureCount: number;
   topicCount: number;
   associationCount: number;
   enumCount: number;
@@ -41,6 +42,7 @@ const STD_LIBS = new Set(['INTERLIS', 'Units', 'Time', 'CoordSys']);
 export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
   fileName,
   classCount,
+  structureCount,
   topicCount,
   associationCount,
   enumCount,
@@ -107,6 +109,11 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
               <Chip size="small" color="primary" label={`INTERLIS ${interlisVersion}`} />
             )}
             <Chip size="small" label={`${classCount} Classes`} />
+            {structureCount > 0 && (
+              <Tooltip title="Wertgebundene Datenstrukturen ohne eigene Identität (Refhb 3.5/3.6 Structure)">
+                <Chip size="small" label={`${structureCount} Structures`} />
+              </Tooltip>
+            )}
             {topicCount > 0 && <Chip size="small" label={`${topicCount} Topics`} />}
             {associationCount > 0 && <Chip size="small" label={`${associationCount} Assoc.`} />}
             {enumCount > 0 && (

@@ -151,21 +151,27 @@ export function attachClassAssociations(
     relatedNodeIds.add(associationNodeId);
     enhancedNodes.push(associationNode);
 
+    const kind = assoc.kind ?? 'plain';
+    const isStrong = kind === 'composition' || kind === 'aggregation';
+    const edgeStyle: Record<string, string | number> = {
+      stroke: colors.relationship,
+      strokeWidth: isStrong ? 3 : 2,
+      ...(isStrong ? {} : { strokeDasharray: '5,5' }),
+    };
+    const markerType = kind === 'composition'
+      ? MarkerType.ArrowClosed
+      : MarkerType.Arrow;
     enumEdges.push({
       id: `${entity.id}-${associationNodeId}-assoc`,
       source: isSource ? entity.id : associationNodeId,
       target: isSource ? associationNodeId : entity.id,
       type: useCurvedLines ? 'default' : 'step',
-      animated: true,
+      animated: !isStrong,
       sourceHandle: isSource ? 'left-source' : 'right-source',
       targetHandle: isSource ? 'right-target' : 'left-target',
-      style: {
-        stroke: colors.relationship,
-        strokeWidth: 2,
-        strokeDasharray: '5,5',
-      },
+      style: edgeStyle,
       markerEnd: {
-        type: MarkerType.Arrow,
+        type: markerType,
         color: colors.relationship,
         width: 20,
         height: 20,
