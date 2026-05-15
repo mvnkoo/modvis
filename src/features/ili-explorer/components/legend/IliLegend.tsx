@@ -45,31 +45,24 @@ const IliLegend: React.FC<IliLegendProps> = ({
       isDisabled: !enumsVisible,
       onClick: () => onToggleEnums(!enumsVisible)
     },
-    { 
+    {
       label: 'ASSOCIATION',
       color: colors.relationship,
       isToggleable: true,
       isDisabled: !showAssociations,
       onClick: () => onToggleAssociations(!showAssociations)
     },
-    { 
-      label: 'ACTIVE', 
-      color: colors.selectedEntity,
-      isActive: true 
-    }
-  ];
-
-  const relationItems = [
-    { label: 'EXTENDS', color: colors.inheritance, style: 'solid' },
-    { label: 'DEPENDS ON', color: colors.relationship, style: 'dashed' },
-    { label: 'ASSOCIATES', color: colors.reference, style: 'dotted' },
-    { label: 'REFERENCES', color: colors.reference, style: 'dashed' },
-    { label: 'CONTAINS', color: colors.containment, style: 'solid' },
     {
-      label: 'ENUMERATION',
-      color: colors.typeReference,
-      style: 'dashed',
-      isDisabled: !enumsVisible
+      label: 'COMPOSITION',
+      color: colors.composition,
+      isToggleable: true,
+      isDisabled: !showAssociations,
+      onClick: () => onToggleAssociations(!showAssociations),
+    },
+    {
+      label: 'ACTIVE',
+      color: colors.selectedEntity,
+      isActive: true
     }
   ];
 
@@ -180,25 +173,57 @@ const IliLegend: React.FC<IliLegendProps> = ({
               <Typography variant="caption">EXTENDS</Typography>
             </Box>
 
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
                 gap: 1,
                 opacity: showAssociations ? 1 : 0.5,
                 cursor: 'pointer',
-                '&:hover': {
-                  opacity: 0.8
-                }
+                '&:hover': { opacity: 0.8 },
               }}
               onClick={() => onToggleAssociations(!showAssociations)}
             >
-              <Box sx={{ 
+              <Box sx={{
                 width: 20,
                 height: 0,
-                borderTop: `2px dashed ${colors.relationship}`
+                borderTop: `2px solid ${colors.relationship}`,
               }} />
               <Typography variant="caption">ASSOCIATES</Typography>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                opacity: showAssociations ? 1 : 0.5,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', width: 20, height: 10 }}>
+                <Box sx={{ flex: 1, height: 0, borderTop: `2px solid ${colors.composition}` }} />
+                <svg width="10" height="10" style={{ display: 'block' }}>
+                  <polygon points="5,1 9,5 5,9 1,5" fill={colors.composition} stroke={colors.composition} strokeWidth="1" />
+                </svg>
+              </Box>
+              <Typography variant="caption">COMPOSITION</Typography>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                opacity: showAssociations ? 1 : 0.5,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', width: 20, height: 10 }}>
+                <Box sx={{ flex: 1, height: 0, borderTop: `2px solid ${colors.composition}` }} />
+                <svg width="10" height="10" style={{ display: 'block' }}>
+                  <polygon points="5,1 9,5 5,9 1,5" fill="white" stroke={colors.composition} strokeWidth="1.5" />
+                </svg>
+              </Box>
+              <Typography variant="caption">AGGREGATION</Typography>
             </Box>
 
             <Box 

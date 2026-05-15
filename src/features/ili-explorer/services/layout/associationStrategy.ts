@@ -1,7 +1,34 @@
-import { Edge, MarkerType } from '@xyflow/react';
+import { Edge, MarkerType, EdgeMarker } from '@xyflow/react';
 import type { ThemeColors } from '../../../../common/theme/ThemeContext';
 import type { IliAssociation, IliNode } from '../types/IliBaseTypes';
 import { LAYOUT_CONFIG } from './config';
+import {
+  COMPOSITION_MARKER_ID,
+  AGGREGATION_MARKER_ID,
+} from '../../components/AssociationMarkerDefs';
+
+function pickAssocMarker(
+  kind: 'composition' | 'aggregation' | 'plain',
+  color: string,
+): EdgeMarker | string {
+  if (kind === 'composition') return `url(#${COMPOSITION_MARKER_ID})`;
+  if (kind === 'aggregation') return `url(#${AGGREGATION_MARKER_ID})`;
+  return { type: MarkerType.Arrow, color, width: 20, height: 20 };
+}
+
+function pickAssocColor(
+  kind: 'composition' | 'aggregation' | 'plain',
+  colors: ThemeColors,
+): string {
+  if (kind === 'composition' || kind === 'aggregation') return colors.composition;
+  return colors.relationship;
+}
+
+const KIND_ORDER: Record<'plain' | 'aggregation' | 'composition', number> = {
+  plain: 0,
+  aggregation: 1,
+  composition: 2,
+};
 
 export function layoutAssociationCenter(
   entity: IliNode,
@@ -59,6 +86,11 @@ export function layoutAssociationCenter(
     });
   }
 
+  const kind = (association.kind ?? 'plain') as 'composition' | 'aggregation' | 'plain';
+  const stroke = pickAssocColor(kind, colors);
+  const isStrong = kind === 'composition' || kind === 'aggregation';
+  const centerEdgeStyle = { stroke, strokeWidth: 2 };
+
   if (sourceClass || unloadedSourceNode) {
     const sourceId = sourceClass?.id || unloadedSourceNode?.id || 'unknown';
     edges.push({
@@ -66,14 +98,11 @@ export function layoutAssociationCenter(
       source: sourceId,
       target: entity.id,
       type: useCurvedLines ? 'default' : 'step',
-      animated: true,
+      animated: !isStrong,
       sourceHandle: 'right-source',
       targetHandle: 'left-target',
-      style: {
-        stroke: colors.relationship,
-        strokeWidth: 2,
-        strokeDasharray: '5,5',
-      },
+      style: centerEdgeStyle,
+      markerEnd: pickAssocMarker(kind, stroke),
     });
   }
 
@@ -83,14 +112,11 @@ export function layoutAssociationCenter(
       source: entity.id,
       target: targetClass.id,
       type: useCurvedLines ? 'default' : 'step',
-      animated: true,
+      animated: !isStrong,
       sourceHandle: 'right-source',
       targetHandle: 'left-target',
-      style: {
-        stroke: colors.relationship,
-        strokeWidth: 2,
-        strokeDasharray: '5,5',
-      },
+      style: centerEdgeStyle,
+      markerEnd: pickAssocMarker(kind, stroke),
     });
   }
 
@@ -111,6 +137,10 @@ export function attachClassAssociations(
   if (!associations || associations.length === 0) return;
 
   const sortedAssociations = [...associations].sort((a, b) => {
+    const aKind = (a.kind ?? 'plain') as 'plain' | 'aggregation' | 'composition';
+    const bKind = (b.kind ?? 'plain') as 'plain' | 'aggregation' | 'composition';
+    const kindDelta = KIND_ORDER[aKind] - KIND_ORDER[bKind];
+    if (kindDelta !== 0) return kindDelta;
     const aIsSource = a.sourceClass === entity.id;
     const bIsSource = b.sourceClass === entity.id;
     return Number(aIsSource) - Number(bIsSource);
@@ -152,15 +182,8 @@ export function attachClassAssociations(
     enhancedNodes.push(associationNode);
 
     const kind = assoc.kind ?? 'plain';
+    const stroke = pickAssocColor(kind, colors);
     const isStrong = kind === 'composition' || kind === 'aggregation';
-    const edgeStyle: Record<string, string | number> = {
-      stroke: colors.relationship,
-      strokeWidth: isStrong ? 3 : 2,
-      ...(isStrong ? {} : { strokeDasharray: '5,5' }),
-    };
-    const markerType = kind === 'composition'
-      ? MarkerType.ArrowClosed
-      : MarkerType.Arrow;
     enumEdges.push({
       id: `${entity.id}-${associationNodeId}-assoc`,
       source: isSource ? entity.id : associationNodeId,
@@ -169,13 +192,8 @@ export function attachClassAssociations(
       animated: !isStrong,
       sourceHandle: isSource ? 'left-source' : 'right-source',
       targetHandle: isSource ? 'right-target' : 'left-target',
-      style: edgeStyle,
-      markerEnd: {
-        type: markerType,
-        color: colors.relationship,
-        width: 20,
-        height: 20,
-      },
+      style: { stroke, strokeWidth: 2 },
+      markerEnd: pickAssocMarker(kind, stroke),
     });
   });
 }
