@@ -170,6 +170,21 @@ describe('IliParser conformance — synthetic fixture', () => {
     expect(targets).not.toContain('TopicBravo.ANYCLASS');
   });
 
+  it('Refhb 3.8.4 + 3.5.3 — Standard-Library CoordSys.ili parses without errors', () => {
+    const path = resolve(__dirname, '../__fixtures__/CoordSys.ili');
+    const { errors, warnings = [] } = new IliParser().parseContent(readFileSync(path, 'utf8'));
+    expect(errors).toEqual([]);
+    const onlyAssocLimitations = warnings.every(w => /ASSOCIATION.*Rollen/.test(w.message));
+    expect(onlyAssocLimitations).toBe(true);
+  });
+
+  it('Standard-Library Units.ili parses without errors or warnings', () => {
+    const path = resolve(__dirname, '../__fixtures__/Units.ili');
+    const { errors, warnings = [] } = new IliParser().parseContent(readFileSync(path, 'utf8'));
+    expect(errors).toEqual([]);
+    expect(warnings).toEqual([]);
+  });
+
   it('Refhb 3.5.3 — STRUCTURE properties: ABSTRACT/FINAL/EXTENDED are distinct', () => {
     const ili = `INTERLIS 2.4;
       MODEL M = TOPIC T =

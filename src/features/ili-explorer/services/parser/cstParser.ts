@@ -94,6 +94,10 @@ export class IliCstParser extends CstParser {
   domainProp!: any;
   domainConstraintsClause!: any;
   formatType!: any;
+  formatSpec!: any;
+  formatSpecToken!: any;
+  formatRange!: any;
+  qualifiedSegment!: any;
   allOfClause!: any;
   enumerationDef!: any;
   enumValueList!: any;

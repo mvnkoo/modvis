@@ -9,7 +9,7 @@ import {
   Bag, List, Of,
   Coord, MultiCoord, Polyline, MultiPolyline,
   Surface, MultiSurface, Area, MultiArea,
-  Star, Minus, DotDot,
+  Star, Minus, Plus, DotDot,
   Oid, Continuous, Subdivision,
   Circular, Clockwise, Counterclockwise, Refsys,
 } from '../tokens';
@@ -134,6 +134,9 @@ export function registerAttributeRules(p: IliCstParserBuilder): void {
   p.numericType = p.RULE('numericType', () => {
     p.CONSUME(Numeric);
     p.OPTION(() => p.SUBRULE(p.numericRange));
+    p.OPTION2(() => p.CONSUME(Circular));
+    p.OPTION3(() => p.SUBRULE(p.unitRef));
+    p.OPTION4(() => p.SUBRULE(p.refsysSuffix));
   });
 
   p.numericRange = p.RULE('numericRange', () => {
@@ -162,7 +165,10 @@ export function registerAttributeRules(p: IliCstParserBuilder): void {
   });
 
   p.signedNumber = p.RULE('signedNumber', () => {
-    p.OPTION(() => p.CONSUME(Minus));
+    p.OPTION(() => p.OR([
+      { ALT: () => p.CONSUME(Minus) },
+      { ALT: () => p.CONSUME(Plus) },
+    ]));
     p.CONSUME(NumberLiteral);
   });
 

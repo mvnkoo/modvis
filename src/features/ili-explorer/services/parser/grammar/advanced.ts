@@ -20,7 +20,7 @@ import {
   Surface, MultiSurface, Area, MultiArea,
   AnyClass, AnyStructure, Translation, Attribute, At,
   Extends, Extended, Abstract, Final,
-  Imports, Unqualified, Version, Where, Depends, On, No, Format,
+  Imports, Unqualified, Version, Where, Depends, On, No, Format, Based,
   Constraints, Basket, Restriction, Inherit, Base,
 } from '../tokens';
 
@@ -117,6 +117,7 @@ export function registerAdvancedRules(p: IliCstParserBuilder): void {
       { ALT: () => p.CONSUME(On) },
       { ALT: () => p.CONSUME(No) },
       { ALT: () => p.CONSUME(Format) },
+      { ALT: () => p.CONSUME(Based) },
       { ALT: () => p.CONSUME(Constraints) },
       { ALT: () => p.CONSUME(Basket) },
       { ALT: () => p.CONSUME(Restriction) },

@@ -112,6 +112,7 @@ export const Depends = kw('Depends', 'DEPENDS');
 export const On = kw('On', 'ON');
 export const No = kw('No', 'NO');
 export const Format = kw('Format', 'FORMAT');
+export const Based = kw('Based', 'BASED');
 export const In = kw('In', 'IN');
 export const Constraints = kw('Constraints', 'CONSTRAINTS');
 export const Parameter = kw('Parameter', 'PARAMETER');
@@ -185,7 +186,7 @@ export const allTokens: TokenType[] = [
   Interlis, Version, Model, Topic, Class, Structure, Association, Enumeration,
   Domain, Unit, Function, View, Graphic, Refsystem, Coordsystem, Imports,
   End, Extends, Extended, Abstract, Final, Mandatory, All, Of, Bag, List,
-  Reference, Base, Constraints, Constraint, Existence, Unique, Set, Where, Required,
+  Reference, Based, Base, Constraints, Constraint, Existence, Unique, Set, Where, Required,
   Numeric, Text, MText, Boolean, DateTime, Date,
   Coord, MultiCoord, Polyline, MultiPolyline, Surface, MultiSurface, Area, MultiArea,
   AnyClass, AnyStructure, Translation, Attribute, At, Ordered, Or, And, Not, Null, True, False,
