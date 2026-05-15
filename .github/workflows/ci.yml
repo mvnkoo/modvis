@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -35,7 +35,11 @@ jobs:
         run: npm run typecheck
 
       - name: Test
+        # Heap-Bump für die Vitest-Worker: Chevrotain-Parser-Konstruktion mit
+        # SkipBody-Kategorie zieht in der Lookahead-Analyse temporär ~2 GB.
         run: npm test -- --run
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
 
       - name: Build
         run: npm run build
