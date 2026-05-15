@@ -19,7 +19,3 @@ export interface IliParseResult {
   imports?: IliImportRef[];
   interlisVersion?: string;
 }
-
-export interface IliParser {
-  parseContent(content: string): IliParseResult;
-}

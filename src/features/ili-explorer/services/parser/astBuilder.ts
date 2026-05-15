@@ -1,10 +1,10 @@
 import type { CstNode, IToken } from 'chevrotain';
 import type {
   IliBaseNode, IliRelation, IliAttribute, IliEnumValue, IliAssociation,
-} from '../../types/IliBaseTypes';
-import type { IliClassNode, IliStructureNode } from '../../types/IliModelTypes';
-import type { IliImportRef } from '../IliParser';
-import { cstParserInstance } from './parser';
+} from '../types/IliBaseTypes';
+import type { IliClassNode, IliStructureNode } from '../types/IliModelTypes';
+import type { IliImportRef } from './types';
+import { cstParserInstance } from './cstParser';
 
 const BaseVisitor = cstParserInstance.getBaseCstVisitorConstructorWithDefaults();
 
