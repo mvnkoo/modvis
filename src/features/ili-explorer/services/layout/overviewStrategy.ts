@@ -33,7 +33,7 @@ function collectRootClasses(allNodes: IliNode[], allRelations: IliRelation[]): I
     extendsToInternal.add(rel.sourceId);
   }
   return allNodes.filter(n =>
-    n.type === 'classNode'
+    (n.type === 'classNode' || n.type === 'structureNode')
     && !(n.data as { isExternal?: boolean } | undefined)?.isExternal
     && !extendsToInternal.has(n.id),
   );
@@ -121,13 +121,13 @@ export function layoutModelOverview(
     topicIndex++;
   }
 
-  const dependsEdges: Edge[] = [];
+  const edges: Edge[] = [];
   for (const rel of allRelations) {
     if (rel.type !== 'DEPENDS') continue;
     const sourceId = topicLabelIdByName.get(rel.sourceId);
     const targetId = topicLabelIdByName.get(rel.targetId);
     if (!sourceId || !targetId) continue;
-    dependsEdges.push({
+    edges.push({
       id: `depends-${rel.sourceId}-${rel.targetId}`,
       source: sourceId,
       target: targetId,
@@ -141,5 +141,5 @@ export function layoutModelOverview(
     });
   }
 
-  return { nodes: placedNodes, edges: dependsEdges };
+  return { nodes: placedNodes, edges };
 }

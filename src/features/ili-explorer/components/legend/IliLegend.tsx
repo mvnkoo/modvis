@@ -37,7 +37,7 @@ const IliLegend: React.FC<IliLegendProps> = ({
     { label: 'TOPIC', color: colors.abstractEntity },
     { label: 'CLASS', color: colors.inheritance },
     { label: 'ABSTRACT CLASS', color: colors.abstractEntity },
-    { label: 'STRUCTURE', color: colors.typeNode },
+    { label: 'STRUCTURE', color: colors.containment },
     { 
       label: 'ENUMERATION', 
       color: colors.typeNode,
@@ -63,9 +63,11 @@ const IliLegend: React.FC<IliLegendProps> = ({
     { label: 'EXTENDS', color: colors.inheritance, style: 'solid' },
     { label: 'DEPENDS ON', color: colors.relationship, style: 'dashed' },
     { label: 'ASSOCIATES', color: colors.reference, style: 'dotted' },
-    { 
-      label: 'ENUMERATION', 
-      color: colors.typeReference, 
+    { label: 'REFERENCES', color: colors.reference, style: 'dashed' },
+    { label: 'CONTAINS', color: colors.containment, style: 'solid' },
+    {
+      label: 'ENUMERATION',
+      color: colors.typeReference,
       style: 'dashed',
       isDisabled: !enumsVisible
     }

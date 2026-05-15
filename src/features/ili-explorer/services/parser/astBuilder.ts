@@ -1,6 +1,7 @@
 import type { CstNode, IToken } from 'chevrotain';
 import type {
   IliBaseNode, IliRelation, IliAttribute, IliEnumValue, IliAssociation,
+  IliAssociationKind,
 } from '../types/IliBaseTypes';
 import type { IliClassNode, IliStructureNode } from '../types/IliModelTypes';
 import type { IliImportRef, IliParseError } from './types';
@@ -96,9 +97,11 @@ class IliCstToAstVisitor extends BaseVisitor {
     this.commentBefore = commentBefore;
     this.visit(cst);
     this.decorateDomainAttributes();
+    this.decorateStructureAttributes();
     this.decorateAssociations();
     this.decorateReferences();
     this.decorateInheritedAttributes();
+    this.validateStructureInheritance();
     this.decorateExternalNodes();
     return {
       nodes: this.state.nodes,
@@ -142,6 +145,79 @@ class IliCstToAstVisitor extends BaseVisitor {
           isActive: false,
         },
       });
+    }
+  }
+
+  private validateStructureInheritance(): void {
+    const typeById = new Map<string, string>();
+    for (const node of this.state.nodes) typeById.set(node.id, node.type);
+    for (const rel of this.state.relations) {
+      if (rel.type !== 'EXTENDS') continue;
+      const sourceType = typeById.get(rel.sourceId);
+      const targetType = typeById.get(rel.targetId);
+      if (sourceType === 'STRUCTURE' && targetType === 'CLASS') {
+        this.emitWarning(
+          `STRUCTURE '${rel.sourceId}' erweitert die CLASS '${rel.targetId}' — Refhb 3.5.3 verbietet das.`,
+        );
+      }
+    }
+  }
+
+  private decorateStructureAttributes(): void {
+    const structIds = new Set<string>();
+    for (const node of this.state.nodes) {
+      if (node.type === 'STRUCTURE') structIds.add(node.id);
+    }
+    if (structIds.size === 0) return;
+
+    const seenContains = new Set<string>();
+    const tryEmit = (sourceId: string, targetId: string, attrName: string) => {
+      const key = `${sourceId}|${targetId}|${attrName}`;
+      if (seenContains.has(key)) return;
+      seenContains.add(key);
+      this.state.relations.push({
+        id: `${sourceId}-${attrName}-${targetId}-contains`,
+        sourceId,
+        targetId,
+        type: 'CONTAINS',
+        role: attrName,
+      });
+    };
+
+    for (const node of this.state.nodes) {
+      if (node.type !== 'CLASS' && node.type !== 'STRUCTURE') continue;
+      const owner = node as IliClassNode;
+      if (!owner.attributes) continue;
+      for (const attr of owner.attributes) {
+        if (!attr.isEnum && !attr.isInlineEnum && !attr.isDomainEnum && !attr.isReference) {
+          const t = attr.type ?? '';
+          const primitive = /^(TEXT|MTEXT|NUMERIC|BOOLEAN|DATE|DATETIME|COORD|MULTICOORD|POLYLINE|MULTIPOLYLINE|SURFACE|MULTISURFACE|AREA|MULTIAREA|GEOMETRY|FORMAT|ENUMERATION|BAG|LIST|REFERENCE)\b/.test(t);
+          if (!primitive && t.length > 0) {
+            const candidate = qualifyRef(t, owner.topicId ?? '');
+            if (structIds.has(candidate)) {
+              attr.isStructValue = true;
+              attr.structRef = candidate;
+              attr.structKind = 'single';
+              tryEmit(owner.id, candidate, attr.name);
+            }
+          }
+        }
+        if (attr.isReference) {
+          const m = attr.type?.match(/^(BAG|LIST)(?:\s+\{[^}]*\})?\s+OF\s+(\S+)$/);
+          if (m) {
+            const target = qualifyRef(m[2], owner.topicId ?? '');
+            if (structIds.has(target)) {
+              attr.isStructValue = true;
+              attr.structRef = target;
+              attr.structKind = m[1] === 'BAG' ? 'bag' : 'list';
+              tryEmit(owner.id, target, attr.name);
+            }
+          }
+        }
+      }
+      if (owner.data && Array.isArray(owner.data.attributes)) {
+        owner.data.attributes = owner.attributes;
+      }
     }
   }
 
@@ -419,7 +495,10 @@ class IliCstToAstVisitor extends BaseVisitor {
   structureDef(ctx: any) {
     const structName = imageOf(ctx.structName?.[0]);
     const structId = qualifyLocal(structName, this.state.topicName);
-    const isAbstract = !!ctx.classModifier;
+    const mod = ctx.classModifier?.[0]?.children ?? {};
+    const isAbstract = !!mod.Abstract;
+    const isFinal = !!mod.Final;
+    const isExtended = !!mod.Extended;
     const comment = this.commentFor(ctx.Structure?.[0]);
 
     let superTypeQualified: string | undefined;
@@ -448,6 +527,8 @@ class IliCstToAstVisitor extends BaseVisitor {
       data: {
         label: structName,
         isAbstract,
+        isFinal,
+        isExtended,
         attributes,
         topic: this.state.topicName,
         comment,
@@ -472,25 +553,49 @@ class IliCstToAstVisitor extends BaseVisitor {
     const target = ctx.AnyClass
       ? 'ANYCLASS'
       : (this.visit(ctx.qualifiedName[0]) as string);
-    return {
-      type: `REFERENCE TO ${target}`,
+    const restriction = ctx.restrictionClause
+      ? this.visit(ctx.restrictionClause[0]) as string[]
+      : undefined;
+    const restrPart = restriction && restriction.length > 0
+      ? ` RESTRICTION (${restriction.join('; ')})`
+      : '';
+    const result: Partial<IliAttribute> = {
+      type: `REFERENCE TO ${target}${restrPart}`,
       isReference: true,
     };
+    if (restriction && restriction.length > 0) {
+      result.restriction = restriction;
+    }
+    return result;
   }
 
   collectionType(ctx: any): Partial<IliAttribute> {
     const isBag = !!ctx.Bag;
     const card = ctx.cardinality ? this.visit(ctx.cardinality[0]) as string : undefined;
-    const target = this.visit(ctx.qualifiedName[0]) as string;
+    const target = ctx.AnyStructure
+      ? 'ANYSTRUCTURE'
+      : (this.visit(ctx.qualifiedName[0]) as string);
+    const restriction = ctx.restrictionClause
+      ? this.visit(ctx.restrictionClause[0]) as string[]
+      : undefined;
     const kind = isBag ? 'BAG' : 'LIST';
     const cardPart = card ? ` {${card}}` : '';
-    return { type: `${kind}${cardPart} OF ${target}`, isReference: true };
+    const restrPart = restriction && restriction.length > 0
+      ? ` RESTRICTION (${restriction.join('; ')})`
+      : '';
+    return { type: `${kind}${cardPart} OF ${target}${restrPart}`, isReference: true };
+  }
+
+  restrictionClause(ctx: any): string[] {
+    const qns = ctx.qualifiedName as CstNode[] | undefined;
+    if (!qns) return [];
+    return qns.map(q => this.visit(q) as string);
   }
 
   associationDef(ctx: any) {
     const assocName = imageOf(ctx.assocName?.[0]);
     const roles = (ctx.roleDef as CstNode[] | undefined)?.map(
-      r => this.visit(r) as { roleName: string; targetClass: string; cardinality: string },
+      r => this.visit(r) as ReturnType<IliCstToAstVisitor['roleDef']>,
     ) ?? [];
     if (roles.length !== 2) {
       this.emitWarning(
@@ -502,6 +607,12 @@ class IliCstToAstVisitor extends BaseVisitor {
     const [source, target] = roles;
     const assocId = qualifyLocal(`assoc_${assocName}`, this.state.topicName);
     const comment = this.commentFor(ctx.Association?.[0]) ?? this.commentFor(ctx.assocName?.[0]);
+    const kind = source.kind !== 'plain' ? source.kind
+      : target.kind !== 'plain' ? target.kind
+      : 'plain';
+    const targetAlternatives = target.targetAlternatives?.map(
+      raw => qualifyRef(raw, this.state.topicName),
+    );
     const assoc: IliAssociation = {
       id: assocId,
       name: assocName,
@@ -512,15 +623,35 @@ class IliCstToAstVisitor extends BaseVisitor {
       sourceCardinality: source.cardinality,
       targetCardinality: target.cardinality,
       comment,
+      kind,
     };
+    if (targetAlternatives && targetAlternatives.length > 0) {
+      assoc.targetAlternatives = targetAlternatives;
+    }
     this.state.parsedAssociations.push(assoc);
   }
 
-  roleDef(ctx: any): { roleName: string; targetClass: string; cardinality: string } {
+  roleDef(ctx: any): {
+    roleName: string;
+    targetClass: string;
+    cardinality: string;
+    kind: IliAssociationKind;
+    targetAlternatives?: string[];
+  } {
+    let kind: IliAssociationKind = 'plain';
+    if (ctx.CompositionArrow) kind = 'composition';
+    else if (ctx.AggregationArrow) kind = 'aggregation';
+    const targetAlternatives = (ctx.targetClassAlt as CstNode[] | undefined)?.map(
+      a => this.visit(a) as string,
+    );
     return {
       roleName: imageOf(ctx.roleName?.[0]),
       targetClass: ctx.targetClass?.[0] ? this.visit(ctx.targetClass[0]) as string : '',
       cardinality: ctx.cardinality?.[0] ? this.visit(ctx.cardinality[0]) as string : '',
+      kind,
+      ...(targetAlternatives && targetAlternatives.length > 0
+        ? { targetAlternatives }
+        : {}),
     };
   }
 
@@ -675,7 +806,10 @@ class IliCstToAstVisitor extends BaseVisitor {
   classDef(ctx: any) {
     const className = imageOf(ctx.className?.[0]);
     const classId = qualifyLocal(className, this.state.topicName);
-    const isAbstract = !!ctx.classModifier;
+    const mod = ctx.classModifier?.[0]?.children ?? {};
+    const isAbstract = !!mod.Abstract;
+    const isFinal = !!mod.Final;
+    const isExtended = !!mod.Extended;
     const comment = this.commentFor(ctx.Class?.[0]);
 
     let superTypeQualified: string | undefined;
@@ -694,13 +828,25 @@ class IliCstToAstVisitor extends BaseVisitor {
     }
 
     for (const attr of attributes) {
-      if (attr.isReference && attr.type.startsWith('REFERENCE TO ')) {
-        const target = attr.type.slice('REFERENCE TO '.length).trim();
+      if (!attr.isReference || !attr.type.startsWith('REFERENCE TO ')) continue;
+      const restriction = attr.restriction;
+      const refBase = attr.type.slice('REFERENCE TO '.length);
+      const base = refBase.split(' RESTRICTION')[0].trim();
+      if (restriction && restriction.length > 0) {
+        for (const r of restriction) {
+          this.state.pendingReferences.push({
+            sourceClass: classId,
+            targetQualified: qualifyRef(r, this.state.topicName),
+            attrName: attr.name,
+            isExternal: r.includes('.'),
+          });
+        }
+      } else {
         this.state.pendingReferences.push({
           sourceClass: classId,
-          targetQualified: qualifyRef(target, this.state.topicName),
+          targetQualified: qualifyRef(base, this.state.topicName),
           attrName: attr.name,
-          isExternal: target.includes('.'),
+          isExternal: base.includes('.'),
         });
       }
     }
@@ -710,6 +856,7 @@ class IliCstToAstVisitor extends BaseVisitor {
       type: 'CLASS',
       name: className,
       isAbstract,
+      isFinal,
       position: { x: 0, y: 0 },
       attributes,
       associations: [],
@@ -719,6 +866,8 @@ class IliCstToAstVisitor extends BaseVisitor {
       data: {
         label: className,
         isAbstract,
+        isFinal,
+        isExtended,
         attributes,
         associations: [],
         inheritedAttributes: [],

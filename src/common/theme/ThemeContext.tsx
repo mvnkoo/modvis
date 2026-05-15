@@ -34,6 +34,7 @@ export interface ThemeColors {
   shadow: string;
   relationship: string;
   reference: string;
+  containment: string;
   selectedNodeBg: string;
   nodeHeaderText: string;
 }
@@ -79,6 +80,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     // Schema Explorer Node Farben
     relationship: '#4caf50',    // Grün für Beziehungen
     reference: '#ff4081',       // Pink wie typeNode
+    containment: '#607d8b',     // Graublau für Strukturen / Komposition (CONTAINS)
     
     // Explorer Node Farben (Hintergrund)
     nodeSection: (mode: string) => mode === 'dark' ? '#333333' : '#f5f5f5',
@@ -138,6 +140,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     // Schema Explorer Node Farben
     relationship: '#4caf50',    // Grün für Beziehungen
     reference: '#ff4081',       // Pink wie typeNode
+    containment: '#607d8b',     // Graublau für Strukturen / Komposition (CONTAINS)
 
     // Explorer Node Farben
     nodeSection: (mode: string) => mode === 'dark' ? '#333333' : '#f5f5f5',
@@ -197,6 +200,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
     // Schema Explorer Node Farben
     relationship: '#4caf50',    // Grün für Beziehungen
     reference: '#ff4081',       // Pink wie typeNode
+    containment: '#607d8b',     // Graublau für Strukturen / Komposition (CONTAINS)
 
     // Explorer Node Farben
     nodeSection: (mode: string) => mode === 'dark' ? '#333333' : '#f5f5f5',

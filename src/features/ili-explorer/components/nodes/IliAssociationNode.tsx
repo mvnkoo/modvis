@@ -158,7 +158,10 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
               {getShortClassName(data.association.sourceClass)}
               {data.association.sourceCardinality && ` [${data.association.sourceCardinality}]`}
               {' — '}
-              {getShortClassName(data.association.targetClass)}
+              {[
+                data.association.targetClass,
+                ...(data.association.targetAlternatives ?? []),
+              ].map(getShortClassName).join(' | ')}
               {data.association.targetCardinality && ` [${data.association.targetCardinality}]`}
             </Typography>
           </Box>
@@ -188,7 +191,9 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
           overflow: 'hidden'
         }}>
           <Typography variant="subtitle2" fontWeight="bold">
-            «ASSOCIATION»
+            {data.association.kind === 'composition' ? '«COMPOSITION»'
+              : data.association.kind === 'aggregation' ? '«AGGREGATION»'
+              : '«ASSOCIATION»'}
           </Typography>
           <Typography variant="subtitle1" fontWeight="bold">
             {data.association.name}
@@ -348,20 +353,23 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
                 alignItems: 'start'
               }}>
                 <Box>
-                  <Typography 
+                  <Typography
                     variant="body2"
                     color={colors.propertyText}
-                    sx={{ 
+                    sx={{
                       fontFamily: 'monospace',
                       wordBreak: 'break-word',
                       whiteSpace: 'pre-wrap'
                     }}
                   >
-                    {getShortClassName(data.association.targetClass)}
+                    {[
+                      data.association.targetClass,
+                      ...(data.association.targetAlternatives ?? []),
+                    ].map(getShortClassName).join(' | ')}
                   </Typography>
                   {data.association.targetRole && (
-                    <Typography 
-                      variant="body2" 
+                    <Typography
+                      variant="body2"
                       color="text.secondary"
                       sx={{ mt: 0.5 }}
                     >

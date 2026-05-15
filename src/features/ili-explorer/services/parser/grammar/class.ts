@@ -58,10 +58,12 @@ export function registerClassRules(p: IliCstParserBuilder): void {
     p.OPTION(() => p.SUBRULE(p.classModifier));
     p.OPTION2(() => p.SUBRULE(p.extendsClause));
     p.CONSUME(Equals);
+    p.OPTION3(() => p.CONSUME(Attribute));
     p.MANY(() => {
       p.OR([
         { ALT: () => p.SUBRULE(p.attributeDef) },
         { ALT: () => p.SUBRULE(p.constraintClause) },
+        { ALT: () => p.CONSUME2(Attribute) },
       ]);
     });
     p.CONSUME(End);

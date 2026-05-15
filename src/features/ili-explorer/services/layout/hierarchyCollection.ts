@@ -1,6 +1,11 @@
 import type { Edge } from '@xyflow/react';
 import type { IliNode } from '../types/IliBaseTypes';
 
+function isInheritanceEdge(edge: Edge): boolean {
+  const rt = (edge.data as { relationType?: string } | undefined)?.relationType;
+  return rt === undefined || rt === 'EXTENDS';
+}
+
 export function collectAllSuperTypes(
   currentId: string,
   allEdges: Edge[],
@@ -15,6 +20,7 @@ export function collectAllSuperTypes(
 
   for (const edge of allEdges) {
     if (edge.source !== currentId) continue;
+    if (!isInheritanceEdge(edge)) continue;
     const targetNode = nodeMap.get(edge.target);
     if (!targetNode) continue;
 
@@ -53,7 +59,7 @@ export function buildSuperTypeLevels(
     superTypesByLevel.get(level)!.push(nodeId);
 
     for (const edge of allEdges) {
-      if (edge.source === nodeId && superTypeChain.has(edge.target)) {
+      if (edge.source === nodeId && superTypeChain.has(edge.target) && isInheritanceEdge(edge)) {
         visit(edge.target, level + 1, visited);
       }
     }
