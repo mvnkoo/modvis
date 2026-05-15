@@ -9,3 +9,4 @@ export { IliUnloadedClassNode } from './IliUnloadedClassNode';
 export { IliTopicLabelNode } from './IliTopicLabelNode';
 export { IliTopicFrameNode } from './IliTopicFrameNode';
 export { IliPreviewNode } from './IliPreviewNode';
+export { IliUnsupportedNode } from './IliUnsupportedNode';

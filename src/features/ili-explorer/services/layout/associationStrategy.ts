@@ -11,14 +11,8 @@ export function layoutAssociationCenter(
 ): { nodes: IliNode[]; edges: Edge[] } | null {
   const association = entity.data.association as IliAssociation;
 
-  const sourceClass = allNodes.find(n =>
-    n.data.label === association.sourceClass ||
-    n.data.label === association.sourceClass.split('.').pop(),
-  );
-  const targetClass = allNodes.find(n =>
-    n.data.label === association.targetClass ||
-    n.data.label === association.targetClass.split('.').pop(),
-  );
+  const sourceClass = allNodes.find(n => n.id === association.sourceClass);
+  const targetClass = allNodes.find(n => n.id === association.targetClass);
 
   const unloadedSourceNode: IliNode | null = !sourceClass
     ? {
@@ -117,8 +111,8 @@ export function attachClassAssociations(
   if (!associations || associations.length === 0) return;
 
   const sortedAssociations = [...associations].sort((a, b) => {
-    const aIsSource = a.sourceClass === entity.data.label;
-    const bIsSource = b.sourceClass === entity.data.label;
+    const aIsSource = a.sourceClass === entity.id;
+    const bIsSource = b.sourceClass === entity.id;
     return Number(aIsSource) - Number(bIsSource);
   });
 
@@ -134,7 +128,7 @@ export function attachClassAssociations(
   const startY = activeNodeY - totalHeight / 2;
 
   sortedAssociations.forEach((assoc, index) => {
-    const isSource = assoc.sourceClass === entity.data.label;
+    const isSource = assoc.sourceClass === entity.id;
     const associationNodeId = `assoc_${assoc.name}_${entity.id}`;
 
     const associationNode: IliNode = {

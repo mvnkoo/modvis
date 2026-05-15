@@ -29,7 +29,7 @@ describe('getDirectRelations', () => {
     `;
 
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
-    const foo = flowNodes.find(n => n.id === 'Foo')!;
+    const foo = flowNodes.find(n => n.id === 'T.Foo')!;
 
     const result = getDirectRelations(
       foo,
@@ -40,7 +40,7 @@ describe('getDirectRelations', () => {
     );
 
     expect(result.nodes).toHaveLength(1);
-    expect(result.nodes[0].id).toBe('Foo');
+    expect(result.nodes[0].id).toBe('T.Foo');
     expect(result.nodes[0].data.isActive).toBe(true);
     expect(result.edges).toHaveLength(0);
   });
@@ -66,7 +66,7 @@ describe('getDirectRelations', () => {
     `;
 
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
-    const mid = flowNodes.find(n => n.id === 'Mid')!;
+    const mid = flowNodes.find(n => n.id === 'T.Mid')!;
 
     const result = getDirectRelations(
       mid,
@@ -77,15 +77,15 @@ describe('getDirectRelations', () => {
     );
 
     const ids = result.nodes.map(n => n.id);
-    expect(ids).toContain('Mid');
-    expect(ids).toContain('Base');
-    expect(ids).toContain('LeafA');
-    expect(ids).toContain('LeafB');
+    expect(ids).toContain('T.Mid');
+    expect(ids).toContain('T.Base');
+    expect(ids).toContain('T.LeafA');
+    expect(ids).toContain('T.LeafB');
 
     const yOf = (id: string) => result.nodes.find(n => n.id === id)!.position.y;
-    expect(yOf('Base')).toBeLessThan(yOf('Mid'));
-    expect(yOf('LeafA')).toBeGreaterThan(yOf('Mid'));
-    expect(yOf('LeafB')).toBeGreaterThan(yOf('Mid'));
+    expect(yOf('T.Base')).toBeLessThan(yOf('T.Mid'));
+    expect(yOf('T.LeafA')).toBeGreaterThan(yOf('T.Mid'));
+    expect(yOf('T.LeafB')).toBeGreaterThan(yOf('T.Mid'));
   });
 
   it('attaches association nodes when showAssociations is true', () => {
@@ -107,7 +107,7 @@ describe('getDirectRelations', () => {
     `;
 
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
-    const owner = flowNodes.find(n => n.id === 'Owner')!;
+    const owner = flowNodes.find(n => n.id === 'T.Owner')!;
 
     const result = getDirectRelations(
       owner,
@@ -141,7 +141,7 @@ describe('getDirectRelations', () => {
     `;
 
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
-    const owner = flowNodes.find(n => n.id === 'Owner')!;
+    const owner = flowNodes.find(n => n.id === 'T.Owner')!;
 
     const result = getDirectRelations(
       owner,
@@ -169,7 +169,7 @@ describe('getDirectRelations', () => {
     `;
 
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
-    const sub = flowNodes.find(n => n.id === 'Sub')!;
+    const sub = flowNodes.find(n => n.id === 'T.Sub')!;
 
     const a = getDirectRelations(sub, flowNodes, flowEdges, mockColors, defaultLayoutOptions);
     const b = getDirectRelations(sub, flowNodes, flowEdges, mockColors, defaultLayoutOptions);
@@ -230,7 +230,7 @@ describe('getDirectRelations', () => {
     `;
 
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
-    const foo = flowNodes.find(n => n.id === 'Foo')!;
+    const foo = flowNodes.find(n => n.id === 'T.Foo')!;
 
     const result = getDirectRelations(
       foo,
@@ -242,7 +242,7 @@ describe('getDirectRelations', () => {
 
     const domainEdge = result.edges.find(e => e.target === 'domain_Status');
     expect(domainEdge).toBeDefined();
-    expect(domainEdge?.source).toBe('Foo');
+    expect(domainEdge?.source).toBe('T.Foo');
   });
 
   it('returns empty result for falsy entity / nodes / edges', () => {

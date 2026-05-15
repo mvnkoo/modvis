@@ -3,7 +3,7 @@ import type {
   IliBaseNode, IliRelation, IliAttribute, IliEnumValue, IliAssociation,
 } from '../types/IliBaseTypes';
 import type { IliClassNode, IliStructureNode } from '../types/IliModelTypes';
-import type { IliImportRef } from './types';
+import type { IliImportRef, IliParseError } from './types';
 import { cstParserInstance } from './cstParser';
 
 const BaseVisitor = cstParserInstance.getBaseCstVisitorConstructorWithDefaults();
@@ -17,10 +17,19 @@ interface VisitState {
   domainEnumsByName: Map<string, IliEnumValue[]>;
   parsedAssociations: IliAssociation[];
   pendingReferences: { sourceClass: string; targetQualified: string; attrName: string; isExternal: boolean }[];
+  warnings: IliParseError[];
 }
 
 function lastSegment(qualified: string): string {
   return qualified.includes('.') ? qualified.split('.').pop()! : qualified;
+}
+
+function qualifyLocal(localName: string, topicName: string): string {
+  return topicName ? `${topicName}.${localName}` : localName;
+}
+
+function qualifyRef(rawRef: string, currentTopic: string): string {
+  return rawRef.includes('.') ? rawRef : qualifyLocal(rawRef, currentTopic);
 }
 
 function imageOf(token: IToken | undefined): string {
@@ -66,7 +75,7 @@ class IliCstToAstVisitor extends BaseVisitor {
   private state: VisitState = {
     topicName: '', nodes: [], relations: [], imports: [], interlisVersion: undefined,
     domainEnumsByName: new Map(), parsedAssociations: [],
-    pendingReferences: [],
+    pendingReferences: [], warnings: [],
   };
   private commentBefore: Map<number, IToken[]> = new Map();
 
@@ -78,11 +87,11 @@ class IliCstToAstVisitor extends BaseVisitor {
   build(
     cst: CstNode,
     commentBefore: Map<number, IToken[]> = new Map(),
-  ): { nodes: IliBaseNode[]; relations: IliRelation[]; imports: IliImportRef[]; interlisVersion: string | undefined } {
+  ): { nodes: IliBaseNode[]; relations: IliRelation[]; imports: IliImportRef[]; interlisVersion: string | undefined; warnings: IliParseError[] } {
     this.state = {
       topicName: '', nodes: [], relations: [], imports: [], interlisVersion: undefined,
       domainEnumsByName: new Map(), parsedAssociations: [],
-      pendingReferences: [],
+      pendingReferences: [], warnings: [],
     };
     this.commentBefore = commentBefore;
     this.visit(cst);
@@ -96,7 +105,18 @@ class IliCstToAstVisitor extends BaseVisitor {
       relations: this.state.relations,
       imports: this.state.imports,
       interlisVersion: this.state.interlisVersion,
+      warnings: this.state.warnings,
     };
+  }
+
+  private emitWarning(message: string, token?: IToken): void {
+    this.state.warnings.push({
+      message,
+      severity: 'warning',
+      offset: token?.startOffset,
+      line: token?.startLine,
+      column: token?.startColumn,
+    });
   }
 
   private decorateExternalNodes(): void {
@@ -127,11 +147,10 @@ class IliCstToAstVisitor extends BaseVisitor {
 
   private decorateReferences(): void {
     for (const ref of this.state.pendingReferences) {
-      const targetLocal = lastSegment(ref.targetQualified);
       this.state.relations.push({
-        id: `${ref.sourceClass}-${ref.attrName}-${targetLocal}-ref`,
+        id: `${ref.sourceClass}-${ref.attrName}-${ref.targetQualified}-ref`,
         sourceId: ref.sourceClass,
-        targetId: targetLocal,
+        targetId: ref.targetQualified,
         type: 'REFERENCES',
         role: ref.attrName,
       });
@@ -148,31 +167,28 @@ class IliCstToAstVisitor extends BaseVisitor {
   }
 
   private decorateInheritedAttributes(): void {
-    const classByName = new Map<string, IliClassNode>();
+    const classById = new Map<string, IliClassNode>();
     for (const node of this.state.nodes) {
       if (node.type === 'CLASS' || node.type === 'STRUCTURE') {
-        classByName.set(node.name, node as IliClassNode);
+        classById.set(node.id, node as IliClassNode);
       }
     }
 
     const superTypeOf = new Map<string, string>();
     for (const rel of this.state.relations) {
-      if (rel.type === 'EXTENDS') {
-        const targetLocal = lastSegment(rel.targetId);
-        superTypeOf.set(rel.sourceId, targetLocal);
-      }
+      if (rel.type === 'EXTENDS') superTypeOf.set(rel.sourceId, rel.targetId);
     }
 
-    for (const [className, classNode] of classByName) {
+    for (const [classId, classNode] of classById) {
       const inherited: { className: string; attributes: IliAttribute[] }[] = [];
-      const visited = new Set<string>([className]);
-      let current = superTypeOf.get(className);
+      const visited = new Set<string>([classId]);
+      let current = superTypeOf.get(classId);
       while (current && !visited.has(current)) {
         visited.add(current);
-        const ancestor = classByName.get(current);
+        const ancestor = classById.get(current);
         if (!ancestor) break;
         if (ancestor.attributes && ancestor.attributes.length > 0) {
-          inherited.push({ className: current, attributes: ancestor.attributes });
+          inherited.push({ className: ancestor.name, attributes: ancestor.attributes });
         }
         current = superTypeOf.get(current);
       }
@@ -184,10 +200,10 @@ class IliCstToAstVisitor extends BaseVisitor {
   private decorateAssociations(): void {
     this.state.parsedAssociations.forEach(assoc => {
       const sourceNode = this.state.nodes.find(
-        n => n.type === 'CLASS' && n.name === assoc.sourceClass,
+        n => n.type === 'CLASS' && n.id === assoc.sourceClass,
       ) as IliClassNode | undefined;
       const targetNode = this.state.nodes.find(
-        n => n.type === 'CLASS' && n.name === assoc.targetClass,
+        n => n.type === 'CLASS' && n.id === assoc.targetClass,
       ) as IliClassNode | undefined;
       // Self-Assoc nur einmal anhängen — sonst rendert die UI zwei Edges
       // mit identischer Key und React Flow erzeugt Geister-Edges.
@@ -200,6 +216,24 @@ class IliCstToAstVisitor extends BaseVisitor {
         targetNode.associations = [...(targetNode.associations ?? []), assoc];
         targetNode.data.associations = targetNode.associations;
       }
+
+      // Suchbarkeit: synthetischer ASSOCIATION-Node, damit `generateSearchOptions`
+      // den Assoc-Namen findet. Layout zentriert ihn via `layoutAssociationCenter`.
+      const topic = (sourceNode?.topicId as string | undefined) ?? (targetNode?.topicId as string | undefined) ?? '';
+      this.state.nodes.push({
+        id: assoc.id,
+        type: 'ASSOCIATION',
+        name: assoc.name,
+        position: { x: 0, y: 0 },
+        data: {
+          label: assoc.name,
+          association: assoc,
+          topic,
+          comment: assoc.comment,
+          isHighlighted: false,
+          isActive: false,
+        },
+      });
     });
   }
 
@@ -266,6 +300,7 @@ class IliCstToAstVisitor extends BaseVisitor {
   topicDef(ctx: any) {
     const topicName = imageOf(ctx.topicName?.[0]);
     this.state.topicName = topicName;
+    if (ctx.dependsOnDecl) ctx.dependsOnDecl.forEach((d: CstNode) => this.visit(d));
     if (ctx.domainSection) ctx.domainSection.forEach((d: CstNode) => this.visit(d));
     if (ctx.classDef) ctx.classDef.forEach((c: CstNode) => this.visit(c));
     if (ctx.structureDef) ctx.structureDef.forEach((s: CstNode) => this.visit(s));
@@ -274,6 +309,23 @@ class IliCstToAstVisitor extends BaseVisitor {
     if (ctx.functionDef) ctx.functionDef.forEach((f: CstNode) => this.visit(f));
     if (ctx.viewDef) ctx.viewDef.forEach((v: CstNode) => this.visit(v));
     this.state.topicName = '';
+  }
+
+  dependsOnDecl(ctx: any) {
+    if (!this.state.topicName) return;
+    const sourceTopic = this.state.topicName;
+    const qualifiedNames = (ctx.qualifiedName as CstNode[] | undefined) ?? [];
+    for (const qn of qualifiedNames) {
+      const target = this.visit(qn) as string;
+      if (!target) continue;
+      const targetLocal = lastSegment(target);
+      this.state.relations.push({
+        id: `depends_${sourceTopic}_${targetLocal}`,
+        sourceId: sourceTopic,
+        targetId: targetLocal,
+        type: 'DEPENDS',
+      });
+    }
   }
 
   functionDef(ctx: any) {
@@ -331,10 +383,11 @@ class IliCstToAstVisitor extends BaseVisitor {
 
     if (formation) {
       for (const src of formation.sources) {
+        const targetId = qualifyRef(src, this.state.topicName);
         this.state.relations.push({
-          id: `view_${viewName}-uses-${src}`,
+          id: `view_${viewName}-uses-${targetId}`,
           sourceId: `view_${viewName}`,
-          targetId: lastSegment(src),
+          targetId,
           type: 'REFERENCES',
           role: formation.kind.toLowerCase(),
         });
@@ -365,6 +418,7 @@ class IliCstToAstVisitor extends BaseVisitor {
 
   structureDef(ctx: any) {
     const structName = imageOf(ctx.structName?.[0]);
+    const structId = qualifyLocal(structName, this.state.topicName);
     const isAbstract = !!ctx.classModifier;
     const comment = this.commentFor(ctx.Structure?.[0]);
 
@@ -384,7 +438,7 @@ class IliCstToAstVisitor extends BaseVisitor {
     }
 
     const node: IliStructureNode = {
-      id: structName,
+      id: structId,
       type: 'STRUCTURE',
       name: structName,
       isAbstract,
@@ -404,10 +458,11 @@ class IliCstToAstVisitor extends BaseVisitor {
     this.state.nodes.push(node);
 
     if (superTypeQualified) {
+      const targetId = qualifyRef(superTypeQualified, this.state.topicName);
       this.state.relations.push({
-        id: `${structName}-${superTypeQualified}`,
-        sourceId: structName,
-        targetId: superTypeQualified,
+        id: `${structId}-${targetId}`,
+        sourceId: structId,
+        targetId,
         type: 'EXTENDS',
       });
     }
@@ -437,17 +492,26 @@ class IliCstToAstVisitor extends BaseVisitor {
     const roles = (ctx.roleDef as CstNode[] | undefined)?.map(
       r => this.visit(r) as { roleName: string; targetClass: string; cardinality: string },
     ) ?? [];
-    if (roles.length !== 2) return;
+    if (roles.length !== 2) {
+      this.emitWarning(
+        `ASSOCIATION '${assocName}' hat ${roles.length} Rollen — modvis unterstützt aktuell nur binäre Assoziationen (Roles=2). Verworfen.`,
+        ctx.assocName?.[0],
+      );
+      return;
+    }
     const [source, target] = roles;
+    const assocId = qualifyLocal(`assoc_${assocName}`, this.state.topicName);
+    const comment = this.commentFor(ctx.Association?.[0]) ?? this.commentFor(ctx.assocName?.[0]);
     const assoc: IliAssociation = {
-      id: `assoc_${assocName}`,
+      id: assocId,
       name: assocName,
-      sourceClass: lastSegment(source.targetClass),
-      targetClass: lastSegment(target.targetClass),
+      sourceClass: qualifyRef(source.targetClass, this.state.topicName),
+      targetClass: qualifyRef(target.targetClass, this.state.topicName),
       sourceRole: source.roleName.replace(/Ref$/, ''),
       targetRole: target.roleName.replace(/Ref$/, ''),
       sourceCardinality: source.cardinality,
       targetCardinality: target.cardinality,
+      comment,
     };
     this.state.parsedAssociations.push(assoc);
   }
@@ -610,6 +674,7 @@ class IliCstToAstVisitor extends BaseVisitor {
 
   classDef(ctx: any) {
     const className = imageOf(ctx.className?.[0]);
+    const classId = qualifyLocal(className, this.state.topicName);
     const isAbstract = !!ctx.classModifier;
     const comment = this.commentFor(ctx.Class?.[0]);
 
@@ -632,8 +697,8 @@ class IliCstToAstVisitor extends BaseVisitor {
       if (attr.isReference && attr.type.startsWith('REFERENCE TO ')) {
         const target = attr.type.slice('REFERENCE TO '.length).trim();
         this.state.pendingReferences.push({
-          sourceClass: className,
-          targetQualified: target,
+          sourceClass: classId,
+          targetQualified: qualifyRef(target, this.state.topicName),
           attrName: attr.name,
           isExternal: target.includes('.'),
         });
@@ -641,7 +706,7 @@ class IliCstToAstVisitor extends BaseVisitor {
     }
 
     const node: IliClassNode = {
-      id: className,
+      id: classId,
       type: 'CLASS',
       name: className,
       isAbstract,
@@ -666,10 +731,11 @@ class IliCstToAstVisitor extends BaseVisitor {
     this.state.nodes.push(node);
 
     if (superTypeQualified) {
+      const targetId = qualifyRef(superTypeQualified, this.state.topicName);
       this.state.relations.push({
-        id: `${className}-${superTypeQualified}`,
-        sourceId: className,
-        targetId: superTypeQualified,
+        id: `${classId}-${targetId}`,
+        sourceId: classId,
+        targetId,
         type: 'EXTENDS',
       });
     }
@@ -733,6 +799,7 @@ class IliCstToAstVisitor extends BaseVisitor {
     }
     if (ctx.formatType) return { type: this.visit(ctx.formatType[0]) as string };
     if (ctx.qualifiedName) return { type: this.visit(ctx.qualifiedName[0]) as string };
+    this.emitWarning('attributeType: keine Variante matched, Typ leer');
     return { type: '' };
   }
 

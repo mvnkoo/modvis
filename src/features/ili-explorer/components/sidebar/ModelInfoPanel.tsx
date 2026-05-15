@@ -111,12 +111,12 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
             {associationCount > 0 && <Chip size="small" label={`${associationCount} Assoc.`} />}
             {enumCount > 0 && (
               <Tooltip title="Wiederverwendbare Enumeration als Wertebereich (INTERLIS-Regel DomainDef, Refhb 3.8.2)">
-                <Chip size="small" label={`${enumCount} Enumeration`} />
+                <Chip size="small" label={`${enumCount} Enums`} />
               </Tooltip>
             )}
             {inlineEnumCount > 0 && (
               <Tooltip title="Anonyme Enumeration direkt als Attribut-Typ (INTERLIS-Regel AttrTypeDef, Refhb 3.6)">
-                <Chip size="small" label={`${inlineEnumCount} Inline-Enumeration`} />
+                <Chip size="small" label={`${inlineEnumCount} Enums (Inline)`} />
               </Tooltip>
             )}
             {unitCount > 0 && <Chip size="small" label={`${unitCount} Units`} />}

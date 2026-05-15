@@ -19,6 +19,62 @@ describe('IliParser (Chevrotain backend)', () => {
     expect(r.relations).toEqual([]);
   });
 
+  it('tolerates UTF-8 BOM at start of file', () => {
+    const r = parse('﻿INTERLIS 2.4;\nMODEL Demo = END Demo.');
+    expect(r.errors).toEqual([]);
+    expect(r.interlisVersion).toBe('2.4');
+  });
+
+  it('two classes with same name in different topics stay separate (R1.1)', () => {
+    const r = parse(`INTERLIS 2.4;
+MODEL Demo =
+  TOPIC T1 =
+    CLASS Item =
+      id : MANDATORY TEXT*10;
+    END Item;
+  END T1;
+  TOPIC T2 =
+    CLASS Item =
+      code : MANDATORY TEXT*5;
+    END Item;
+  END T2;
+END Demo.`);
+    expect(r.errors).toEqual([]);
+    const items = r.nodes.filter(n => n.type === 'CLASS' && n.name === 'Item');
+    expect(items).toHaveLength(2);
+    expect(items.map(i => i.id).sort()).toEqual(['T1.Item', 'T2.Item']);
+    // distinct attribute schemas confirm they did not collapse
+    const t1Item = items.find(i => i.id === 'T1.Item') as IliClassNode;
+    const t2Item = items.find(i => i.id === 'T2.Item') as IliClassNode;
+    expect(t1Item.attributes?.[0].name).toBe('id');
+    expect(t2Item.attributes?.[0].name).toBe('code');
+  });
+
+  it('emits warning for non-binary ASSOCIATION; strict mode escalates to error', () => {
+    const src = `INTERLIS 2.4;
+MODEL M AT "x" VERSION "1" =
+  TOPIC T =
+    CLASS A = id : MANDATORY TEXT*10; END A;
+    CLASS B = id : MANDATORY TEXT*10; END B;
+    CLASS C = id : MANDATORY TEXT*10; END C;
+    ASSOCIATION ABC =
+      RefA -- {1} A;
+      RefB -- {1} B;
+      RefC -- {1} C;
+    END ABC;
+  END T;
+END M.`;
+    const lenient = new IliParser().parseContent(src);
+    expect(lenient.errors?.filter(e => e.severity !== 'warning')).toEqual([]);
+    expect(lenient.warnings?.length).toBeGreaterThan(0);
+    expect(lenient.warnings?.[0].message).toMatch(/ASSOCIATION 'ABC'/);
+
+    const strict = new IliParser().parseContent(src, { strict: true });
+    const hardErrors = strict.errors?.filter(e => e.severity === 'error') ?? [];
+    expect(hardErrors.length).toBeGreaterThan(0);
+    expect(hardErrors[0].message).toMatch(/ASSOCIATION 'ABC'/);
+  });
+
   it('skips !! line comments and /* block */ comments', () => {
     const r = parse(`
       !! header comment
@@ -104,8 +160,8 @@ describe('IliParser (Chevrotain backend)', () => {
     expect(sub.isAbstract).toBe(false);
 
     const inh = r.relations.find(rel => rel.type === 'EXTENDS');
-    expect(inh?.sourceId).toBe('Sub');
-    expect(inh?.targetId).toBe('Base');
+    expect(inh?.sourceId).toBe('T.Sub');
+    expect(inh?.targetId).toBe('T.Base');
   });
 
   it('keeps qualified superclass names like Topic.Class', () => {
@@ -123,9 +179,9 @@ describe('IliParser (Chevrotain backend)', () => {
         END T;
       END Demo.
     `);
-    const inh = r.relations.find(rel => rel.sourceId === 'Child');
+    const inh = r.relations.find(rel => rel.sourceId === 'T.Child');
     expect(inh).toBeDefined();
-    expect(inh?.targetId).toContain('Parent');
+    expect(inh?.targetId).toBe('OtherTopic.Parent');
   });
 
   it('parses basic attribute types (NUMERIC, BOOLEAN, DATE, DATETIME, MTEXT)', () => {
@@ -387,8 +443,8 @@ describe('IliParser (Chevrotain backend)', () => {
     expect(asset.associations).toHaveLength(1);
     const assoc = owner.associations?.[0];
     expect(assoc?.name).toBe('Owns');
-    expect(assoc?.sourceClass).toBe('Owner');
-    expect(assoc?.targetClass).toBe('Asset');
+    expect(assoc?.sourceClass).toBe('T.Owner');
+    expect(assoc?.targetClass).toBe('T.Asset');
     expect(assoc?.sourceCardinality).toBe('1');
     expect(assoc?.targetCardinality).toBe('0..*');
     expect(assoc?.sourceRole).toBe('owner');
@@ -929,12 +985,12 @@ describe('IliParser (Chevrotain backend)', () => {
       expect(ownerAttr?.isReference).toBe(true);
       expect(ownerAttr?.type).toBe('REFERENCE TO Owner');
 
-      const refRel = r.relations.find(rel => rel.type === 'REFERENCES' && rel.sourceId === 'Asset');
-      expect(refRel?.targetId).toBe('Owner');
+      const refRel = r.relations.find(rel => rel.type === 'REFERENCES' && rel.sourceId === 'T.Asset');
+      expect(refRel?.targetId).toBe('T.Owner');
       expect(refRel?.role).toBe('owner');
     });
 
-    it('REFERENCE TO with qualified target stripped to last segment in edge', () => {
+    it('REFERENCE TO with already-qualified target keeps full qualifier', () => {
       const r = parse(`
         MODEL Demo =
           TOPIC T =
@@ -946,7 +1002,7 @@ describe('IliParser (Chevrotain backend)', () => {
         END Demo.
       `);
       const refRel = r.relations.find(rel => rel.type === 'REFERENCES');
-      expect(refRel?.targetId).toBe('Foo');
+      expect(refRel?.targetId).toBe('External.Foo');
     });
 
     it('creates external node placeholders for EXTENDS targets in imported models', () => {
@@ -965,7 +1021,7 @@ describe('IliParser (Chevrotain backend)', () => {
       expect(ext?.data.isExternal).toBe(true);
       expect(ext?.data.externalSource).toBe('Imported');
 
-      const inh = r.relations.find(rel => rel.type === 'EXTENDS' && rel.sourceId === 'Local');
+      const inh = r.relations.find(rel => rel.type === 'EXTENDS' && rel.sourceId === 'T.Local');
       expect(inh?.targetId).toBe('Imported.Foreign');
     });
 

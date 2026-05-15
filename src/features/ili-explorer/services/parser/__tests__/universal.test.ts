@@ -205,6 +205,44 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
     expect(r.errors).toEqual([]);
   });
 
+  it('ASSOCIATION yields a searchable node in state.nodes', () => {
+    const src = `INTERLIS 2.4;
+MODEL M AT "x" VERSION "1" =
+  TOPIC T =
+    CLASS A = id : MANDATORY TEXT*10; END A;
+    CLASS B = id : MANDATORY TEXT*10; END B;
+    ASSOCIATION AssocAB =
+      RefA -- {1} A;
+      RefB -- {1..*} B;
+    END AssocAB;
+  END T;
+END M.`;
+    const r = new IliParser().parseContent(src);
+    expect(r.errors).toEqual([]);
+    const assocNode = r.nodes.find(n => n.type === 'ASSOCIATION');
+    expect(assocNode).toBeDefined();
+    expect(assocNode?.id).toBe('T.assoc_AssocAB');
+    expect(assocNode?.name).toBe('AssocAB');
+    expect((assocNode?.data as any).association?.sourceClass).toBe('T.A');
+    expect((assocNode?.data as any).association?.targetClass).toBe('T.B');
+  });
+
+  it('TOPIC DEPENDS ON produces a DEPENDS relation', () => {
+    const src = `INTERLIS 2.4;
+MODEL M AT "x" VERSION "1" =
+  TOPIC T1 = END T1;
+  TOPIC T2 =
+    DEPENDS ON T1;
+  END T2;
+END M.`;
+    const r = new IliParser().parseContent(src);
+    expect(r.errors).toEqual([]);
+    const depends = r.relations.filter(re => re.type === 'DEPENDS');
+    expect(depends).toHaveLength(1);
+    expect(depends[0].sourceId).toBe('T2');
+    expect(depends[0].targetId).toBe('T1');
+  });
+
   // Regression: ISOS_V2.ili Zeile 536. FORMAT war als DomainDef-Variante
   // registriert, fehlte aber als attributeType-Alternative.
   it('FORMAT as inline attribute type (Refhb 3.8.6)', () => {

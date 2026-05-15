@@ -37,7 +37,8 @@ import {
   IliDomainEnumNode,
   IliTopicLabelNode,
   IliTopicFrameNode,
-  IliPreviewNode
+  IliPreviewNode,
+  IliUnsupportedNode,
 } from './nodes';
 import { useIliSchema } from '../hooks/useIliSchema';
 import { useDiagramExport } from '../hooks/useDiagramExport';
@@ -51,7 +52,7 @@ import { debounce } from 'lodash';
 
 interface CustomNode extends ReactFlowNode {
   id: string;
-  type: 'modelNode' | 'topicNode' | 'classNode' | 'structureNode' | 'enumNode' | 'associationNode' | 'unloadedClassNode' | 'domainEnumNode';
+  type: 'modelNode' | 'topicNode' | 'classNode' | 'structureNode' | 'enumNode' | 'associationNode' | 'unloadedClassNode' | 'domainEnumNode' | 'unsupportedNode';
   data: {
     label: string;
     isHighlighted?: boolean;
@@ -72,6 +73,7 @@ const nodeTypes: NodeTypes = {
   topicLabelNode: IliTopicLabelNode,
   topicFrameNode: IliTopicFrameNode,
   previewNode: IliPreviewNode,
+  unsupportedNode: IliUnsupportedNode,
 };
 
 
@@ -170,8 +172,6 @@ const Flow: React.FC = () => {
   }, [handleFileUploadBase]);
 
   const [lastFitDone, setLastFitDone] = useState(0);
-  // Fade-in only on initial fit per file; navigations within the file keep
-  // the canvas visible to avoid the brief blank between layout swaps.
   const canvasReady = fitViewRequest === 0 || lastFitDone > 0;
 
   useEffect(() => {
