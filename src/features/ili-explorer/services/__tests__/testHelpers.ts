@@ -27,6 +27,7 @@ export const mockColors: ThemeColors = {
   scrollbar: { track: '#000', thumb: '#000', thumbHover: '#000' },
   shadow: '#000',
   relationship: '#000',
+  composition: '#000',
   reference: '#000',
   containment: '#000',
   selectedNodeBg: '#000',

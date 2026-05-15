@@ -33,6 +33,7 @@ export interface ThemeColors {
   scrollbar: ScrollbarColors;
   shadow: string;
   relationship: string;
+  composition: string;
   reference: string;
   containment: string;
   selectedNodeBg: string;
@@ -79,6 +80,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
 
     // Schema Explorer Node Farben
     relationship: '#4caf50',    // Grün für Beziehungen
+    composition: '#6e8b60',     // Graugrün für Komposition/Aggregation
     reference: '#ff4081',       // Pink wie typeNode
     containment: '#607d8b',     // Graublau für Strukturen / Komposition (CONTAINS)
     
@@ -139,6 +141,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
 
     // Schema Explorer Node Farben
     relationship: '#4caf50',    // Grün für Beziehungen
+    composition: '#6e8b60',     // Graugrün für Komposition/Aggregation
     reference: '#ff4081',       // Pink wie typeNode
     containment: '#607d8b',     // Graublau für Strukturen / Komposition (CONTAINS)
 
@@ -199,6 +202,7 @@ const colorSchemes: Record<string, Record<string, any>> = {
 
     // Schema Explorer Node Farben
     relationship: '#4caf50',    // Grün für Beziehungen
+    composition: '#6e8b60',     // Graugrün für Komposition/Aggregation
     reference: '#ff4081',       // Pink wie typeNode
     containment: '#607d8b',     // Graublau für Strukturen / Komposition (CONTAINS)
 

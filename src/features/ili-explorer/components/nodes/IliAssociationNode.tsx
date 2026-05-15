@@ -41,6 +41,19 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
 
+  const kind = data.association.kind;
+  const stereotype =
+    kind === 'composition' ? '«COMPOSITION»'
+    : kind === 'aggregation' ? '«AGGREGATION»'
+    : '«ASSOCIATION»';
+  const stereotypeGlyph =
+    kind === 'composition' ? '◆'
+    : kind === 'aggregation' ? '◇'
+    : null;
+  const accentColor = (kind === 'composition' || kind === 'aggregation')
+    ? colors.composition
+    : colors.relationship;
+
   const handleExpandClick = useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
     if (data.onExpandChange) {
@@ -89,11 +102,11 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
       sx={{ 
         width: width,
         position: 'relative',
-        border: data.isActive 
+        border: data.isActive
           ? `2px solid ${colors.selectedEntity}`
-          : data.isHighlighted 
-            ? `2px solid ${colors.selectedEntity}` 
-            : `2px solid ${colors.relationship}`,
+          : data.isHighlighted
+            ? `2px solid ${colors.selectedEntity}`
+            : `2px solid ${accentColor}`,
         borderRadius: 2,
         overflow: 'hidden',
         bgcolor: data.isActive ? colors.selectedNodeBg : colors.nodeContent,
@@ -181,8 +194,8 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
           bgcolor: data.isActive || data.isHighlighted
             ? colors.selectedEntity
             : data.isSource
-              ? alpha(colors.relationship, 0.8)
-              : alpha(colors.relationship, 0.5),
+              ? alpha(accentColor, 0.8)
+              : alpha(accentColor, 0.5),
           p: 1,
           textAlign: 'center',
           color: '#FFFFFF',
@@ -191,9 +204,10 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
           overflow: 'hidden'
         }}>
           <Typography variant="subtitle2" fontWeight="bold">
-            {data.association.kind === 'composition' ? '«COMPOSITION»'
-              : data.association.kind === 'aggregation' ? '«AGGREGATION»'
-              : '«ASSOCIATION»'}
+            {stereotypeGlyph && (
+              <Box component="span" sx={{ mr: 0.5, fontSize: '0.95em' }}>{stereotypeGlyph}</Box>
+            )}
+            {stereotype}
           </Typography>
           <Typography variant="subtitle1" fontWeight="bold">
             {data.association.name}
