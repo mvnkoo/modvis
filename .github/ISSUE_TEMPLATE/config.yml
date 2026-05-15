@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Fragen / Diskussion
+    url: https://github.com/mvnkoo/modvis/discussions
+    about: Für Fragen, Ideen oder Diskussionen bitte Discussions statt Issues nutzen.

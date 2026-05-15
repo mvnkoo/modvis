@@ -129,7 +129,7 @@ export function registerTopLevelRules(p: IliCstParserBuilder): void {
     p.SUBRULE(p.identifierLike);
     p.MANY(() => {
       p.CONSUME(Dot);
-      p.SUBRULE2(p.identifierLike);
+      p.SUBRULE(p.qualifiedSegment);
     });
   });
 
@@ -137,6 +137,19 @@ export function registerTopLevelRules(p: IliCstParserBuilder): void {
     p.OR([
       { ALT: () => p.CONSUME(Identifier) },
       { ALT: () => p.CONSUME(Interlis) },
+    ]);
+  });
+
+  // Segmente nach dem ersten Punkt in einem QualifiedName dürfen auch
+  // reservierte Wörter sein, die in der INTERLIS-Standard-Library als
+  // Klassen-/Domain-Namen vorkommen (Refhb 4.3): z.B. INTERLIS.REFSYSTEM,
+  // INTERLIS.COORDSYSTEM.
+  p.qualifiedSegment = p.RULE('qualifiedSegment', () => {
+    p.OR([
+      { ALT: () => p.CONSUME(Identifier) },
+      { ALT: () => p.CONSUME(Interlis) },
+      { ALT: () => p.CONSUME(Refsystem) },
+      { ALT: () => p.CONSUME(Coordsystem) },
     ]);
   });
 }

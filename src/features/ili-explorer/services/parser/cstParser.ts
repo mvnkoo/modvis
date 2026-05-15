@@ -94,6 +94,10 @@ export class IliCstParser extends CstParser {
   domainProp!: any;
   domainConstraintsClause!: any;
   formatType!: any;
+  formatSpec!: any;
+  formatSpecToken!: any;
+  formatRange!: any;
+  qualifiedSegment!: any;
   allOfClause!: any;
   enumerationDef!: any;
   enumValueList!: any;
@@ -121,7 +125,7 @@ export class IliCstParser extends CstParser {
   constructor() {
     super(allTokens, {
       recoveryEnabled: true,
-      maxLookahead: 4,
+      maxLookahead: 2,
     });
 
     const b = this as unknown as IliCstParserBuilder;

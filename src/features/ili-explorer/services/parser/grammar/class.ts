@@ -3,7 +3,7 @@ import {
   Class, Structure, Association, End, Equals, Semicolon, Comma, Colon,
   Identifier, LParen, RParen,
   Abstract, Final, Extends, Extended, External, Transient,
-  Attribute, Or, Restriction,
+  Attribute, Or, Restriction, Parameter,
   Oid, As, No,
   DashDash, CompositionArrow, AggregationArrow,
   Ordered,
@@ -47,6 +47,10 @@ export function registerClassRules(p: IliCstParserBuilder): void {
         { ALT: () => p.CONSUME2(Attribute) },
       ]);
     });
+    p.OPTION5(() => {
+      p.CONSUME(Parameter);
+      p.MANY2(() => p.SUBRULE2(p.attributeDef));
+    });
     p.CONSUME(End);
     p.CONSUME2(Identifier, { LABEL: 'classEndName' });
     p.CONSUME(Semicolon);
@@ -65,6 +69,10 @@ export function registerClassRules(p: IliCstParserBuilder): void {
         { ALT: () => p.SUBRULE(p.constraintClause) },
         { ALT: () => p.CONSUME2(Attribute) },
       ]);
+    });
+    p.OPTION4(() => {
+      p.CONSUME(Parameter);
+      p.MANY2(() => p.SUBRULE2(p.attributeDef));
     });
     p.CONSUME(End);
     p.CONSUME2(Identifier, { LABEL: 'structEndName' });

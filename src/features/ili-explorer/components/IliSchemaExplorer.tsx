@@ -26,6 +26,7 @@ import { IliSideToolbar } from './toolbar/IliSideToolbar';
 import { IliSelectionOverlay } from './IliSelectionOverlay';
 import { IliDropOverlay } from './IliDropOverlay';
 import IliLegend from './legend/IliLegend';
+import AssociationMarkerDefs from './AssociationMarkerDefs';
 import {
   IliClassNode,
   IliModelNode,
@@ -703,6 +704,7 @@ const Flow: React.FC = () => {
         onMouseMove={isSelectingArea ? handleSelectionMove : undefined}
         onMouseUp={isSelectingArea ? handleSelectionEnd : undefined}
       >
+        <AssociationMarkerDefs />
         <Background />
         <Controls style={controlsStyle} />
         

@@ -18,14 +18,18 @@ export const BlockComment = createToken({
   group: 'comments',
 });
 
+export const SkipBody = createToken({ name: 'SkipBody', pattern: Lexer.NA });
+
 export const Identifier = createToken({
   name: 'Identifier',
   pattern: /[a-zA-ZäöüÄÖÜß][a-zA-Z0-9äöüÄÖÜß_]*/,
+  categories: SkipBody,
 });
 
 export const HashIdentifier = createToken({
   name: 'HashIdentifier',
   pattern: /#[a-zA-ZäöüÄÖÜß][a-zA-Z0-9äöüÄÖÜß_.]*/,
+  categories: SkipBody,
 });
 
 function kw(name: string, literal?: string): TokenType {
@@ -36,8 +40,17 @@ function kw(name: string, literal?: string): TokenType {
   });
 }
 
-export const Interlis = kw('Interlis', 'INTERLIS');
-export const Version = kw('Version', 'VERSION');
+function skw(name: string, literal?: string): TokenType {
+  return createToken({
+    name,
+    pattern: new RegExp(literal ?? name),
+    longer_alt: Identifier,
+    categories: SkipBody,
+  });
+}
+
+export const Interlis = skw('Interlis', 'INTERLIS');
+export const Version = skw('Version', 'VERSION');
 export const Model = kw('Model', 'MODEL');
 export const Topic = kw('Topic', 'TOPIC');
 export const Class = kw('Class', 'CLASS');
@@ -51,69 +64,70 @@ export const View = kw('View', 'VIEW');
 export const Graphic = kw('Graphic', 'GRAPHIC');
 export const Refsystem = kw('Refsystem', 'REFSYSTEM');
 export const Coordsystem = kw('Coordsystem', 'COORDSYSTEM');
-export const Imports = kw('Imports', 'IMPORTS');
+export const Imports = skw('Imports', 'IMPORTS');
 export const End = kw('End', 'END');
-export const Extends = kw('Extends', 'EXTENDS');
-export const Extended = kw('Extended', 'EXTENDED');
-export const Abstract = kw('Abstract', 'ABSTRACT');
-export const Final = kw('Final', 'FINAL');
-export const Mandatory = kw('Mandatory', 'MANDATORY');
-export const All = kw('All', 'ALL');
-export const Of = kw('Of', 'OF');
-export const Bag = kw('Bag', 'BAG');
-export const List = kw('List', 'LIST');
-export const Reference = kw('Reference', 'REFERENCE');
-export const Base = kw('Base', 'BASE');
-export const Constraint = kw('Constraint', 'CONSTRAINT');
-export const Existence = kw('Existence', 'EXISTENCE');
-export const Unique = kw('Unique', 'UNIQUE');
-export const Set = kw('Set', 'SET');
-export const Where = kw('Where', 'WHERE');
-export const Required = kw('Required', 'REQUIRED');
-export const Numeric = kw('Numeric', 'NUMERIC');
-export const Text = kw('Text', 'TEXT');
-export const MText = kw('MText', 'MTEXT');
-export const Boolean = kw('Boolean', 'BOOLEAN');
-export const Date = kw('Date', 'DATE');
-export const DateTime = kw('DateTime', 'DATETIME');
-export const Coord = kw('Coord', 'COORD');
-export const MultiCoord = kw('MultiCoord', 'MULTICOORD');
-export const Polyline = kw('Polyline', 'POLYLINE');
-export const MultiPolyline = kw('MultiPolyline', 'MULTIPOLYLINE');
-export const Surface = kw('Surface', 'SURFACE');
-export const MultiSurface = kw('MultiSurface', 'MULTISURFACE');
-export const Area = kw('Area', 'AREA');
-export const MultiArea = kw('MultiArea', 'MULTIAREA');
-export const AnyClass = kw('AnyClass', 'ANYCLASS');
-export const AnyStructure = kw('AnyStructure', 'ANYSTRUCTURE');
-export const Translation = kw('Translation', 'TRANSLATION');
-export const At = kw('At', 'AT');
-export const Or = kw('Or', 'OR');
-export const And = kw('And', 'AND');
-export const Not = kw('Not', 'NOT');
-export const Null = kw('Null', 'NULL');
-export const True = kw('True', 'TRUE');
-export const False = kw('False', 'FALSE');
-export const Inherit = kw('Inherit', 'INHERIT');
-export const To = kw('To', 'TO');
-export const From = kw('From', 'FROM');
-export const Without = kw('Without', 'WITHOUT');
-export const With = kw('With', 'WITH');
-export const Oid = kw('Oid', 'OID');
-export const Tid = kw('Tid', 'TID');
-export const As = kw('As', 'AS');
-export const Type = kw('Type', 'TYPE');
+export const Extends = skw('Extends', 'EXTENDS');
+export const Extended = skw('Extended', 'EXTENDED');
+export const Abstract = skw('Abstract', 'ABSTRACT');
+export const Final = skw('Final', 'FINAL');
+export const Mandatory = skw('Mandatory', 'MANDATORY');
+export const All = skw('All', 'ALL');
+export const Of = skw('Of', 'OF');
+export const Bag = skw('Bag', 'BAG');
+export const List = skw('List', 'LIST');
+export const Reference = skw('Reference', 'REFERENCE');
+export const Base = skw('Base', 'BASE');
+export const Constraint = skw('Constraint', 'CONSTRAINT');
+export const Existence = skw('Existence', 'EXISTENCE');
+export const Unique = skw('Unique', 'UNIQUE');
+export const Set = skw('Set', 'SET');
+export const Where = skw('Where', 'WHERE');
+export const Required = skw('Required', 'REQUIRED');
+export const Numeric = skw('Numeric', 'NUMERIC');
+export const Text = skw('Text', 'TEXT');
+export const MText = skw('MText', 'MTEXT');
+export const Boolean = skw('Boolean', 'BOOLEAN');
+export const Date = skw('Date', 'DATE');
+export const DateTime = skw('DateTime', 'DATETIME');
+export const Coord = skw('Coord', 'COORD');
+export const MultiCoord = skw('MultiCoord', 'MULTICOORD');
+export const Polyline = skw('Polyline', 'POLYLINE');
+export const MultiPolyline = skw('MultiPolyline', 'MULTIPOLYLINE');
+export const Surface = skw('Surface', 'SURFACE');
+export const MultiSurface = skw('MultiSurface', 'MULTISURFACE');
+export const Area = skw('Area', 'AREA');
+export const MultiArea = skw('MultiArea', 'MULTIAREA');
+export const AnyClass = skw('AnyClass', 'ANYCLASS');
+export const AnyStructure = skw('AnyStructure', 'ANYSTRUCTURE');
+export const Translation = skw('Translation', 'TRANSLATION');
+export const At = skw('At', 'AT');
+export const Or = skw('Or', 'OR');
+export const And = skw('And', 'AND');
+export const Not = skw('Not', 'NOT');
+export const Null = skw('Null', 'NULL');
+export const True = skw('True', 'TRUE');
+export const False = skw('False', 'FALSE');
+export const Inherit = skw('Inherit', 'INHERIT');
+export const To = skw('To', 'TO');
+export const From = skw('From', 'FROM');
+export const Without = skw('Without', 'WITHOUT');
+export const With = skw('With', 'WITH');
+export const Oid = skw('Oid', 'OID');
+export const Tid = skw('Tid', 'TID');
+export const As = skw('As', 'AS');
+export const Type = skw('Type', 'TYPE');
 export const External = kw('External', 'EXTERNAL');
-export const Restriction = kw('Restriction', 'RESTRICTION');
-export const Attribute = kw('Attribute', 'ATTRIBUTE');
-export const Unqualified = kw('Unqualified', 'UNQUALIFIED');
-export const Basket = kw('Basket', 'BASKET');
-export const Depends = kw('Depends', 'DEPENDS');
-export const On = kw('On', 'ON');
-export const No = kw('No', 'NO');
-export const Format = kw('Format', 'FORMAT');
-export const In = kw('In', 'IN');
-export const Constraints = kw('Constraints', 'CONSTRAINTS');
+export const Restriction = skw('Restriction', 'RESTRICTION');
+export const Attribute = skw('Attribute', 'ATTRIBUTE');
+export const Unqualified = skw('Unqualified', 'UNQUALIFIED');
+export const Basket = skw('Basket', 'BASKET');
+export const Depends = skw('Depends', 'DEPENDS');
+export const On = skw('On', 'ON');
+export const No = skw('No', 'NO');
+export const Format = skw('Format', 'FORMAT');
+export const Based = skw('Based', 'BASED');
+export const In = skw('In', 'IN');
+export const Constraints = skw('Constraints', 'CONSTRAINTS');
 export const Parameter = kw('Parameter', 'PARAMETER');
 export const Symbology = kw('Symbology', 'SYMBOLOGY');
 export const Sign = kw('Sign', 'SIGN');
@@ -138,54 +152,57 @@ export const Generic = kw('Generic', 'GENERIC');
 export const StringLiteral = createToken({
   name: 'StringLiteral',
   pattern: /"(?:[^"\\]|\\.)*"/,
+  categories: SkipBody,
 });
 
 export const NumberLiteral = createToken({
   name: 'NumberLiteral',
   pattern: /[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/,
+  categories: SkipBody,
 });
 
-export const DotDot = createToken({ name: 'DotDot', pattern: /\.\./ });
-export const Dot = createToken({ name: 'Dot', pattern: /\./ });
-export const ColonEquals = createToken({ name: 'ColonEquals', pattern: /:=/ });
-export const Colon = createToken({ name: 'Colon', pattern: /:/ });
+export const DotDot = createToken({ name: 'DotDot', pattern: /\.\./, categories: SkipBody });
+export const Dot = createToken({ name: 'Dot', pattern: /\./, categories: SkipBody });
+export const ColonEquals = createToken({ name: 'ColonEquals', pattern: /:=/, categories: SkipBody });
+export const Colon = createToken({ name: 'Colon', pattern: /:/, categories: SkipBody });
 export const Semicolon = createToken({ name: 'Semicolon', pattern: /;/ });
-export const Comma = createToken({ name: 'Comma', pattern: /,/ });
-export const Equals = createToken({ name: 'Equals', pattern: /=/ });
+export const Comma = createToken({ name: 'Comma', pattern: /,/, categories: SkipBody });
+export const Equals = createToken({ name: 'Equals', pattern: /=/, categories: SkipBody });
 export const LParen = createToken({ name: 'LParen', pattern: /\(/ });
 export const RParen = createToken({ name: 'RParen', pattern: /\)/ });
-export const LBrace = createToken({ name: 'LBrace', pattern: /\{/ });
-export const RBrace = createToken({ name: 'RBrace', pattern: /\}/ });
-export const LBracket = createToken({ name: 'LBracket', pattern: /\[/ });
-export const RBracket = createToken({ name: 'RBracket', pattern: /\]/ });
-export const ArrowLeft = createToken({ name: 'ArrowLeft', pattern: /<--/ });
-export const ArrowRight = createToken({ name: 'ArrowRight', pattern: /-->/ });
-export const ArrowBoth = createToken({ name: 'ArrowBoth', pattern: /<->/ });
-export const CompositionArrow = createToken({ name: 'CompositionArrow', pattern: /-<#>/ });
-export const AggregationArrow = createToken({ name: 'AggregationArrow', pattern: /-<>/ });
-export const DashDash = createToken({ name: 'DashDash', pattern: /--/ });
-export const Star = createToken({ name: 'Star', pattern: /\*/ });
-export const Plus = createToken({ name: 'Plus', pattern: /\+/ });
-export const Minus = createToken({ name: 'Minus', pattern: /-/ });
-export const Slash = createToken({ name: 'Slash', pattern: /\// });
-export const LessEqual = createToken({ name: 'LessEqual', pattern: /<=/ });
-export const GreaterEqual = createToken({ name: 'GreaterEqual', pattern: />=/ });
-export const NotEqual = createToken({ name: 'NotEqual', pattern: /!=/ });
-export const EqualEqual = createToken({ name: 'EqualEqual', pattern: /==/ });
-export const Less = createToken({ name: 'Less', pattern: /</ });
-export const Greater = createToken({ name: 'Greater', pattern: />/ });
-export const At2 = createToken({ name: 'At2', pattern: /@/ });
-export const Tilde = createToken({ name: 'Tilde', pattern: /~/ });
+export const LBrace = createToken({ name: 'LBrace', pattern: /\{/, categories: SkipBody });
+export const RBrace = createToken({ name: 'RBrace', pattern: /\}/, categories: SkipBody });
+export const LBracket = createToken({ name: 'LBracket', pattern: /\[/, categories: SkipBody });
+export const RBracket = createToken({ name: 'RBracket', pattern: /\]/, categories: SkipBody });
+export const ArrowLeft = createToken({ name: 'ArrowLeft', pattern: /<--/, categories: SkipBody });
+export const ArrowRight = createToken({ name: 'ArrowRight', pattern: /-->/, categories: SkipBody });
+export const ArrowBoth = createToken({ name: 'ArrowBoth', pattern: /<->/, categories: SkipBody });
+export const CompositionArrow = createToken({ name: 'CompositionArrow', pattern: /-<#>/, categories: SkipBody });
+export const AggregationArrow = createToken({ name: 'AggregationArrow', pattern: /-<>/, categories: SkipBody });
+export const DashDash = createToken({ name: 'DashDash', pattern: /--/, categories: SkipBody });
+export const Star = createToken({ name: 'Star', pattern: /\*/, categories: SkipBody });
+export const Plus = createToken({ name: 'Plus', pattern: /\+/, categories: SkipBody });
+export const Minus = createToken({ name: 'Minus', pattern: /-/, categories: SkipBody });
+export const Slash = createToken({ name: 'Slash', pattern: /\//, categories: SkipBody });
+export const LessEqual = createToken({ name: 'LessEqual', pattern: /<=/, categories: SkipBody });
+export const GreaterEqual = createToken({ name: 'GreaterEqual', pattern: />=/, categories: SkipBody });
+export const NotEqual = createToken({ name: 'NotEqual', pattern: /!=/, categories: SkipBody });
+export const EqualEqual = createToken({ name: 'EqualEqual', pattern: /==/, categories: SkipBody });
+export const Less = createToken({ name: 'Less', pattern: /</, categories: SkipBody });
+export const Greater = createToken({ name: 'Greater', pattern: />/, categories: SkipBody });
+export const At2 = createToken({ name: 'At2', pattern: /@/, categories: SkipBody });
+export const Tilde = createToken({ name: 'Tilde', pattern: /~/, categories: SkipBody });
 
 export const allTokens: TokenType[] = [
   Whitespace,
   LineComment,
   BlockComment,
+  SkipBody,
 
   Interlis, Version, Model, Topic, Class, Structure, Association, Enumeration,
   Domain, Unit, Function, View, Graphic, Refsystem, Coordsystem, Imports,
   End, Extends, Extended, Abstract, Final, Mandatory, All, Of, Bag, List,
-  Reference, Base, Constraints, Constraint, Existence, Unique, Set, Where, Required,
+  Reference, Based, Base, Constraints, Constraint, Existence, Unique, Set, Where, Required,
   Numeric, Text, MText, Boolean, DateTime, Date,
   Coord, MultiCoord, Polyline, MultiPolyline, Surface, MultiSurface, Area, MultiArea,
   AnyClass, AnyStructure, Translation, Attribute, At, Ordered, Or, And, Not, Null, True, False,

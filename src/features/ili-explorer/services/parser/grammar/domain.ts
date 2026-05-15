@@ -4,7 +4,7 @@ import {
   Identifier, StringLiteral,
   LParen, RParen,
   Equals, Semicolon, Comma, Extends, DotDot,
-  Format, Ordered, Circular,
+  Format, Based, On, Ordered, Circular,
   Mandatory, Constraints, Colon,
   Abstract, Generic, Final,
 } from '../tokens';
@@ -33,6 +33,7 @@ export function registerDomainRules(p: IliCstParserBuilder): void {
       { ALT: () => p.SUBRULE6(p.textType) },
       { ALT: () => p.SUBRULE(p.oidDomainType) },
       { ALT: () => p.SUBRULE(p.formatType) },
+      { ALT: () => p.SUBRULE(p.formatRange) },
       { ALT: () => p.SUBRULE7(p.qualifiedName, { LABEL: 'aliasRef' }) },
     ]);
     p.OPTION3(() => p.SUBRULE(p.domainConstraintsClause));
@@ -72,13 +73,38 @@ export function registerDomainRules(p: IliCstParserBuilder): void {
 
   p.formatType = p.RULE('formatType', () => {
     p.CONSUME(Format);
-    p.OPTION(() => p.CONSUME(Identifier, { LABEL: 'formatBase' }));
+    p.OPTION3(() => {
+      p.CONSUME(Based);
+      p.CONSUME(On);
+    });
     p.SUBRULE(p.qualifiedName);
+    p.OPTION4(() => p.SUBRULE(p.formatSpec));
     p.OPTION2(() => {
       p.CONSUME(StringLiteral, { LABEL: 'minVal' });
       p.CONSUME(DotDot);
       p.CONSUME2(StringLiteral, { LABEL: 'maxVal' });
     });
+  });
+
+  p.formatSpec = p.RULE('formatSpec', () => {
+    p.CONSUME(LParen);
+    p.MANY(() => p.SUBRULE(p.formatSpecToken));
+    p.CONSUME(RParen);
+  });
+
+  p.formatSpecToken = p.RULE('formatSpecToken', () => {
+    p.OR([
+      { ALT: () => p.CONSUME(Identifier) },
+      { ALT: () => p.CONSUME(StringLiteral) },
+    ]);
+  });
+
+  // Refhb 3.8.4: Bereichseinschränkung auf einem FORMAT-typisierten Domain
+  // via String-Literal-Range, z.B. EXTENDS Angle_DMS = "-90:00:00.000" .. "90:00:00.000".
+  p.formatRange = p.RULE('formatRange', () => {
+    p.CONSUME(StringLiteral, { LABEL: 'formatMin' });
+    p.CONSUME(DotDot);
+    p.CONSUME2(StringLiteral, { LABEL: 'formatMax' });
   });
 
   p.allOfClause = p.RULE('allOfClause', () => {
