@@ -21,7 +21,7 @@ import {
   ExpandLess,
 } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
-import type { IliImportRef } from '../../services/parsers/IliParser';
+import type { IliImportRef } from '../../services/parser/types';
 
 interface ModelInfoPanelProps {
   fileName: string | null;
@@ -29,6 +29,7 @@ interface ModelInfoPanelProps {
   topicCount: number;
   associationCount: number;
   enumCount: number;
+  inlineEnumCount: number;
   unitCount: number;
   imports: IliImportRef[];
   warningCount: number;
@@ -43,6 +44,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
   topicCount,
   associationCount,
   enumCount,
+  inlineEnumCount,
   unitCount,
   imports,
   warningCount,
@@ -104,10 +106,19 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
             {interlisVersion && (
               <Chip size="small" color="primary" label={`INTERLIS ${interlisVersion}`} />
             )}
-            <Chip size="small" label={`${classCount} Klassen`} />
+            <Chip size="small" label={`${classCount} Classes`} />
             {topicCount > 0 && <Chip size="small" label={`${topicCount} Topics`} />}
             {associationCount > 0 && <Chip size="small" label={`${associationCount} Assoc.`} />}
-            {enumCount > 0 && <Chip size="small" label={`${enumCount} Enums`} />}
+            {enumCount > 0 && (
+              <Tooltip title="Wiederverwendbare Enumeration als Wertebereich (INTERLIS-Regel DomainDef, Refhb 3.8.2)">
+                <Chip size="small" label={`${enumCount} Enumeration`} />
+              </Tooltip>
+            )}
+            {inlineEnumCount > 0 && (
+              <Tooltip title="Anonyme Enumeration direkt als Attribut-Typ (INTERLIS-Regel AttrTypeDef, Refhb 3.6)">
+                <Chip size="small" label={`${inlineEnumCount} Inline-Enumeration`} />
+              </Tooltip>
+            )}
             {unitCount > 0 && <Chip size="small" label={`${unitCount} Units`} />}
             {warningCount > 0 && (
               <Chip

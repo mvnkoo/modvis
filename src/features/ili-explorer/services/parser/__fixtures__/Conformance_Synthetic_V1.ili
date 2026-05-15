@@ -1,0 +1,359 @@
+!!==============================================================================
+!! Conformance_Synthetic_V1.ili
+!! ----------------------------------------------------------------------------
+!! Synthetic conformance corpus for the modvis parser.
+!!
+!! All identifiers are intentionally abstract (NATO phonetic + numeric suffixes,
+!! prefixes Cls / Struct / Enum / Dom / Vw / Assoc / Unit / fn). The file
+!! exercises INTERLIS 2.4 constructs without resembling any real-world domain
+!! model — it must never be confused with a productive schema.
+!!
+!! Coverage map (parser verified, 0 errors)
+!!   Counts: 15 internal classes (87% commented), 4 external markers,
+!!           2 structures, 1 standalone ENUMERATION, 5 enum-domains,
+!!           7 units, 4 views, 5 functions, 7 inline enumerations,
+!!           13 EXTENDS edges, 11 REFERENCES edges.
+!!
+!!   TOP-LEVEL
+!!     - INTERLIS 2.4 prologue
+!!     - MODEL with language tag, AT URI, VERSION
+!!     - !!@ metadata: technicalContact, furtherInformation, ili2db.dispName
+!!     - IMPORTS: qualified, UNQUALIFIED, and 2 unresolved (external markers)
+!!   UNITS
+!!     - abstract base unit, concrete short-named units, EXTENDS edges,
+!!       DerivedUnit (FUNCTION body), ComposedUnit (paren expression)
+!!   DOMAINS
+!!     - NUMERIC range, NUMERIC + CIRCULAR + unit
+!!     - Enumeration (flat), EXTENDS-Enumeration, ALL OF, nested (tree),
+!!       ORDERED suffix, top-level ENUMERATION construct
+!!     - domain properties ABSTRACT / GENERIC / FINAL
+!!     - inline CONSTRAINTS clause on a domain
+!!     - domain alias (Foo = Bar;)
+!!   TOPICS
+!!     - 3 topics: one base, one DEPENDS ON, one EXTENDS another topic
+!!     - OID AS, BASKET OID AS, DEPENDS ON declarations
+!!     - CONSTRAINTS OF <class> block
+!!     - top-level FUNCTIONs (model + topic level, BAG argument)
+!!     - VIEWs: PROJECTION, JOIN + WHERE, AGGREGATION ALL, UNION
+!!     - GRAPHIC / REFSYSTEM BASKET / SIGN BASKET / PARAMETER (skip-paths)
+!!   CLASSES / STRUCTURES
+!!     - ABSTRACT modifier, 3-level inheritance chain
+!!     - OID AS on class header, NO OID inside class body
+!!     - STRUCTURE EXTENDS STRUCTURE
+!!     - class-level constraint (MANDATORY/UNIQUE inside body)
+!!   ATTRIBUTES
+!!     - TEXT*N, MTEXT*N, NUMERIC ranges, BOOLEAN, DATETIME
+!!     - all geometry types: COORD, MULTICOORD, POLYLINE, MULTIPOLYLINE,
+!!       SURFACE, MULTISURFACE, AREA (with body), MULTIAREA
+!!     - REFERENCE TO, REFERENCE TO ANYCLASS RESTRICTION
+!!     - BAG / LIST OF with cardinality
+!!     - multi-property (ABSTRACT, EXTENDED, TRANSIENT, FINAL)
+!!     - MANDATORY without explicit type
+!!     - default-value list (:= 1, 2, 3)
+!!     - 5 inline enumerations across two classes
+!!   ASSOCIATIONS
+!!     - 2-role, self-association, cross-topic
+!!
+!! License
+!!   MIT — original work, modvis project. Free to use, modify, redistribute.
+!!==============================================================================
+INTERLIS 2.4;
+
+!!@ technicalContact=mailto:test@modvis.local
+!!@ furtherInformation=https://github.com/<owner>/modvis
+!!@ ili2db.dispName="Synthetic Conformance Model"
+
+MODEL Conformance_Synthetic_V1 (en)
+  AT "https://modvis.test/synthetic"
+  VERSION "2026-05-15"  =
+
+  IMPORTS INTERLIS;
+  IMPORTS UNQUALIFIED Units;
+  IMPORTS Synthetic_Ext_Foxtrot_V1;
+  IMPORTS Synthetic_Ext_Golf_V1;
+
+  UNIT
+    !! abstract base unit Q
+    UnitQ (ABSTRACT);
+    UnitQA [qa] EXTENDS UnitQ;
+    UnitQB [qb] EXTENDS UnitQ = 1000 [qa];
+
+    !! derived unit with FUNCTION body — exercises paren-balanced skip
+    UnitQD [qd] = FUNCTION // 10**(qd/20) * 0.00002 // [UnitQ];
+
+    !! composed-unit paren expression
+    UnitR (ABSTRACT);
+    UnitS (ABSTRACT);
+    UnitRS (ABSTRACT) = (UnitR/UnitS);
+
+  DOMAIN
+
+    !!@ comment="abstract integer range"
+    DomN1 = 0 .. 2147483647;
+
+    !! continuous numeric range with CIRCULAR + unit
+    DomN2 = 0.0 .. 359.999 CIRCULAR [UnitQ];
+
+    !! flat enumeration
+    EnumE1 = (alpha, bravo, charlie);
+
+    !! enum EXTENDS another enum
+    EnumE2 EXTENDS EnumE1 = (alpha, bravo, charlie, delta);
+
+    !! nested enumeration (tree structure, Refhb 3.8.2)
+    EnumE3 = (kappa (kappa_1, kappa_2, kappa_3),
+              lambda,
+              mu (mu_1, mu_2));
+
+    !! ORDERED suffix on an enumeration
+    EnumE4 = (echelon_a, echelon_b, echelon_c) ORDERED;
+
+    !! ALL OF — propagates leaves + nodes of base
+    EnumE5 = ALL OF EnumE3;
+
+    !! domain properties: ABSTRACT / GENERIC / FINAL
+    DomAbs (ABSTRACT) = NUMERIC;
+    DomGen (GENERIC) = NUMERIC;
+    DomFin (FINAL) EXTENDS DomAbs = 0 .. 100;
+
+    !! inline CONSTRAINTS on a domain
+    DomConstr = NUMERIC CONSTRAINTS positive : THIS > 0;
+
+    !! domain alias — pure type reference
+    DomAlias = DomN1;
+
+
+  !!========================================================================
+  !! TopicAlpha — abstract supertypes, structures, enumeration, function
+  !!========================================================================
+  TOPIC TopicAlpha =
+
+    OID AS INTERLIS.UUIDOID;
+    BASKET OID AS INTERLIS.UUIDOID;
+
+    !!@ comment="abstract base for any identified entity"
+    CLASS ClsAlpha0 (ABSTRACT) =
+      F01 : MANDATORY TEXT*20;
+      F02 : TEXT*100;
+      F03 : MTEXT*500;
+    END ClsAlpha0;
+
+    !! adds timestamps — exercises EXTENDS-edge
+    CLASS ClsAlpha1 EXTENDS ClsAlpha0 =
+      F04 : MANDATORY DATETIME;
+      F05 : DATETIME;
+    END ClsAlpha1;
+
+    !! adds point geometry — used as supertype across topics
+    CLASS ClsAlpha2 EXTENDS ClsAlpha1 =
+      !!@ ili2db.dispName="Alpha-Spatial Entity"
+      F06 : MANDATORY COORD;
+      F07 : NUMERIC 0.0 .. 100.0;
+    END ClsAlpha2;
+
+    !! reusable structure
+    STRUCTURE StructAlpha1 =
+      F01 : TEXT*200;
+      F02 : MANDATORY TEXT*100;
+      F03 : TEXT*10;
+    END StructAlpha1;
+
+    !! STRUCTURE EXTENDS STRUCTURE — exercises structure inheritance
+    STRUCTURE StructAlpha2 EXTENDS StructAlpha1 =
+      F04 : MANDATORY TEXT*40;
+      F05 : MANDATORY TEXT*200;
+    END StructAlpha2;
+
+    !!@ comment="standalone ENUMERATION construct"
+    ENUMERATION EnumA1 = (state_a, state_b, state_c, state_d);
+
+    !! topic-level function — has access to topic name in AST
+    FUNCTION fnAlpha (entity: ClsAlpha0) : BOOLEAN;
+
+  END TopicAlpha;
+
+
+  !!========================================================================
+  !! TopicBravo — DEPENDS ON TopicAlpha, heavy attribute coverage
+  !!========================================================================
+  TOPIC TopicBravo =
+
+    DEPENDS ON TopicAlpha;
+
+    !!@ comment="class with OID AS in header position"
+    !!@ ili2db.dispName="Bravo-1 Entity"
+    CLASS ClsBravo1 EXTENDS TopicAlpha.ClsAlpha2 OID AS INTERLIS.UUIDOID =
+      F01 : MANDATORY TEXT*10;
+      F02 : MANDATORY NUMERIC 0 .. 999999 [UnitQA];
+      F03 : 1 .. 8;
+      F04 : MANDATORY EnumE1;
+      F05 : TopicAlpha.EnumA1;
+      F06 : REFERENCE TO ClsBravo2;
+      F07 : BAG {0..*} OF TopicAlpha.StructAlpha2;
+    END ClsBravo1;
+
+    !! class with NO OID inside body
+    CLASS ClsBravo2 EXTENDS TopicAlpha.ClsAlpha1 =
+      NO OID;
+      F01 : BOOLEAN;
+      F02 : LIST {1..*} OF TopicAlpha.StructAlpha1;
+    END ClsBravo2;
+
+    !!@ comment="surface geometry showcase"
+    CLASS ClsBravo3 EXTENDS TopicAlpha.ClsAlpha2 =
+      F01 : MANDATORY SURFACE;
+    END ClsBravo3;
+
+    !! abstract subtype within a topic — yields 3-level chain Alpha2->Bravo4->Bravo5
+    CLASS ClsBravo4 (ABSTRACT) EXTENDS TopicAlpha.ClsAlpha2 =
+      F01 : MANDATORY TEXT*10;
+    END ClsBravo4;
+
+    CLASS ClsBravo5 EXTENDS ClsBravo4 =
+      F02 : BOOLEAN;
+    END ClsBravo5;
+
+    CLASS ClsBravo6 EXTENDS ClsBravo4 =
+      F02 : MANDATORY 5 .. 130;
+    END ClsBravo6;
+
+    !! external reference via IMPORTS — produces an external marker node
+    CLASS ClsBravo7 =
+      F01 : REFERENCE TO Synthetic_Ext_Foxtrot_V1.ExtClsX1;
+      F02 : MANDATORY TEXT*20;
+    END ClsBravo7;
+
+    !!@ comment="attribute showcase: multi-property, ANYCLASS, inline enums, defaults"
+    CLASS ClsBravo8 =
+      a (ABSTRACT) : TEXT;
+      b (EXTENDED, TRANSIENT) : NUMERIC;
+      c (FINAL) : BOOLEAN;
+      d : MANDATORY;
+      e : REFERENCE TO ANYCLASS RESTRICTION (ClsBravo1; ClsBravo2);
+      F08 : NUMERIC := 1, 2, 3;
+      !! inline enums — 3 separate Aufzählungen as AttrTypeDef
+      InlineE1 : (k_alpha, k_bravo, k_charlie);
+      InlineE2 : (k_x, k_y, k_z);
+      InlineE3 : MANDATORY (k_open, k_closed);
+      !! class-level UNIQUE constraint (constraintClause inside body)
+      UNIQUE F08;
+    END ClsBravo8;
+
+    !! standard 2-role association
+    ASSOCIATION AssocBravo01 =
+      RefA -- {1..*} ClsBravo1;
+      RefB -- {2} ClsBravo3;
+    END AssocBravo01;
+
+    !! self-association — exercises self-edge dedup
+    ASSOCIATION AssocBravo02 =
+      Side1 -- {0..*} ClsBravo1;
+      Side2 -- {0..*} ClsBravo1;
+    END AssocBravo02;
+
+    !! topic-level CONSTRAINTS OF block targeting a class
+    CONSTRAINTS OF ClsBravo1 =
+      MANDATORY CONSTRAINT F01 != "";
+    END;
+
+    !! VIEW — PROJECTION
+    VIEW VwBravo1
+      PROJECTION OF ClsBravo1;
+      = END VwBravo1;
+
+    !! VIEW — JOIN + WHERE
+    VIEW VwBravo2
+      JOIN OF ClsBravo1, ClsBravo3;
+      WHERE TRUE;
+      =
+      END VwBravo2;
+
+    !! PARAMETER skip-path
+    PARAMETER
+      paramN : NUMERIC;
+      paramT : TEXT*40;
+
+  END TopicBravo;
+
+
+  !!========================================================================
+  !! TopicCharlie — EXTENDS TopicAlpha (TOPIC inheritance), geometry showcase
+  !!========================================================================
+  TOPIC TopicCharlie EXTENDS TopicAlpha =
+
+    !!@ comment="geometry-types showcase"
+    CLASS ClsCharlie1 EXTENDS TopicAlpha.ClsAlpha2 =
+      F01 : MANDATORY POLYLINE;
+      F02 : MULTIPOLYLINE;
+      F03 : MULTISURFACE;
+      F04 : MULTICOORD;
+      F05 : AREA WITH (STRAIGHTS, ARCS) VERTEX Synthetic_Ext_Foxtrot_V1.CoordType WITHOUT OVERLAPS > 0.050;
+      F06 : MULTIAREA;
+    END ClsCharlie1;
+
+    !! cross-topic reference target
+    CLASS ClsCharlie2 =
+      F01 : MANDATORY TEXT*16;
+      F02 : MANDATORY REFERENCE TO TopicBravo.ClsBravo1;
+    END ClsCharlie2;
+
+    !!@ comment="many inline enums — exercises inline-enum counter"
+    CLASS ClsCharlie3 EXTENDS TopicAlpha.ClsAlpha2 =
+      InlineX1 : (yankee_a, yankee_b, yankee_c);
+      InlineX2 : (zulu_n, zulu_s, zulu_e, zulu_w);
+      InlineX3 : MANDATORY (foxtrot_1, foxtrot_2);
+    END ClsCharlie3;
+
+    !! cross-topic association
+    ASSOCIATION AssocCharlie01 =
+      RefCh2 -- {1..*} ClsCharlie2;
+      RefBr1 -- {1} TopicBravo.ClsBravo1;
+    END AssocCharlie01;
+
+    !! VIEW — AGGREGATION ALL
+    VIEW VwCharlie1
+      AGGREGATION OF ClsCharlie1 ALL;
+      = END VwCharlie1;
+
+    !! VIEW — UNION of multiple sources across topics
+    VIEW VwCharlie2
+      UNION OF ClsCharlie1, TopicBravo.ClsBravo1, TopicBravo.ClsBravo3;
+      = END VwCharlie2;
+
+    FUNCTION fnCharlie () : NUMERIC;
+
+    !! GRAPHIC — skip-rule
+    GRAPHIC Graph1 BASED ON VwCharlie1 =
+      rule OF SignClass: (param := value);
+    END Graph1;
+
+    !! REFSYSTEM BASKET — skip-rule
+    REFSYSTEM BASKET BasketRefSys ~ Synthetic_Ext_Golf_V1.SysRef;
+
+    !! SIGN BASKET — skip-rule
+    SIGN BASKET BasketSign ~ Synthetic_Ext_Golf_V1.SigRef;
+
+  END TopicCharlie;
+
+
+  !!========================================================================
+  !! Model-level constructs (outside any TOPIC)
+  !!========================================================================
+
+  !! model-level FUNCTION — zero args
+  FUNCTION fnModel0 () : NUMERIC;
+
+  !! model-level FUNCTION — SURFACE arg
+  FUNCTION fnModel1 (geom: SURFACE) : NUMERIC;
+
+  !! model-level FUNCTION — BAG argument
+  FUNCTION fnModel2 (items: BAG OF TopicAlpha.ClsAlpha0) : NUMERIC;
+
+  !!@ comment="model-level class with inline enum + default value list"
+  CLASS ClsModel0 =
+    Mode  : (read, write, admin);
+    Thr   : NUMERIC := 1, 2, 3;
+    F03   : MANDATORY TEXT*100;
+  END ClsModel0;
+
+END Conformance_Synthetic_V1.

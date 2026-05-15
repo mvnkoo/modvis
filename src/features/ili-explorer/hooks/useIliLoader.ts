@@ -3,11 +3,10 @@ import { Node, Edge } from '@xyflow/react';
 import type { ThemeColors } from '../../../common/theme/ThemeContext';
 import { readFileAsText } from '../../../common/utils/readFileAsText';
 import { IliSchemaService } from '../services/iliSchemaService';
-import { NgIliParser } from '../services/parsers/ng/NgIliParser';
 import { generateSearchOptions } from '../services/searchOptions';
 import { flowNodeFromBaseNode, inheritanceEdgesFromRelations } from '../services/flowMapping';
 import type { IliRelation, SearchOption } from '../services/types/IliBaseTypes';
-import type { IliParseError, IliImportRef } from '../services/parsers/IliParser';
+import type { IliParseError, IliImportRef } from '../services/parser/types';
 
 export interface LoadResult {
   flowNodes: Node[];
@@ -50,7 +49,7 @@ export function useIliLoader(options: UseIliLoaderOptions): UseIliLoaderReturn {
   const [relations, setRelations] = useState<IliRelation[]>([]);
   const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
 
-  const schemaServiceRef = useRef<IliSchemaService>(new IliSchemaService(new NgIliParser()));
+  const schemaServiceRef = useRef<IliSchemaService>(new IliSchemaService());
   const lastContentRef = useRef<{ content: string; fileName: string } | null>(null);
 
   const colorsRef = useRef(options.colors);

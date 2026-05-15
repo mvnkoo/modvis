@@ -1,5 +1,4 @@
-import type { IliCstParserBuilder } from '../parser';
-import type { IliCstParserBuilder as Builder } from '../parser';
+import type { IliCstParserBuilder } from '../cstParser';
 import {
   Class, Structure, Association, End, Equals, Semicolon, Comma, Colon,
   Identifier, LParen, RParen,
@@ -13,7 +12,7 @@ import {
 // Disambiguator for associationDef body: peek forward, paren-balanced, to see
 // whether the next "Identifier ..." item is a roleDef (terminates at -- / -<> / -<#>)
 // or an attributeDef (terminates at ':').
-function isRoleAhead(p: Builder): boolean {
+function isRoleAhead(p: IliCstParserBuilder): boolean {
   let i = 1;
   let depth = 0;
   while (i < 60) {

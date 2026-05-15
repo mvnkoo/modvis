@@ -1,4 +1,4 @@
-import type { IliCstParserBuilder } from '../parser';
+import type { IliCstParserBuilder } from '../cstParser';
 import {
   Identifier, NumberLiteral, StringLiteral, HashIdentifier,
   Interlis, Mandatory, Constraint, Unique, Existence, Set,

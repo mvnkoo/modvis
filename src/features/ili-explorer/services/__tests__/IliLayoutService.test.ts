@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { IliParserService } from '../IliParserService';
+import { IliParser } from '../parser/IliParser';
 import { IliLayoutService } from '../IliLayoutService';
 import {
   flowNodeFromBaseNode,
@@ -9,7 +9,8 @@ import type { IliNode } from '../types/IliBaseTypes';
 import { mockColors, defaultLayoutOptions } from './testHelpers';
 
 function buildLayoutInput(ili: string) {
-  const { nodes: baseNodes, relations } = new IliParserService().parseContent(ili);
+  const wrapped = `INTERLIS 2.4;\n${ili}`;
+  const { nodes: baseNodes, relations } = new IliParser().parseContent(wrapped);
   const flowNodes = baseNodes.map(flowNodeFromBaseNode) as IliNode[];
   const flowEdges = inheritanceEdgesFromRelations(relations, mockColors, true);
   return { flowNodes, flowEdges };

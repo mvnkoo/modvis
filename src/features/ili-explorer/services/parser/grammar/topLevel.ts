@@ -1,4 +1,4 @@
-import type { IliCstParserBuilder } from '../parser';
+import type { IliCstParserBuilder } from '../cstParser';
 import {
   Interlis, Model, End, Equals, Dot, Semicolon, Comma,
   Identifier, NumberLiteral, StringLiteral,
