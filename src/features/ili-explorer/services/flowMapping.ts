@@ -10,6 +10,8 @@ const FLOW_NODE_TYPE: Record<string, string> = {
   ASSOCIATION: 'associationNode',
   ENUMERATION: 'enumNode',
   UNIT: 'domainEnumNode',
+  FUNCTION: 'unsupportedNode',
+  VIEW: 'unsupportedNode',
   enumNode: 'enumNode',
   domainEnumNode: 'domainEnumNode',
 };
@@ -18,7 +20,7 @@ export function flowNodeFromBaseNode(node: IliBaseNode) {
   const { data: nodeData, ...nodeRest } = node;
   return {
     id: node.id,
-    type: FLOW_NODE_TYPE[node.type] ?? 'classNode',
+    type: FLOW_NODE_TYPE[node.type] ?? 'unsupportedNode',
     position: { x: 0, y: 0 },
     draggable: true,
     data: {

@@ -5,6 +5,7 @@ export interface IliParseError {
   offset?: number;
   line?: number;
   column?: number;
+  severity?: 'error' | 'warning';
 }
 
 export interface IliImportRef {
@@ -16,6 +17,7 @@ export interface IliParseResult {
   nodes: IliBaseNode[];
   relations: IliRelation[];
   errors?: IliParseError[];
+  warnings?: IliParseError[];
   imports?: IliImportRef[];
   interlisVersion?: string;
 }

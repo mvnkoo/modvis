@@ -1,4 +1,4 @@
-import { Edge } from '@xyflow/react';
+import { Edge, MarkerType } from '@xyflow/react';
 import type { IliNode, IliRelation } from '../types/IliBaseTypes';
 
 const COL_W = 460;
@@ -61,6 +61,7 @@ export function layoutModelOverview(
 
   const totalGridWidth = MAX_COLS * COL_W;
   const placedNodes: IliNode[] = [];
+  const topicLabelIdByName = new Map<string, string>();
   let cursorY = 0;
   let topicIndex = 0;
 
@@ -69,7 +70,6 @@ export function layoutModelOverview(
     const rows = Math.max(1, Math.ceil(classes.length / MAX_COLS));
     const groupContentH = TOPIC_HEADER_H + rows * ROW_H;
 
-    // Frame must be pushed first so it renders behind the cards.
     placedNodes.push({
       id: `__topic_frame_${topic}_${topicIndex}`,
       type: 'topicFrameNode',
@@ -84,8 +84,10 @@ export function layoutModelOverview(
       },
     } as unknown as IliNode);
 
+    const labelId = `__topic_label_${topic}_${topicIndex}`;
+    topicLabelIdByName.set(topic, labelId);
     placedNodes.push({
-      id: `__topic_label_${topic}_${topicIndex}`,
+      id: labelId,
       type: 'topicLabelNode',
       position: { x: 0, y: cursorY },
       draggable: false,
@@ -119,5 +121,25 @@ export function layoutModelOverview(
     topicIndex++;
   }
 
-  return { nodes: placedNodes, edges: [] };
+  const dependsEdges: Edge[] = [];
+  for (const rel of allRelations) {
+    if (rel.type !== 'DEPENDS') continue;
+    const sourceId = topicLabelIdByName.get(rel.sourceId);
+    const targetId = topicLabelIdByName.get(rel.targetId);
+    if (!sourceId || !targetId) continue;
+    dependsEdges.push({
+      id: `depends-${rel.sourceId}-${rel.targetId}`,
+      source: sourceId,
+      target: targetId,
+      type: 'default',
+      animated: false,
+      style: { stroke: '#8888aa', strokeWidth: 2, strokeDasharray: '6 4' },
+      markerEnd: { type: MarkerType.Arrow, color: '#8888aa' },
+      label: 'DEPENDS ON',
+      labelStyle: { fill: '#8888aa', fontSize: 11, fontWeight: 600 },
+      labelBgStyle: { fill: 'transparent' },
+    });
+  }
+
+  return { nodes: placedNodes, edges: dependsEdges };
 }

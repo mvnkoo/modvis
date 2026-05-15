@@ -6,8 +6,13 @@ import type { IliParseResult, IliParseError } from './types';
 
 const LEADING_NOISE = /^(?:\s+|!![^\n]*\n?|\/\*[\s\S]*?\*\/)*/;
 
+export interface IliParserOptions {
+  strict?: boolean;
+}
+
 export class IliParser {
-  parseContent(content: string): IliParseResult {
+  parseContent(content: string, options: IliParserOptions = {}): IliParseResult {
+    if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
     const stripped = content.replace(LEADING_NOISE, '');
     if (/^TRANSFER\b/i.test(stripped)) {
       return {
@@ -18,6 +23,7 @@ export class IliParser {
           offset: 0,
           line: 1,
           column: 1,
+          severity: 'error',
         }],
       };
     }
@@ -31,6 +37,7 @@ export class IliParser {
         offset: lexErr.offset,
         line: lexErr.line,
         column: lexErr.column,
+        severity: 'error',
       });
     }
 
@@ -46,14 +53,19 @@ export class IliParser {
         offset: tok?.startOffset,
         line: tok?.startLine,
         column: tok?.startColumn,
+        severity: 'error',
       });
     }
 
     const ast = astVisitor.build(cst, commentBefore);
+    if (options.strict) {
+      for (const w of ast.warnings) errors.push({ ...w, severity: 'error' });
+    }
     return {
       nodes: ast.nodes,
       relations: ast.relations,
       errors,
+      warnings: ast.warnings,
       imports: ast.imports,
       interlisVersion: ast.interlisVersion,
     };

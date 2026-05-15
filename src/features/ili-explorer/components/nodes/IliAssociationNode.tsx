@@ -141,19 +141,27 @@ export const IliAssociationNode: React.FC<IliAssociationNodeProps> = memo(({ dat
         style={{ opacity: 0 }}
       />
       
-      <Tooltip 
+      <Tooltip
         title={
-          data.comment && (
-            <Box sx={{ p: 1, maxWidth: 400 }}>
-              <Typography variant="caption" sx={{ 
+          <Box sx={{ p: 1, maxWidth: 400 }}>
+            {data.comment && (
+              <Typography variant="caption" sx={{
                 display: 'block',
                 whiteSpace: 'pre-wrap',
-                color: 'text.secondary'
+                color: 'text.secondary',
+                mb: 0.5,
               }}>
                 {data.comment}
               </Typography>
-            </Box>
-          )
+            )}
+            <Typography variant="caption" sx={{ display: 'block', fontFamily: 'monospace', color: 'text.secondary' }}>
+              {getShortClassName(data.association.sourceClass)}
+              {data.association.sourceCardinality && ` [${data.association.sourceCardinality}]`}
+              {' — '}
+              {getShortClassName(data.association.targetClass)}
+              {data.association.targetCardinality && ` [${data.association.targetCardinality}]`}
+            </Typography>
+          </Box>
         }
         placement="top"
         componentsProps={{

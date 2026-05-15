@@ -1,8 +1,8 @@
 import { IliBaseNode, SearchOption } from './types/IliBaseTypes';
 import { IliClassNode } from './types/IliModelTypes';
 
-const VALID_NODE_TYPES = ['CLASS', 'STRUCTURE', 'TOPIC', 'ENUMERATION'] as const;
-const CATEGORY_ORDER = ['Classes', 'Topics', 'Structures', 'Enumerations', 'Attributes'] as const;
+const VALID_NODE_TYPES = ['CLASS', 'STRUCTURE', 'TOPIC', 'ENUMERATION', 'ASSOCIATION'] as const;
+const CATEGORY_ORDER = ['Classes', 'Topics', 'Structures', 'Enumerations', 'Associations', 'Attributes'] as const;
 
 function categoryFor(nodeType: string): string {
   switch (nodeType) {
@@ -12,6 +12,8 @@ function categoryFor(nodeType: string): string {
       return 'Structures';
     case 'TOPIC':
       return 'Topics';
+    case 'ASSOCIATION':
+      return 'Associations';
     default:
       return 'Enumerations';
   }

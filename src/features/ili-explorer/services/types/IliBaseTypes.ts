@@ -67,6 +67,7 @@ export interface IliAssociation {
   targetRole?: string;
   sourceCardinality?: string;
   targetCardinality?: string;
+  comment?: string;
 }
 
 export interface IliBaseNodeData {
