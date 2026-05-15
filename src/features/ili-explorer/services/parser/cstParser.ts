@@ -9,10 +9,6 @@ import { registerConstraintRules } from './grammar/constraints';
 import { registerUnitsRules } from './grammar/units';
 import { registerAdvancedRules } from './grammar/advanced';
 
-// Public-facing builder type for use by registerXxxRules helpers.
-// Chevrotain's RULE/OPTION/SUBRULE/CONSUME/OR/MANY/LA are protected on CstParser,
-// which TypeScript blocks in module-external register functions.
-// The builder shape exposes them — same instance, looser type.
 export type IliCstParserBuilder = IliCstParser & {
   RULE: (...args: any[]) => any;
   OPTION: (...args: any[]) => any;
@@ -110,7 +106,6 @@ export class IliCstParser extends CstParser {
   unitDef!: any;
   skipStatement!: any;
 
-  // Phase 1+ — advanced rules (skips and structured)
   skipBodyToken!: any;
   parenContents!: any;
   functionDef!: any;

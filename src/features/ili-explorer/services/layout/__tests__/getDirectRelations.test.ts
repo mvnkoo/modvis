@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { IliParser } from '../parser/IliParser';
-import { IliLayoutService } from '../IliLayoutService';
+import { IliParser } from '../../parser/IliParser';
+import { getDirectRelations } from '../getDirectRelations';
 import {
   flowNodeFromBaseNode,
   inheritanceEdgesFromRelations,
-} from '../flowMapping';
-import type { IliNode } from '../types/IliBaseTypes';
-import { mockColors, defaultLayoutOptions } from './testHelpers';
+} from '../../flowMapping';
+import type { IliNode } from '../../types/IliBaseTypes';
+import { mockColors, defaultLayoutOptions } from '../../__tests__/testHelpers';
 
 function buildLayoutInput(ili: string) {
   const wrapped = `INTERLIS 2.4;\n${ili}`;
@@ -16,7 +16,7 @@ function buildLayoutInput(ili: string) {
   return { flowNodes, flowEdges };
 }
 
-describe('IliLayoutService.getDirectRelations', () => {
+describe('getDirectRelations', () => {
   it('returns just the entity if it has no relations', () => {
     const ili = `
       MODEL Demo =
@@ -31,7 +31,7 @@ describe('IliLayoutService.getDirectRelations', () => {
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
     const foo = flowNodes.find(n => n.id === 'Foo')!;
 
-    const result = IliLayoutService.getDirectRelations(
+    const result = getDirectRelations(
       foo,
       flowNodes,
       flowEdges,
@@ -68,7 +68,7 @@ describe('IliLayoutService.getDirectRelations', () => {
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
     const mid = flowNodes.find(n => n.id === 'Mid')!;
 
-    const result = IliLayoutService.getDirectRelations(
+    const result = getDirectRelations(
       mid,
       flowNodes,
       flowEdges,
@@ -109,7 +109,7 @@ describe('IliLayoutService.getDirectRelations', () => {
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
     const owner = flowNodes.find(n => n.id === 'Owner')!;
 
-    const result = IliLayoutService.getDirectRelations(
+    const result = getDirectRelations(
       owner,
       flowNodes,
       flowEdges,
@@ -143,7 +143,7 @@ describe('IliLayoutService.getDirectRelations', () => {
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
     const owner = flowNodes.find(n => n.id === 'Owner')!;
 
-    const result = IliLayoutService.getDirectRelations(
+    const result = getDirectRelations(
       owner,
       flowNodes,
       flowEdges,
@@ -171,8 +171,8 @@ describe('IliLayoutService.getDirectRelations', () => {
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
     const sub = flowNodes.find(n => n.id === 'Sub')!;
 
-    const a = IliLayoutService.getDirectRelations(sub, flowNodes, flowEdges, mockColors, defaultLayoutOptions);
-    const b = IliLayoutService.getDirectRelations(sub, flowNodes, flowEdges, mockColors, defaultLayoutOptions);
+    const a = getDirectRelations(sub, flowNodes, flowEdges, mockColors, defaultLayoutOptions);
+    const b = getDirectRelations(sub, flowNodes, flowEdges, mockColors, defaultLayoutOptions);
 
     expect(a.edges.map(e => e.id).sort()).toEqual(b.edges.map(e => e.id).sort());
   });
@@ -232,7 +232,7 @@ describe('IliLayoutService.getDirectRelations', () => {
     const { flowNodes, flowEdges } = buildLayoutInput(ili);
     const foo = flowNodes.find(n => n.id === 'Foo')!;
 
-    const result = IliLayoutService.getDirectRelations(
+    const result = getDirectRelations(
       foo,
       flowNodes,
       flowEdges,
@@ -246,7 +246,7 @@ describe('IliLayoutService.getDirectRelations', () => {
   });
 
   it('returns empty result for falsy entity / nodes / edges', () => {
-    const empty = IliLayoutService.getDirectRelations(
+    const empty = getDirectRelations(
       null as unknown as IliNode,
       [],
       [],

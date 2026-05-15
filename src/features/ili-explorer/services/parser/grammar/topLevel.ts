@@ -21,8 +21,6 @@ export function registerTopLevelRules(p: IliCstParserBuilder): void {
   });
 
   p.modelDef = p.RULE('modelDef', () => {
-    // Spec allows combinations like `CONTRACTED TYPE MODEL` —
-    // consume any sequence of MODEL-prefixes until MODEL.
     p.MANY3({
       GATE: () => {
         const t = p.LA(1);

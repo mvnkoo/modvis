@@ -24,8 +24,6 @@ import {
   Constraints, Basket, Restriction, Inherit, Base,
 } from '../tokens';
 
-// Wide token consumer for skip-bodies.
-// Excludes End, LParen, RParen, Semicolon — the outer skip rule needs to react to those.
 export function registerAdvancedRules(p: IliCstParserBuilder): void {
   p.skipBodyToken = p.RULE('skipBodyToken', () => {
     p.OR([

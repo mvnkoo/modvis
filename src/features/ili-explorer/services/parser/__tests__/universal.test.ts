@@ -204,6 +204,23 @@ describe('NG Phase 2 — datamodel feinheiten', () => {
     const r = new IliParser().parseContent(src);
     expect(r.errors).toEqual([]);
   });
+
+  // Regression: ISOS_V2.ili Zeile 536. FORMAT war als DomainDef-Variante
+  // registriert, fehlte aber als attributeType-Alternative.
+  it('FORMAT as inline attribute type (Refhb 3.8.6)', () => {
+    const src = wrapTopic(`
+    CLASS C =
+      bild_datum : FORMAT INTERLIS.XMLDate "1800-01-01" .. "2200-01-01";
+      simple_fmt : FORMAT INTERLIS.XMLDate;
+    END C;`);
+    const r = new IliParser().parseContent(src);
+    expect(r.errors).toEqual([]);
+    const c = r.nodes.find(n => n.name === 'C') as any;
+    const ranged = c?.attributes?.find((a: any) => a.name === 'bild_datum');
+    expect(ranged?.type).toBe('FORMAT INTERLIS.XMLDate "1800-01-01".."2200-01-01"');
+    const simple = c?.attributes?.find((a: any) => a.name === 'simple_fmt');
+    expect(simple?.type).toBe('FORMAT INTERLIS.XMLDate');
+  });
 });
 
 describe('NG Phase 3 — FUNCTION semantisch', () => {
