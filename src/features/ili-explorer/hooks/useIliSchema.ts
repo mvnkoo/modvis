@@ -78,7 +78,7 @@ const FULL_SCHEMA_KEY = '__fullSchema__';
 
 type DisplayTarget =
   | { kind: 'overview' }
-  | { kind: 'fullSchema' }
+  | { kind: 'fullSchema'; showEnums?: boolean; showAssociations?: boolean }
   | { kind: 'node'; node: IliNode; override?: Partial<LayoutOptions> };
 
 function normalizeIliNode(source: Node | IliNode, extraData?: Record<string, unknown>): IliNode {
@@ -150,6 +150,9 @@ export const useIliSchema = (
   } = display;
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [fitViewRequest, setFitViewRequest] = useState(0);
+  const [viewMode, setViewMode] = useState<'overview' | 'fullSchema' | 'focus'>('overview');
+  const [fsShowEnums, setFsShowEnums] = useState(false);
+  const [fsShowAssociations, setFsShowAssociations] = useState(false);
 
   const sessionCacheRef = useRef<Map<string, Map<string, CachedNodeState>>>(new Map());
   const currentViewKeyRef = useRef<string>(OVERVIEW_KEY);
@@ -266,6 +269,9 @@ export const useIliSchema = (
   const commitDisplay = useCallback(
     (result: { nodes: IliNode[]; edges: Edge[] }, activeId: string | null, viewKey: string) => {
       currentViewKeyRef.current = viewKey;
+      if (viewKey === OVERVIEW_KEY) setViewMode('overview');
+      else if (viewKey === FULL_SCHEMA_KEY) setViewMode('fullSchema');
+      else setViewMode('focus');
       setNodes(applyCachedState(viewKey, result.nodes));
       setEdges(result.edges);
       setActiveNodeId(activeId);
@@ -286,14 +292,18 @@ export const useIliSchema = (
         allEdges,
         colors,
         useCurvedLines,
-        { maxPerRow: maxSubTypesPerRow > 0 ? maxSubTypesPerRow : 4 },
+        {
+          maxPerRow: maxSubTypesPerRow > 0 ? maxSubTypesPerRow : 4,
+          showEnums: target.showEnums ?? fsShowEnums,
+          showAssociations: target.showAssociations ?? fsShowAssociations,
+        },
       );
       commitDisplay({ nodes: result.nodes, edges: result.edges }, null, FULL_SCHEMA_KEY);
     } else {
       commitDisplay(computeLayout(target.node, target.override), target.node.id, `node:${target.node.id}`);
     }
     return true;
-  }, [allNodes, allEdges, parsedRelations, maxSubTypesPerRow, colors, useCurvedLines, computeLayout, commitDisplay]);
+  }, [allNodes, allEdges, parsedRelations, maxSubTypesPerRow, fsShowEnums, fsShowAssociations, colors, useCurvedLines, computeLayout, commitDisplay]);
 
   const handleLoaded = useCallback((result: LoadResult) => {
     setSearchValue(null);
@@ -535,6 +545,12 @@ export const useIliSchema = (
   }, [allNodes, parsedRelations, displayNode, setShowFullHierarchy, setShowEnums, setShowAssociations, resetHistory]);
 
   const handleToggleEnums = useCallback((visible: boolean) => {
+    if (viewMode === 'fullSchema') {
+      setFsShowEnums(visible);
+      displayNode({ kind: 'fullSchema', showEnums: visible, showAssociations: fsShowAssociations });
+      return;
+    }
+
     setShowEnums(visible);
 
     if (!activeNodeId) return;
@@ -561,7 +577,7 @@ export const useIliSchema = (
 
     setNodes(updatedNodes);
     setEdges(relatedNodes.edges);
-  }, [activeNodeId, allNodes, computeLayout, nodes, setNodes, setEdges, setShowEnums]);
+  }, [activeNodeId, allNodes, computeLayout, nodes, setNodes, setEdges, setShowEnums, viewMode, fsShowAssociations, displayNode]);
 
   const handleMaxSubTypesChange = useCallback((value: number) => {
     setMaxSubTypesPerRow(value);
@@ -622,6 +638,12 @@ export const useIliSchema = (
   }, [nodes, setNodes, setEdges, setUseCurvedLines]);
 
   const handleToggleAssociations = useCallback((visible: boolean) => {
+    if (viewMode === 'fullSchema') {
+      setFsShowAssociations(visible);
+      displayNode({ kind: 'fullSchema', showEnums: fsShowEnums, showAssociations: visible });
+      return;
+    }
+
     setShowAssociations(visible);
 
     if (activeNodeId) {
@@ -631,7 +653,7 @@ export const useIliSchema = (
         nav.patchCurrent({ showAssociations: visible });
       }
     }
-  }, [activeNodeId, allNodes, applyLayout, nav]);
+  }, [activeNodeId, allNodes, applyLayout, nav, viewMode, fsShowEnums, displayNode]);
 
   const resetCurrentLayout = useCallback(() => {
     const key = currentViewKeyRef.current;
@@ -704,13 +726,13 @@ export const useIliSchema = (
     setActiveNodeId,
     allNodes,
     allEdges,
-    showEnums,
+    showEnums: viewMode === 'fullSchema' ? fsShowEnums : showEnums,
     handleToggleEnums,
     historyIndex,
     maxSubTypesPerRow,
     setMaxSubTypesPerRow,
     handleLineTypeToggle,
-    showAssociations,
+    showAssociations: viewMode === 'fullSchema' ? fsShowAssociations : showAssociations,
     handleToggleAssociations,
     handleMagicLayout,
     resetCurrentLayout,

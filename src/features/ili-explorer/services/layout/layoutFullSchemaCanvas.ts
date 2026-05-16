@@ -24,6 +24,8 @@ const DEFAULT_MAX_PER_ROW = 4;
 
 export interface FullSchemaCanvasOptions {
   maxPerRow?: number;
+  showEnums?: boolean;
+  showAssociations?: boolean;
 }
 
 export interface FullSchemaCanvasResult {
@@ -44,8 +46,10 @@ export function layoutFullSchemaCanvas(
   opts: FullSchemaCanvasOptions = {},
 ): FullSchemaCanvasResult {
   const maxPerRow = Math.max(1, opts.maxPerRow ?? DEFAULT_MAX_PER_ROW);
+  const showEnums = opts.showEnums ?? true;
+  const showAssociations = opts.showAssociations ?? true;
 
-  const synthesizedEnums = synthesizeMissingEnumNodes(allNodes);
+  const synthesizedEnums = showEnums ? synthesizeMissingEnumNodes(allNodes) : [];
   const workingNodes: IliNode[] = [...allNodes, ...synthesizedEnums];
   const byId = new Map(workingNodes.map((n) => [n.id, n]));
 
@@ -58,8 +62,8 @@ export function layoutFullSchemaCanvas(
     if (rt === 'EXTENDS') subTypeOf.set(e.source, e.target);
   }
 
-  const enums = workingNodes.filter(isEnumNode);
-  const assocs = workingNodes.filter((n) => n.type === 'associationNode');
+  const enums = showEnums ? workingNodes.filter(isEnumNode) : [];
+  const assocs = showAssociations ? workingNodes.filter((n) => n.type === 'associationNode') : [];
 
   const { nodes: treeNodes, width: treesWidth } = layoutTopicTrees(
     primary,
