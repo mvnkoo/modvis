@@ -75,6 +75,7 @@ function describeEntry(entry: NavigationState): { kind: string; label: string } 
 interface IliSideToolbarProps {
   currentFileName: string | null;
   activeNodeId: string | null;
+  isFullSchemaView?: boolean;
   historyIndex: number;
   canGoBack?: boolean;
   canGoForward?: boolean;
@@ -102,6 +103,7 @@ interface IliSideToolbarProps {
 export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   currentFileName,
   activeNodeId,
+  isFullSchemaView,
   historyIndex,
   canGoBack,
   canGoForward,
@@ -128,6 +130,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   const { colors } = useTheme();
   const noSchema = !currentFileName;
   const noNode = !currentFileName || !activeNodeId;
+  const noEditable = noNode && !isFullSchemaView;
 
   const [historyMenu, setHistoryMenu] = useState<{ anchor: HTMLElement; direction: HistoryDirection } | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -160,6 +163,12 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
     cancelLongPress();
     if (direction === 'back') onBack();
     else onForward();
+  };
+
+  const handleNavContextMenu = (direction: HistoryDirection) => (event: React.MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    cancelLongPress();
+    setHistoryMenu({ anchor: event.currentTarget, direction });
   };
 
   const closeHistoryMenu = () => setHistoryMenu(null);
@@ -233,7 +242,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
         </span>
       </Tooltip>
 
-      <Tooltip title="Zurück (lang drücken für Verlauf)" placement="right">
+      <Tooltip title="Zurück (lang drücken oder Rechtsklick für Verlauf)" placement="right">
         <span>
           <IconButton
             size="small"
@@ -242,6 +251,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
             onPointerUp={cancelLongPress}
             onPointerLeave={cancelLongPress}
             onPointerCancel={cancelLongPress}
+            onContextMenu={handleNavContextMenu('back')}
             disabled={canGoBack === undefined ? historyIndex <= 0 : !canGoBack}
             aria-label="Go back"
           >
@@ -250,7 +260,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
         </span>
       </Tooltip>
 
-      <Tooltip title="Vorwärts (lang drücken für Verlauf)" placement="right">
+      <Tooltip title="Vorwärts (lang drücken oder Rechtsklick für Verlauf)" placement="right">
         <span>
           <IconButton
             size="small"
@@ -259,6 +269,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
             onPointerUp={cancelLongPress}
             onPointerLeave={cancelLongPress}
             onPointerCancel={cancelLongPress}
+            onContextMenu={handleNavContextMenu('forward')}
             disabled={!canGoForward}
             aria-label="Go forward"
           >
@@ -287,9 +298,11 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
         {historyMenu?.direction === 'back' && backMenuItems.map(({ index, entry }) => {
           const desc = describeEntry(entry);
           const isOv = entry.isOverview;
+          const isFs = entry.isFullSchema;
           return (
-            <MenuItem key={`b-${index}`} onClick={jumpAndClose(index)} sx={isOv ? { gap: 1 } : undefined}>
+            <MenuItem key={`b-${index}`} onClick={jumpAndClose(index)} sx={isOv || isFs ? { gap: 1 } : undefined}>
               {isOv && <OverviewIcon fontSize="small" sx={{ color: 'text.secondary' }} />}
+              {isFs && <AccountTree fontSize="small" sx={{ color: 'text.secondary' }} />}
               <ListItemText
                 primary={desc.label}
                 secondary={desc.kind}
@@ -302,9 +315,11 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
         {historyMenu?.direction === 'forward' && forwardMenuItems.map(({ index, entry }) => {
           const desc = describeEntry(entry);
           const isOv = entry.isOverview;
+          const isFs = entry.isFullSchema;
           return (
-            <MenuItem key={`f-${index}`} onClick={jumpAndClose(index)} sx={isOv ? { gap: 1 } : undefined}>
+            <MenuItem key={`f-${index}`} onClick={jumpAndClose(index)} sx={isOv || isFs ? { gap: 1 } : undefined}>
               {isOv && <OverviewIcon fontSize="small" sx={{ color: 'text.secondary' }} />}
+              {isFs && <AccountTree fontSize="small" sx={{ color: 'text.secondary' }} />}
               <ListItemText
                 primary={desc.label}
                 secondary={desc.kind}
@@ -343,7 +358,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
           <IconButton
             size="small"
             onClick={onResetLayout}
-            disabled={noNode}
+            disabled={noEditable}
             aria-label="Reset layout"
           >
             <RestartAlt fontSize="small" />
@@ -356,7 +371,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
           <IconButton
             size="small"
             onClick={onMagicLayout}
-            disabled={noNode}
+            disabled={noEditable}
             aria-label="Magic layout"
             sx={{
               color: theme => theme.palette.warning.main,
@@ -373,7 +388,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
           <IconButton
             size="small"
             onClick={onCollapseAll}
-            disabled={noNode}
+            disabled={noEditable}
             aria-label="Collapse all nodes"
           >
             <ExpandLess fontSize="small" />
@@ -386,7 +401,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
           <IconButton
             size="small"
             onClick={onExpandAll}
-            disabled={noNode}
+            disabled={noEditable}
             aria-label="Expand all nodes"
           >
             <ExpandMore fontSize="small" />

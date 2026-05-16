@@ -1,7 +1,7 @@
 # Mitwirken an modvis
 
 Danke fürs Interesse! modvis ist eine Open-Source-Visualisierung für INTERLIS-
-und EXPRESS-Schemas. Beiträge sind willkommen — Bug Reports, Modell-Samples,
+und EXPRESS-Modelle. Beiträge sind willkommen — Bug Reports, Modell-Samples,
 Grammar-Fixes, UI-Polish, Doku.
 
 Dieses Dokument beschreibt den Setup-Pfad, die Branch-Strategie und die

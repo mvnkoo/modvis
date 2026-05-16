@@ -17,7 +17,9 @@ import {
   StepEdge,
   NodeMouseHandler,
 } from '@xyflow/react';
-import { Box, Alert, CircularProgress, Snackbar } from '@mui/material';
+import { Box, Alert, CircularProgress, Snackbar, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import OpenInNew from '@mui/icons-material/OpenInNew';
+import AccountTree from '@mui/icons-material/AccountTree';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { IliNode } from '../services/types/IliBaseTypes';
 
@@ -160,6 +162,7 @@ const Flow: React.FC = () => {
     registerNodeMove,
     registerNodeExpand,
     snapshotNodes,
+    isFullSchemaView,
     handleMaxSubTypesChange,
     fitViewRequest,
   } = useIliSchema(
@@ -220,8 +223,27 @@ const Flow: React.FC = () => {
 
   const [nodePositionsHistory, setNodePositionsHistory] = useState<Map<string, { x: number; y: number }>[]>([]);
 
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<
+    { x: number; y: number; nodeId: string; label: string } | null
+  >(null);
+
+  useEffect(() => {
+    if (!isFullSchemaView) {
+      setHighlightedId(null);
+      setContextMenu(null);
+    }
+  }, [isFullSchemaView]);
+
   const handleNodeClick = useCallback((event: React.MouseEvent, node: ReactFlowNode) => {
     if (node.type === 'topicLabelNode' || node.type === 'topicFrameNode') return;
+
+    if (isFullSchemaView) {
+      setContextMenu(null);
+      setHighlightedId(prev => (prev === node.id ? null : node.id));
+      return;
+    }
+
     if (node.id === activeNodeId) return;
 
     const iliNode: IliNode = {
@@ -236,7 +258,51 @@ const Flow: React.FC = () => {
     };
 
     baseHandleNodeClick(event, iliNode);
-  }, [activeNodeId, baseHandleNodeClick]);
+  }, [activeNodeId, baseHandleNodeClick, isFullSchemaView]);
+
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: ReactFlowNode) => {
+    if (node.type === 'topicLabelNode' || node.type === 'topicFrameNode') return;
+    event.preventDefault();
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      nodeId: node.id,
+      label: String(node.data?.label ?? node.id),
+    });
+  }, []);
+
+  const handlePaneClick = useCallback(() => {
+    setHighlightedId(null);
+    setContextMenu(null);
+  }, []);
+
+  const handleContextMenuJump = useCallback(() => {
+    if (!contextMenu) return;
+    const target = allNodes.find(n => n.id === contextMenu.nodeId);
+    setContextMenu(null);
+    setHighlightedId(null);
+    if (target) {
+      baseHandleNodeClick({} as React.MouseEvent, target as IliNode);
+    }
+  }, [contextMenu, allNodes, baseHandleNodeClick]);
+
+  const handleContextMenuToFullSchema = useCallback(() => {
+    if (!contextMenu) return;
+    const id = contextMenu.nodeId;
+    setContextMenu(null);
+    setHighlightedId(id);
+    showFullSchema();
+  }, [contextMenu, showFullSchema]);
+
+  const handleNodeDoubleClick = useCallback((event: React.MouseEvent, node: ReactFlowNode) => {
+    if (!isFullSchemaView) return;
+    if (node.type === 'topicLabelNode' || node.type === 'topicFrameNode') return;
+    const target = allNodes.find(n => n.id === node.id);
+    if (!target) return;
+    setContextMenu(null);
+    setHighlightedId(null);
+    baseHandleNodeClick(event, target as IliNode);
+  }, [isFullSchemaView, allNodes, baseHandleNodeClick]);
 
   const controlsStyle = useMemo(() => ({
     backgroundColor: colors.paper,
@@ -382,10 +448,70 @@ const Flow: React.FC = () => {
     return layoutHoverPreview(hovered, allNodes, allEdges, colors);
   }, [hoverPreviewEnabled, hoveredClassId, nodes, allNodes, allEdges, colors, activeSupertypeIds]);
 
-  const renderedNodes = useMemo(
-    () => [...nodesWithHandlers, ...hoverPreview.nodes],
-    [nodesWithHandlers, hoverPreview.nodes]
-  );
+  const keptIdsForHighlight = useMemo(() => {
+    if (!highlightedId || !isFullSchemaView) return null;
+    const ids = new Set<string>([highlightedId]);
+    const parentOf = new Map<string, string>();
+    const childrenOf = new Map<string, string[]>();
+    for (const e of edges) {
+      const rt = (e.data as { relationType?: string } | undefined)?.relationType;
+      if (rt !== 'EXTENDS') continue;
+      parentOf.set(e.source, e.target);
+      if (!childrenOf.has(e.target)) childrenOf.set(e.target, []);
+      childrenOf.get(e.target)!.push(e.source);
+    }
+    let cur = highlightedId;
+    while (parentOf.has(cur)) {
+      cur = parentOf.get(cur)!;
+      if (ids.has(cur)) break;
+      ids.add(cur);
+    }
+    const stack = [highlightedId];
+    while (stack.length) {
+      const id = stack.pop()!;
+      for (const c of childrenOf.get(id) ?? []) {
+        if (!ids.has(c)) {
+          ids.add(c);
+          stack.push(c);
+        }
+      }
+    }
+    const keptClassIds = new Set(ids);
+    const nodesById = new Map(nodes.map(n => [n.id, n]));
+    const isEnumOrAssoc = (id: string): boolean => {
+      const n = nodesById.get(id);
+      if (!n) return false;
+      return (
+        n.type === 'enumNode'
+        || n.type === 'domainEnumNode'
+        || n.type === 'ENUMERATION'
+        || n.type === 'associationNode'
+      );
+    };
+    for (const e of edges) {
+      if (keptClassIds.has(e.source) && isEnumOrAssoc(e.target)) ids.add(e.target);
+      if (keptClassIds.has(e.target) && isEnumOrAssoc(e.source)) ids.add(e.source);
+    }
+    return ids;
+  }, [highlightedId, isFullSchemaView, edges, nodes]);
+
+  const renderedNodes = useMemo(() => {
+    let base = nodesWithHandlers;
+    if (keptIdsForHighlight) {
+      base = base.map(n => {
+        const kept = keptIdsForHighlight.has(n.id);
+        const isCenter = n.id === highlightedId;
+        return {
+          ...n,
+          data: { ...n.data, isHighlighted: isCenter, isActive: isCenter },
+          style: kept
+            ? { ...n.style, opacity: 1, filter: undefined }
+            : { ...n.style, opacity: 0.22, filter: 'grayscale(0.85)' },
+        };
+      });
+    }
+    return [...base, ...hoverPreview.nodes];
+  }, [nodesWithHandlers, hoverPreview.nodes, keptIdsForHighlight, highlightedId]);
   // Pick the single edge from the hovered node to its closest neighbour in the
   // active-class hierarchy. For ancestors that's the direct child (one rank
   // closer to active); for subtypes / enums / assocs it's active itself.
@@ -431,8 +557,15 @@ const Flow: React.FC = () => {
           };
         })
       : withFade;
-    return [...tinted, ...hoverPreview.edges];
-  }, [edges, hoverPreview.edges, tintedEdgeId, colors.selectedEntity]);
+    const dimmed = keptIdsForHighlight
+      ? tinted.map(e => {
+          const visible = keptIdsForHighlight.has(e.source) && keptIdsForHighlight.has(e.target);
+          if (visible) return e;
+          return { ...e, style: { ...e.style, opacity: 0.1 } };
+        })
+      : tinted;
+    return [...dimmed, ...hoverPreview.edges];
+  }, [edges, hoverPreview.edges, tintedEdgeId, colors.selectedEntity, keptIdsForHighlight]);
 
  
   const debouncedHandleMaxSubTypesChange = useMemo(
@@ -457,6 +590,78 @@ const Flow: React.FC = () => {
       return next;
     });
   }, [handleNodeExpand, setNodes, snapshotNodes]);
+
+  const dragGroupRef = useRef<{
+    rootId: string;
+    rootOrigin: { x: number; y: number };
+    descendantOrigins: Map<string, { x: number; y: number }>;
+  } | null>(null);
+
+  const collectInheritanceDescendants = useCallback((rootId: string): Set<string> => {
+    const childrenByParent = new Map<string, string[]>();
+    for (const e of allEdges) {
+      const rt = (e.data as { relationType?: string } | undefined)?.relationType;
+      if (rt !== 'EXTENDS') continue;
+      if (!childrenByParent.has(e.target)) childrenByParent.set(e.target, []);
+      childrenByParent.get(e.target)!.push(e.source);
+    }
+    const out = new Set<string>();
+    const stack = [rootId];
+    while (stack.length) {
+      const id = stack.pop()!;
+      for (const child of childrenByParent.get(id) ?? []) {
+        if (!out.has(child)) {
+          out.add(child);
+          stack.push(child);
+        }
+      }
+    }
+    return out;
+  }, [allEdges]);
+
+  const handleNodeDragStart = useCallback((_event: React.MouseEvent, draggedNode: ReactFlowNode) => {
+    if (!isFullSchemaView) {
+      dragGroupRef.current = null;
+      return;
+    }
+    const descendantIds = collectInheritanceDescendants(draggedNode.id);
+    const descendantOrigins = new Map<string, { x: number; y: number }>();
+    for (const n of nodes) {
+      if (descendantIds.has(n.id)) {
+        descendantOrigins.set(n.id, { x: n.position.x, y: n.position.y });
+      }
+    }
+    dragGroupRef.current = {
+      rootId: draggedNode.id,
+      rootOrigin: { x: draggedNode.position.x, y: draggedNode.position.y },
+      descendantOrigins,
+    };
+  }, [isFullSchemaView, collectInheritanceDescendants, nodes]);
+
+  const handleNodeDrag = useCallback((_event: React.MouseEvent, draggedNode: ReactFlowNode) => {
+    const group = dragGroupRef.current;
+    if (!group || group.rootId !== draggedNode.id || group.descendantOrigins.size === 0) return;
+    const dx = draggedNode.position.x - group.rootOrigin.x;
+    const dy = draggedNode.position.y - group.rootOrigin.y;
+    setNodes(prev => prev.map(n => {
+      const origin = group.descendantOrigins.get(n.id);
+      if (!origin) return n;
+      return { ...n, position: { x: origin.x + dx, y: origin.y + dy } };
+    }));
+  }, [setNodes]);
+
+  const handleNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: ReactFlowNode) => {
+    const group = dragGroupRef.current;
+    registerNodeMove(draggedNode.id, draggedNode.position);
+    if (group && group.rootId === draggedNode.id) {
+      const dx = draggedNode.position.x - group.rootOrigin.x;
+      const dy = draggedNode.position.y - group.rootOrigin.y;
+      for (const [id, origin] of group.descendantOrigins) {
+        registerNodeMove(id, { x: origin.x + dx, y: origin.y + dy });
+      }
+    }
+    dragGroupRef.current = null;
+  }, [registerNodeMove]);
 
  
   const calculateBounds = (nodes: Node[]) => {
@@ -681,6 +886,9 @@ const Flow: React.FC = () => {
         edges={renderedEdges}
         onConnect={handleConnect}
         onNodeClick={handleNodeClick as unknown as NodeMouseHandler}
+        onNodeDoubleClick={handleNodeDoubleClick as unknown as NodeMouseHandler}
+        onNodeContextMenu={handleNodeContextMenu as unknown as NodeMouseHandler}
+        onPaneClick={handlePaneClick}
         onNodeMouseEnter={handleNodeMouseEnter as unknown as NodeMouseHandler}
         onNodeMouseLeave={handleNodeMouseLeave as unknown as NodeMouseHandler}
         nodeTypes={nodeTypes}
@@ -708,7 +916,9 @@ const Flow: React.FC = () => {
         elementsSelectable={true}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeDragStop={(_event, node) => registerNodeMove(node.id, node.position)}
+        onNodeDragStart={handleNodeDragStart}
+        onNodeDrag={handleNodeDrag}
+        onNodeDragStop={handleNodeDragStop}
         proOptions={{ hideAttribution: true }}
         onMouseDown={isSelectingArea ? handleSelectionStart : undefined}
         onMouseMove={isSelectingArea ? handleSelectionMove : undefined}
@@ -765,6 +975,7 @@ const Flow: React.FC = () => {
             onJumpToHistoryIndex={jumpToHistoryIndex}
             onShowOverview={showOverview}
             onShowFullSchema={showFullSchema}
+            isFullSchemaView={isFullSchemaView}
             useCurvedLines={useCurvedLines}
             exportAnchorEl={exportAnchorEl}
             onBack={handleBack}
@@ -795,6 +1006,37 @@ const Flow: React.FC = () => {
           }}
         />
       </ReactFlow>
+
+      <Menu
+        open={contextMenu !== null}
+        onClose={() => setContextMenu(null)}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenu ? { top: contextMenu.y, left: contextMenu.x } : undefined
+        }
+      >
+        {isFullSchemaView ? (
+          <MenuItem onClick={handleContextMenuJump}>
+            <ListItemIcon>
+              <OpenInNew fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary={`Zur Komponente ${contextMenu?.label ?? ''}`}
+              secondary="Detailansicht öffnen"
+            />
+          </MenuItem>
+        ) : (
+          <MenuItem onClick={handleContextMenuToFullSchema}>
+            <ListItemIcon>
+              <AccountTree fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Im Gesamtmodell zeigen"
+              secondary={`${contextMenu?.label ?? ''} hervorheben`}
+            />
+          </MenuItem>
+        )}
+      </Menu>
 
       {/* Toast-Benachrichtigung hinzufügen */}
       <Snackbar
