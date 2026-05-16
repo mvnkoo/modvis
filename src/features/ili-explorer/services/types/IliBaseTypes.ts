@@ -130,6 +130,7 @@ export interface NavigationState {
   nodeId: string;
   node?: IliNode;
   isOverview?: boolean;
+  isFullSchema?: boolean;
   showEnums: boolean;
   showAssociations: boolean;
   label?: string;

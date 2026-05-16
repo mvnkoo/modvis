@@ -142,6 +142,7 @@ const Flow: React.FC = () => {
     canGoBack,
     canGoForward,
     showOverview,
+    showFullSchema,
     navigationHistory,
     overviewWasShown,
     setFullHierarchyAndReset,
@@ -156,6 +157,9 @@ const Flow: React.FC = () => {
     handleToggleAssociations,
     handleMagicLayout,
     resetCurrentLayout,
+    registerNodeMove,
+    registerNodeExpand,
+    snapshotNodes,
     handleMaxSubTypesChange,
     fitViewRequest,
   } = useIliSchema(
@@ -248,37 +252,40 @@ const Flow: React.FC = () => {
   }), [colors]);
 
   const handleCollapseAll = useCallback(() => {
-    setNodes(currentNodes => 
-      currentNodes.map(node => ({
+    setNodes(currentNodes => {
+      const next = currentNodes.map(node => ({
         ...node,
         data: {
           ...node.data,
           expanded: false,
           isExpanded: false
         }
-      }))
-    );
-  }, [setNodes]);
+      }));
+      snapshotNodes(next);
+      return next;
+    });
+  }, [setNodes, snapshotNodes]);
 
  
   const handleNodeExpand = useCallback((nodeId: string, expanded: boolean) => {
-    setNodes(currentNodes => 
+    registerNodeExpand(nodeId, expanded);
+    setNodes(currentNodes =>
       currentNodes.map(node => {
         if (node.id === nodeId) {
-          return { 
-            ...node, 
-            data: { 
-              ...node.data, 
+          return {
+            ...node,
+            data: {
+              ...node.data,
               expanded,
               isExpanded: expanded,
               onExpandChange: (newExpanded: boolean) => handleNodeExpand(node.id, newExpanded)
-            } 
+            }
           };
         }
         return node;
       })
     );
-  }, []);
+  }, [registerNodeExpand]);
 
  
   const nodesWithHandlers = useMemo(() =>
@@ -436,8 +443,8 @@ const Flow: React.FC = () => {
 
  
   const handleExpandAll = useCallback(() => {
-    setNodes(currentNodes => 
-      currentNodes.map(node => ({
+    setNodes(currentNodes => {
+      const next = currentNodes.map(node => ({
         ...node,
         data: {
           ...node.data,
@@ -445,9 +452,11 @@ const Flow: React.FC = () => {
           isExpanded: true,
           onExpandChange: (expanded: boolean) => handleNodeExpand(node.id, expanded)
         }
-      }))
-    );
-  }, [handleNodeExpand]);
+      }));
+      snapshotNodes(next);
+      return next;
+    });
+  }, [handleNodeExpand, setNodes, snapshotNodes]);
 
  
   const calculateBounds = (nodes: Node[]) => {
@@ -699,6 +708,7 @@ const Flow: React.FC = () => {
         elementsSelectable={true}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDragStop={(_event, node) => registerNodeMove(node.id, node.position)}
         proOptions={{ hideAttribution: true }}
         onMouseDown={isSelectingArea ? handleSelectionStart : undefined}
         onMouseMove={isSelectingArea ? handleSelectionMove : undefined}
@@ -754,6 +764,7 @@ const Flow: React.FC = () => {
             overviewWasShown={overviewWasShown}
             onJumpToHistoryIndex={jumpToHistoryIndex}
             onShowOverview={showOverview}
+            onShowFullSchema={showFullSchema}
             useCurvedLines={useCurvedLines}
             exportAnchorEl={exportAnchorEl}
             onBack={handleBack}
