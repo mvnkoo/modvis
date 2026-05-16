@@ -1,18 +1,18 @@
 import React from 'react';
 import { Autocomplete, TextField } from '@mui/material';
 import { Search } from '@mui/icons-material';
-import { SearchOption } from '../types/expTypes';
+import type { ExpressSearchOption } from '../services/types/ExpressBaseTypes';
 
 interface ExpSchemaControlsProps {
-  searchValue: SearchOption | null;
-  onSearchChange: (value: SearchOption | null) => void;
-  searchOptions: SearchOption[];
+  searchValue: ExpressSearchOption | null;
+  onSearchChange: (value: ExpressSearchOption | null) => void;
+  searchOptions: ExpressSearchOption[];
 }
 
 export const ExpSchemaControls: React.FC<ExpSchemaControlsProps> = ({
   searchValue,
   onSearchChange,
-  searchOptions
+  searchOptions,
 }) => {
   return (
     <Autocomplete
@@ -21,11 +21,12 @@ export const ExpSchemaControls: React.FC<ExpSchemaControlsProps> = ({
       options={searchOptions}
       groupBy={(option) => option.category}
       getOptionLabel={(option) => option.label}
+      isOptionEqualToValue={(o, v) => o.id === v.id}
       renderOption={(props, option) => (
         <li {...props}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div>{option.label}</div>
-            <div style={{ fontSize: '0.8em', color: 'gray' }}>{option.description}</div>
+            <div style={{ fontSize: '0.78em', color: 'gray' }}>{option.description}</div>
           </div>
         </li>
       )}
@@ -34,13 +35,13 @@ export const ExpSchemaControls: React.FC<ExpSchemaControlsProps> = ({
         <TextField
           {...params}
           size="small"
-          placeholder="Suchen Sie nach einer Entity oder einem Type (z.B. 'Person', 'Color')"
+          placeholder="Suche nach Entity / Type / Enum / Select (z.B. 'IfcPerson')"
           InputProps={{
             ...params.InputProps,
-            startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />
+            startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />,
           }}
         />
       )}
     />
   );
-}; 
+};
