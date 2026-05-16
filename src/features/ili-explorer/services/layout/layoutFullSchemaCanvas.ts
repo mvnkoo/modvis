@@ -26,7 +26,10 @@ export interface FullSchemaCanvasOptions {
   maxPerRow?: number;
   showEnums?: boolean;
   showAssociations?: boolean;
+  useMagicLayout?: boolean;
 }
+
+const MAGIC_VERTICAL_SCALE = 2.4;
 
 export interface FullSchemaCanvasResult {
   nodes: IliNode[];
@@ -48,6 +51,9 @@ export function layoutFullSchemaCanvas(
   const maxPerRow = Math.max(1, opts.maxPerRow ?? DEFAULT_MAX_PER_ROW);
   const showEnums = opts.showEnums ?? true;
   const showAssociations = opts.showAssociations ?? true;
+  const vScale = opts.useMagicLayout ? MAGIC_VERTICAL_SCALE : 1;
+  const effRowY = ROW_Y * vScale;
+  const effSecGapY = SECONDARY_GAP_Y * vScale;
 
   const synthesizedEnums = showEnums ? synthesizeMissingEnumNodes(allNodes) : [];
   const workingNodes: IliNode[] = [...allNodes, ...synthesizedEnums];
@@ -70,9 +76,10 @@ export function layoutFullSchemaCanvas(
     subTypeOf,
     byId,
     maxPerRow,
+    effRowY,
   );
-  const enumsGrid = layoutSecondaryGrid(enums);
-  const assocsGrid = layoutSecondaryGrid(assocs);
+  const enumsGrid = layoutSecondaryGrid(enums, effSecGapY);
+  const assocsGrid = layoutSecondaryGrid(assocs, effSecGapY);
 
   const hasAssocs = assocs.length > 0;
   const hasEnums = enums.length > 0;
@@ -267,6 +274,7 @@ function layoutTopicTrees(
   subTypeOf: Map<string, string>,
   byId: Map<string, IliNode>,
   maxPerRow: number,
+  rowY: number,
 ): { nodes: IliNode[]; width: number; depth: number } {
   if (members.length === 0) return { nodes: [], width: 0, depth: 0 };
 
@@ -302,7 +310,7 @@ function layoutTopicTrees(
   const TREE_GUTTER_SLOTS = 0.6;
   for (const rootId of roots) {
     const m = measureNode(rootId, childrenMap, maxPerRow, measureCache);
-    placeTreeNode(rootId, xSlots, 0, childrenMap, byId, maxPerRow, measureCache, out);
+    placeTreeNode(rootId, xSlots, 0, childrenMap, byId, maxPerRow, rowY, measureCache, out);
     xSlots += m.width + TREE_GUTTER_SLOTS;
     maxDepth = Math.max(maxDepth, m.height);
   }
@@ -319,7 +327,7 @@ function layoutTopicTrees(
   return { nodes: shifted, width: widthPx, depth: maxDepth };
 }
 
-function layoutSecondaryGrid(items: IliNode[]): { nodes: IliNode[]; width: number; height: number } {
+function layoutSecondaryGrid(items: IliNode[], gapY: number): { nodes: IliNode[]; width: number; height: number } {
   if (items.length === 0) return { nodes: [], width: 0, height: 0 };
   const sorted = [...items].sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
   const cols = Math.min(SECONDARY_COLS, sorted.length);
@@ -332,12 +340,12 @@ function layoutSecondaryGrid(items: IliNode[]): { nodes: IliNode[]; width: numbe
       ...n,
       position: {
         x: col * (SECONDARY_NODE_W + SECONDARY_GAP_X),
-        y: row * (SECONDARY_NODE_H + SECONDARY_GAP_Y),
+        y: row * (SECONDARY_NODE_H + gapY),
       },
     });
   });
   const width = cols * SECONDARY_NODE_W + (cols - 1) * SECONDARY_GAP_X;
-  const height = rows * SECONDARY_NODE_H + (rows - 1) * SECONDARY_GAP_Y;
+  const height = rows * SECONDARY_NODE_H + (rows - 1) * gapY;
   return { nodes, width, height };
 }
 
@@ -392,6 +400,7 @@ function placeTreeNode(
   childrenMap: Map<string, string[]>,
   byId: Map<string, IliNode>,
   maxPerRow: number,
+  rowY: number,
   cache: Map<string, NodeMeasure>,
   out: IliNode[],
 ): void {
@@ -402,7 +411,7 @@ function placeTreeNode(
   if (node) {
     out.push({
       ...node,
-      position: { x: centerX - NODE_W / 2, y: yDepth * ROW_Y },
+      position: { x: centerX - NODE_W / 2, y: yDepth * rowY },
     });
   }
 
@@ -425,7 +434,7 @@ function placeTreeNode(
     let xCursor = xLeftSlots + (m.width - rowWidth) / 2;
     for (let i = start; i < end; i++) {
       const sub = measureNode(kids[i], childrenMap, maxPerRow, cache);
-      placeTreeNode(kids[i], xCursor, yCursorDepth, childrenMap, byId, maxPerRow, cache, out);
+      placeTreeNode(kids[i], xCursor, yCursorDepth, childrenMap, byId, maxPerRow, rowY, cache, out);
       xCursor += sub.width;
     }
     yCursorDepth += rowMaxHeight;
