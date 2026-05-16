@@ -4,8 +4,9 @@ import type { ExpressNodeType } from '../services/types/ExpressBaseTypes';
 export interface ExpressNavEntry {
   nodeId: string;
   label: string;
-  nodeType: ExpressNodeType | 'OVERVIEW';
+  nodeType: ExpressNodeType | 'OVERVIEW' | 'DOMAIN';
   isOverview?: boolean;
+  isDomain?: boolean;
   isAbstract?: boolean;
 }
 

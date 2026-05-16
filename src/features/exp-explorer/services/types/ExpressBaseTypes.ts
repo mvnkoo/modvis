@@ -53,6 +53,13 @@ export interface ExpressFlowNodeData extends Record<string, unknown> {
   forcedExpanded?: boolean | undefined;
   pairedTypeId?: string;
   pairedObjectId?: string;
+  // DOMAIN CARD (overview) --------------------------------------------
+  domain?: string;
+  domainKey?: string;
+  layer?: 'Core' | 'Shared' | 'Domain' | 'Resource' | 'Other';
+  count?: number;
+  examples?: string[];
+  targetId?: string;
 }
 
 export type ExpressFlowNode = Node<ExpressFlowNodeData>;
