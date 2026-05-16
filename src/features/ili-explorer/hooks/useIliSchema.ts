@@ -4,6 +4,7 @@ import { Node, Edge, Connection } from '@xyflow/react';
 import { useTheme } from '../../../common/theme/ThemeContext';
 import { getDirectRelations } from '../services/layout/getDirectRelations';
 import { isOverviewCandidate, layoutModelOverview } from '../services/layout/overviewStrategy';
+import { layoutFullSchemaCanvas } from '../services/layout/layoutFullSchemaCanvas';
 import { useNavigationHistory } from './useNavigationHistory';
 import { useIliLoader, type LoadResult } from './useIliLoader';
 import { useDisplayToggles } from './useDisplayToggles';
@@ -61,10 +62,23 @@ interface UseIliSchemaReturn {
   canGoBack: boolean;
   canGoForward: boolean;
   showOverview: () => void;
+  showFullSchema: () => void;
+  registerNodeMove: (nodeId: string, position: { x: number; y: number }) => void;
+  registerNodeExpand: (nodeId: string, expanded: boolean) => void;
+  snapshotNodes: (nodes: IliNode[]) => void;
 }
+
+interface CachedNodeState {
+  position?: { x: number; y: number };
+  expanded?: boolean;
+}
+
+const OVERVIEW_KEY = '__overview__';
+const FULL_SCHEMA_KEY = '__fullSchema__';
 
 type DisplayTarget =
   | { kind: 'overview' }
+  | { kind: 'fullSchema' }
   | { kind: 'node'; node: IliNode; override?: Partial<LayoutOptions> };
 
 function normalizeIliNode(source: Node | IliNode, extraData?: Record<string, unknown>): IliNode {
@@ -137,6 +151,58 @@ export const useIliSchema = (
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [fitViewRequest, setFitViewRequest] = useState(0);
 
+  const sessionCacheRef = useRef<Map<string, Map<string, CachedNodeState>>>(new Map());
+  const currentViewKeyRef = useRef<string>(OVERVIEW_KEY);
+
+  const getOrCreateView = useCallback((key: string): Map<string, CachedNodeState> => {
+    let view = sessionCacheRef.current.get(key);
+    if (!view) {
+      view = new Map();
+      sessionCacheRef.current.set(key, view);
+    }
+    return view;
+  }, []);
+
+  const applyCachedState = useCallback((viewKey: string, list: IliNode[]): IliNode[] => {
+    const view = sessionCacheRef.current.get(viewKey);
+    if (!view || view.size === 0) return list;
+    return list.map(n => {
+      const cached = view.get(n.id);
+      if (!cached) return n;
+      const next: IliNode = { ...n };
+      if (cached.position) next.position = cached.position;
+      if (cached.expanded !== undefined) {
+        next.data = { ...n.data, expanded: cached.expanded, isExpanded: cached.expanded };
+      }
+      return next;
+    });
+  }, []);
+
+  const registerNodeMove = useCallback((nodeId: string, position: { x: number; y: number }) => {
+    const view = getOrCreateView(currentViewKeyRef.current);
+    const prev = view.get(nodeId) ?? {};
+    view.set(nodeId, { ...prev, position });
+  }, [getOrCreateView]);
+
+  const registerNodeExpand = useCallback((nodeId: string, expanded: boolean) => {
+    const view = getOrCreateView(currentViewKeyRef.current);
+    const prev = view.get(nodeId) ?? {};
+    view.set(nodeId, { ...prev, expanded });
+  }, [getOrCreateView]);
+
+  const snapshotNodes = useCallback((nodesToSnap: IliNode[]) => {
+    const view = getOrCreateView(currentViewKeyRef.current);
+    for (const n of nodesToSnap) {
+      const prev = view.get(n.id) ?? {};
+      const expanded = n.data?.expanded as boolean | undefined;
+      view.set(n.id, {
+        ...prev,
+        position: n.position,
+        expanded: expanded ?? prev.expanded,
+      });
+    }
+  }, [getOrCreateView]);
+
   const requestFitView = useCallback(() => {
     setFitViewRequest(c => c + 1);
   }, []);
@@ -198,34 +264,47 @@ export const useIliSchema = (
   );
 
   const commitDisplay = useCallback(
-    (result: { nodes: IliNode[]; edges: Edge[] }, activeId: string | null) => {
-      setNodes(result.nodes);
+    (result: { nodes: IliNode[]; edges: Edge[] }, activeId: string | null, viewKey: string) => {
+      currentViewKeyRef.current = viewKey;
+      setNodes(applyCachedState(viewKey, result.nodes));
       setEdges(result.edges);
       setActiveNodeId(activeId);
       requestFitView();
     },
-    [setNodes, setEdges, requestFitView]
+    [setNodes, setEdges, requestFitView, applyCachedState]
   );
 
   const displayNode = useCallback((target: DisplayTarget): boolean => {
     if (target.kind === 'overview') {
       if (allNodes.length === 0) return false;
       const overview = layoutModelOverview(allNodes as IliNode[], parsedRelations);
-      commitDisplay({ nodes: overview.nodes as IliNode[], edges: overview.edges }, null);
+      commitDisplay({ nodes: overview.nodes as IliNode[], edges: overview.edges }, null, OVERVIEW_KEY);
+    } else if (target.kind === 'fullSchema') {
+      if (allNodes.length === 0) return false;
+      const result = layoutFullSchemaCanvas(
+        allNodes as IliNode[],
+        allEdges,
+        colors,
+        useCurvedLines,
+        { maxPerRow: maxSubTypesPerRow > 0 ? maxSubTypesPerRow : 4 },
+      );
+      commitDisplay({ nodes: result.nodes, edges: result.edges }, null, FULL_SCHEMA_KEY);
     } else {
-      commitDisplay(computeLayout(target.node, target.override), target.node.id);
+      commitDisplay(computeLayout(target.node, target.override), target.node.id, `node:${target.node.id}`);
     }
     return true;
-  }, [allNodes, parsedRelations, computeLayout, commitDisplay]);
+  }, [allNodes, allEdges, parsedRelations, maxSubTypesPerRow, colors, useCurvedLines, computeLayout, commitDisplay]);
 
   const handleLoaded = useCallback((result: LoadResult) => {
     setSearchValue(null);
     setMaxSubTypesPerRow(4);
     resetHistory();
 
+    sessionCacheRef.current.clear();
+
     if (isOverviewCandidate(result.flowNodes as IliNode[], result.relations)) {
       const overview = layoutModelOverview(result.flowNodes as IliNode[], result.relations);
-      commitDisplay({ nodes: overview.nodes as IliNode[], edges: overview.edges }, null);
+      commitDisplay({ nodes: overview.nodes as IliNode[], edges: overview.edges }, null, OVERVIEW_KEY);
       resetHistory({
         nodeId: '__overview__',
         isOverview: true,
@@ -257,7 +336,7 @@ export const useIliSchema = (
         useMagicLayout: false,
       }
     );
-    commitDisplay(layoutResult, initialClass.id);
+    commitDisplay(layoutResult, initialClass.id, `node:${initialClass.id}`);
     resetHistory({
       nodeId: initialClass.id,
       showEnums: true,
@@ -305,16 +384,16 @@ export const useIliSchema = (
     const result = computeLayout(iliNode);
     const widened = result.nodes.map(n => ({ ...n, data: { ...n.data, width: 400 } }));
 
-    setNodes(widened);
-    setEdges(result.edges);
-    setActiveNodeId(node.id);
+    commitDisplay({ nodes: widened, edges: result.edges }, node.id, `node:${node.id}`);
     pushHistory({ nodeId: node.id, node: iliNode, showEnums, showAssociations });
-    requestFitView();
-  }, [activeNodeId, computeLayout, showEnums, showAssociations, setNodes, setEdges, requestFitView, pushHistory]);
+  }, [activeNodeId, computeLayout, commitDisplay, showEnums, showAssociations, pushHistory]);
 
   const navigateToEntry = useCallback((entry: NavigationState) => {
     if (entry.isOverview) {
       return displayNode({ kind: 'overview' });
+    }
+    if (entry.isFullSchema) {
+      return displayNode({ kind: 'fullSchema' });
     }
     const target = entry.node
       ?? (allNodes.find(node => node.id === entry.nodeId) as IliNode | undefined);
@@ -383,6 +462,22 @@ export const useIliSchema = (
     setOverviewWasShown(true);
   }, [allNodes, nav, displayNode, pushHistory, resetVisibility]);
 
+  const showFullSchema = useCallback(() => {
+    if (allNodes.length === 0) return;
+    const currentEntry = nav.entries[nav.index];
+    if (currentEntry?.isFullSchema) {
+      displayNode({ kind: 'fullSchema' });
+      return;
+    }
+    if (!displayNode({ kind: 'fullSchema' })) return;
+    pushHistory({
+      nodeId: '__fullSchema__',
+      isFullSchema: true,
+      showEnums: true,
+      showAssociations: true,
+    });
+  }, [allNodes, nav, displayNode, pushHistory]);
+
   const handleBack = nav.back;
   const handleForward = nav.forward;
   const jumpToHistoryIndex = nav.jumpTo;
@@ -396,6 +491,7 @@ export const useIliSchema = (
     resetHistory();
     setActiveNodeId(null);
     resetVisibility();
+    sessionCacheRef.current.clear();
   }, [loader, setNodes, setEdges, resetHistory, resetVisibility]);
 
   const setFullHierarchyAndReset = useCallback((value: boolean) => {
@@ -538,12 +634,22 @@ export const useIliSchema = (
   }, [activeNodeId, allNodes, applyLayout, nav]);
 
   const resetCurrentLayout = useCallback(() => {
+    const key = currentViewKeyRef.current;
+    sessionCacheRef.current.delete(key);
+    if (key === OVERVIEW_KEY) {
+      displayNode({ kind: 'overview' });
+      return;
+    }
+    if (key === FULL_SCHEMA_KEY) {
+      displayNode({ kind: 'fullSchema' });
+      return;
+    }
     if (!activeNodeId) return;
     const targetNode = allNodes.find(n => n.id === activeNodeId) as IliNode | undefined;
     if (!targetNode) return;
     applyLayout(targetNode);
     requestFitView();
-  }, [activeNodeId, allNodes, applyLayout, requestFitView]);
+  }, [activeNodeId, allNodes, displayNode, applyLayout, requestFitView]);
 
   const handleMagicLayout = useCallback(() => {
     if (!activeNodeId) return;
@@ -563,9 +669,10 @@ export const useIliSchema = (
       },
     }));
 
+    snapshotNodes(nodesWithExpandedStates);
     setNodes(nodesWithExpandedStates);
     setEdges(relatedNodes.edges);
-  }, [activeNodeId, allNodes, computeLayout, nodes, setNodes, setEdges]);
+  }, [activeNodeId, allNodes, computeLayout, nodes, setNodes, setEdges, snapshotNodes]);
 
   return {
     isLoading,
@@ -610,5 +717,9 @@ export const useIliSchema = (
     handleMaxSubTypesChange,
     fitViewRequest,
     requestFitView,
+    showFullSchema,
+    registerNodeMove,
+    registerNodeExpand,
+    snapshotNodes,
   };
 };

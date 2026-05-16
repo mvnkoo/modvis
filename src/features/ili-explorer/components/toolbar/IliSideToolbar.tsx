@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
+  AccountTree,
   ArrowBack,
   ArrowForward,
   AutoFixHigh,
@@ -32,6 +33,9 @@ type HistoryDirection = 'back' | 'forward';
 function describeEntry(entry: NavigationState): { kind: string; label: string } {
   if (entry.isOverview) {
     return { kind: 'OVERVIEW', label: 'Übersicht' };
+  }
+  if (entry.isFullSchema) {
+    return { kind: 'FULL SCHEMA', label: 'Alles anzeigen' };
   }
   const node = entry.node;
   const label = String(node?.data?.label ?? entry.label ?? entry.nodeId);
@@ -80,6 +84,7 @@ interface IliSideToolbarProps {
   useCurvedLines: boolean;
   exportAnchorEl: HTMLElement | null;
   onShowOverview: () => void;
+  onShowFullSchema: () => void;
   onBack: () => void;
   onForward: () => void;
   onLineTypeToggle: () => void;
@@ -106,6 +111,7 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
   useCurvedLines,
   exportAnchorEl,
   onShowOverview,
+  onShowFullSchema,
   onBack,
   onForward,
   onLineTypeToggle,
@@ -203,8 +209,26 @@ export const IliSideToolbar: React.FC<IliSideToolbarProps> = ({
     >
       <Tooltip title="Overview / Ansicht zurücksetzen" placement="right">
         <span>
-          <IconButton size="small" onClick={onShowOverview} disabled={noSchema} aria-label="Show overview">
+          <IconButton
+            size="small"
+            onClick={onShowOverview}
+            disabled={noSchema}
+            aria-label="Show overview"
+            sx={{
+              color: colors.entity,
+              bgcolor: alpha(colors.entity, 0.12),
+              '&:hover': { bgcolor: alpha(colors.entity, 0.24) },
+            }}
+          >
             <GridView fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
+
+      <Tooltip title="Alles anzeigen (ganzes Modell als Vererbungsbaum pro Topic)" placement="right">
+        <span>
+          <IconButton size="small" onClick={onShowFullSchema} disabled={noSchema} aria-label="Show full schema">
+            <AccountTree fontSize="small" />
           </IconButton>
         </span>
       </Tooltip>
