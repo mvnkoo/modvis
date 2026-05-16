@@ -63,6 +63,7 @@ interface UseIliSchemaReturn {
   canGoForward: boolean;
   showOverview: () => void;
   showFullSchema: () => void;
+  isFullSchemaView: boolean;
   registerNodeMove: (nodeId: string, position: { x: number; y: number }) => void;
   registerNodeExpand: (nodeId: string, expanded: boolean) => void;
   snapshotNodes: (nodes: IliNode[]) => void;
@@ -674,6 +675,31 @@ export const useIliSchema = (
   }, [activeNodeId, allNodes, displayNode, applyLayout, requestFitView]);
 
   const handleMagicLayout = useCallback(() => {
+    if (viewMode === 'fullSchema') {
+      sessionCacheRef.current.delete(FULL_SCHEMA_KEY);
+      const result = layoutFullSchemaCanvas(
+        allNodes as IliNode[],
+        allEdges,
+        colors,
+        useCurvedLines,
+        {
+          maxPerRow: maxSubTypesPerRow > 0 ? maxSubTypesPerRow : 4,
+          showEnums: fsShowEnums,
+          showAssociations: fsShowAssociations,
+          useMagicLayout: true,
+        },
+      );
+      const expandedNodes = result.nodes.map(n => ({
+        ...n,
+        data: { ...n.data, expanded: true, isExpanded: true },
+      }));
+      snapshotNodes(expandedNodes);
+      setNodes(expandedNodes);
+      setEdges(result.edges);
+      requestFitView();
+      return;
+    }
+
     if (!activeNodeId) return;
     const currentNode = allNodes.find(node => node.id === activeNodeId);
     if (!currentNode) return;
@@ -694,7 +720,7 @@ export const useIliSchema = (
     snapshotNodes(nodesWithExpandedStates);
     setNodes(nodesWithExpandedStates);
     setEdges(relatedNodes.edges);
-  }, [activeNodeId, allNodes, computeLayout, nodes, setNodes, setEdges, snapshotNodes]);
+  }, [viewMode, activeNodeId, allNodes, allEdges, colors, useCurvedLines, maxSubTypesPerRow, fsShowEnums, fsShowAssociations, computeLayout, nodes, setNodes, setEdges, snapshotNodes, requestFitView]);
 
   return {
     isLoading,
@@ -740,6 +766,7 @@ export const useIliSchema = (
     fitViewRequest,
     requestFitView,
     showFullSchema,
+    isFullSchemaView: viewMode === 'fullSchema',
     registerNodeMove,
     registerNodeExpand,
     snapshotNodes,
