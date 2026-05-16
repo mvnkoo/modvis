@@ -42,8 +42,24 @@ export function getDirectRelations(
     ? opts.maxSubTypesPerRow
     : 0;
 
-  const rightIds = mergeRefs(typeRefIds, enumIds);
-  const leftIds = selectIds;
+  const isEnumCenter = center.data.nodeType === 'ENUM';
+  const isSelectCenter = center.data.nodeType === 'SELECT';
+
+  const rightIds = new Set<string>(typeRefIds);
+  const leftIds = new Set<string>();
+
+  if (isEnumCenter) {
+    enumIds.forEach((id) => leftIds.add(id));
+  } else {
+    enumIds.forEach((id) => rightIds.add(id));
+  }
+
+  if (isSelectCenter) {
+    selectIds.forEach((id) => rightIds.add(id));
+  } else {
+    selectIds.forEach((id) => leftIds.add(id));
+  }
+
   const pairedId = center.data.pairedTypeId ?? center.data.pairedObjectId ?? null;
 
   const visibleIds = new Set<string>([center.id]);
@@ -55,11 +71,8 @@ export function getDirectRelations(
 
   const yScale = opts.useMagicLayout ? MAGIC_Y_SCALE : 1;
   const rowWidthHalf = subRowHalfWidth(subs.size, maxPerRow);
-  const sideX = Math.max(
-    L.ENUM_OFFSET_X,
-    rowWidthHalf + NODE_HALF + COL_GUTTER,
-    PAIR_OFFSET_X,
-  );
+  const baseSideX = Math.max(L.ENUM_OFFSET_X, rowWidthHalf + NODE_HALF + COL_GUTTER);
+  const sideX = pairedId ? Math.max(baseSideX, PAIR_OFFSET_X) : baseSideX;
   const selectsX = pairedId ? sideX + SELECTS_EXTRA_GAP : sideX;
 
   const positioned: ExpressFlowNode[] = [];
@@ -88,13 +101,6 @@ export function getDirectRelations(
   });
 
   return { nodes: positioned, visibleRelations };
-}
-
-function mergeRefs(typeRefs: Set<string>, enums: Set<string>): Set<string> {
-  const out = new Set<string>();
-  typeRefs.forEach((id) => out.add(id));
-  enums.forEach((id) => out.add(id));
-  return out;
 }
 
 function collectSupers(

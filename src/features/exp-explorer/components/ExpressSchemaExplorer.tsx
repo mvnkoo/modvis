@@ -88,13 +88,26 @@ const ExpressSchemaExplorerInner: React.FC = () => {
       rfInstance.fitView({ padding: 0.4, maxZoom: 0.9, duration: 400 });
     }, 60);
     return () => window.clearTimeout(handle);
-  }, [rfInstance, schema.currentNodeId, schema.isOverview, schema.nodes.length, layoutOpts.resetCounter]);
+  }, [rfInstance, schema.currentNodeId, schema.currentDomain, schema.isOverview, schema.nodes.length, layoutOpts.resetCounter]);
 
   const history = useNavigationHistory();
 
   useEffect(() => {
+    setLayoutOpts((p) => ({ ...p, forcedExpanded: undefined, useMagicLayout: false }));
+  }, [schema.currentNodeId, schema.currentDomain, schema.isOverview]);
+
+  useEffect(() => {
     if (schema.isOverview) {
       history.push({ nodeId: '__overview__', label: 'Übersicht', nodeType: 'OVERVIEW', isOverview: true });
+      return;
+    }
+    if (schema.currentDomain) {
+      history.push({
+        nodeId: `__domain__${schema.currentDomain}`,
+        label: schema.currentDomain,
+        nodeType: 'DOMAIN',
+        isDomain: true,
+      });
       return;
     }
     if (!schema.currentNodeId) return;
@@ -107,12 +120,16 @@ const ExpressSchemaExplorerInner: React.FC = () => {
       isAbstract: node.data.isAbstract,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema.currentNodeId, schema.isOverview]);
+  }, [schema.currentNodeId, schema.currentDomain, schema.isOverview]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node: ReactFlowNode) => {
     if (node.type === 'expressDomainCardNode') {
-      const target = (node.data as { targetId?: string }).targetId;
-      if (target) schema.focusNode(target);
+      const data = node.data as { domainKey?: string; targetId?: string };
+      if (data.domainKey) {
+        schema.focusDomain(data.domainKey);
+        return;
+      }
+      if (data.targetId) schema.focusNode(data.targetId);
       return;
     }
     schema.focusNode(node.id);
@@ -121,6 +138,7 @@ const ExpressSchemaExplorerInner: React.FC = () => {
   const applyNavEntry = useCallback((entry: ExpressNavEntry | null) => {
     if (!entry) return;
     if (entry.isOverview) schema.showOverview();
+    else if (entry.isDomain) schema.focusDomain(entry.label);
     else schema.focusNode(entry.nodeId);
   }, [schema]);
 

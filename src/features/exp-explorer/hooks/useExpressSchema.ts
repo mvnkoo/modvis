@@ -3,6 +3,8 @@ import type { Edge } from '@xyflow/react';
 import { ExpressParser } from '../services/parser/ExpressParser';
 import { getDirectRelations } from '../services/layout/getDirectRelations';
 import { layoutOverview } from '../services/layout/overviewStrategy';
+import { layoutDomainCanvas } from '../services/layout/layoutDomainCanvas';
+import { applyCollisionAvoidance } from '../services/layout/collisionAvoidance';
 import { relationToEdge } from '../services/flowMapping';
 import type {
   ExpressFlowNode,
@@ -23,8 +25,10 @@ export interface UseExpressSchemaResult {
   nodes: ExpressFlowNode[];
   edges: Edge[];
   currentNodeId: string | null;
+  currentDomain: string | null;
   isOverview: boolean;
   focusNode: (id: string) => void;
+  focusDomain: (domain: string) => void;
   showOverview: () => void;
   resetToRoot: () => void;
   searchOptions: ExpressSearchOption[];
@@ -43,11 +47,13 @@ export function useExpressSchema({
   }, [source]);
 
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
+  const [currentDomain, setCurrentDomain] = useState<string | null>(null);
   const [isOverview, setIsOverview] = useState(true);
 
   useEffect(() => {
     setIsOverview(true);
     setCurrentNodeId(null);
+    setCurrentDomain(null);
   }, [source]);
 
   const initialFocus = useMemo(() => {
@@ -73,7 +79,31 @@ export function useExpressSchema({
       const overviewNodes = layoutOverview(parseResult.nodes, {
         maxComponents: layoutOptions.maxComponents,
       }).map((n) => applyForcedExpanded(n, layoutOptions.forcedExpanded));
-      return { nodes: overviewNodes, edges: [] as Edge[] };
+      const finalOverview = layoutOptions.useMagicLayout
+        ? applyCollisionAvoidance(overviewNodes)
+        : overviewNodes;
+      return { nodes: finalOverview, edges: [] as Edge[] };
+    }
+    if (currentDomain) {
+      const maxPerRow = layoutOptions.limitSubTypes && layoutOptions.maxSubTypesPerRow > 0
+        ? layoutOptions.maxSubTypesPerRow
+        : 4;
+      const { nodes: positioned, visibleRelations } = layoutDomainCanvas(
+        currentDomain,
+        parseResult.nodes,
+        parseResult.relations,
+        { maxPerRow },
+      );
+      const xyEdges = visibleRelations.map((r) =>
+        relationToEdge(r, colors, layoutOptions.useCurvedLines),
+      );
+      const withForced = positioned.map((n) =>
+        applyForcedExpanded(n, layoutOptions.forcedExpanded),
+      );
+      const finalNodes = layoutOptions.useMagicLayout
+        ? applyCollisionAvoidance(withForced)
+        : withForced;
+      return { nodes: finalNodes, edges: xyEdges };
     }
     if (!center) return { nodes: [] as ExpressFlowNode[], edges: [] as Edge[] };
     const { nodes: positioned, visibleRelations } = getDirectRelations(
@@ -88,9 +118,13 @@ export function useExpressSchema({
     const withForced = positioned.map((n) =>
       applyForcedExpanded(n, layoutOptions.forcedExpanded),
     );
-    return { nodes: withForced, edges: xyEdges };
+    const finalNodes = layoutOptions.useMagicLayout
+      ? applyCollisionAvoidance(withForced, center.id)
+      : withForced;
+    return { nodes: finalNodes, edges: xyEdges };
   }, [
     isOverview,
+    currentDomain,
     center,
     parseResult.nodes,
     parseResult.relations,
@@ -100,15 +134,24 @@ export function useExpressSchema({
 
   const focusNode = useCallback((id: string) => {
     setIsOverview(false);
+    setCurrentDomain(null);
     setCurrentNodeId(id);
+  }, []);
+
+  const focusDomain = useCallback((domain: string) => {
+    setIsOverview(false);
+    setCurrentNodeId(null);
+    setCurrentDomain(domain);
   }, []);
 
   const showOverview = useCallback(() => {
     setIsOverview(true);
+    setCurrentDomain(null);
   }, []);
 
   const resetToRoot = useCallback(() => {
     setIsOverview(false);
+    setCurrentDomain(null);
     setCurrentNodeId(initialFocus);
   }, [initialFocus]);
 
@@ -140,9 +183,11 @@ export function useExpressSchema({
     parseResult,
     nodes,
     edges,
-    currentNodeId: isOverview ? null : effectiveId,
+    currentNodeId: isOverview || currentDomain ? null : effectiveId,
+    currentDomain: isOverview ? null : currentDomain,
     isOverview,
     focusNode,
+    focusDomain,
     showOverview,
     resetToRoot,
     searchOptions,
@@ -163,3 +208,4 @@ function domainForName(name: string): string {
   const m = name.match(/^Ifc([A-Z][a-z]+)/);
   return m ? m[1] : 'Other';
 }
+
