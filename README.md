@@ -18,10 +18,24 @@ Welche Branch wohin deployt, siehe [Branch-Strategie](#branch-strategie).
 ### ILI Explorer (Beta)
 
 - Parst INTERLIS-Schema-Dateien (`.ili`) in eine Graph-Repräsentation.
+
+![INTERLIS Modell hochladen](/images/iliexplorer.jpg)
+
 - Stellt Klassen, Aufzählungen und deren Beziehungen mittels [@xyflow/react](https://reactflow.dev/) dar.
+
+![INTERLIS Modell Übersicht](/images/iliexplorer_modellsicht.jpg)
+
 - Unterstützt Domain Enumerations: einfach, verschachtelt, `EXTENDS`, `ALL OF`.
 - Visualisiert Vererbung und Assoziationen zwischen Klassen.
+
+![INTERLIS Modell Attribut Mögliche Werte](/images/iliexplorer_moegliche_werte.jpg)
+
 - Zeigt Attribut-Details: Datentyp, Kardinalität, Kommentar, Pflicht-/Optionalstatus.
+
+![INTERLIS Modell Attributbeschreibung](/images/iliexplor_attributbeschreibung.jpg)
+
+![INTERLIS Modell Klasse geerbte Werte](/images/iliexplorer_geerbte_attribute.jpg)
+
 - Export als PNG und SVG (über `html-to-image`).
 
 ### EXP Explorer (Experimentell)
