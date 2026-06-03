@@ -36,7 +36,22 @@ Welche Branch wohin deployt, siehe [Branch-Strategie](#branch-strategie).
 
 ![INTERLIS Modell Klasse geerbte Werte](/images/iliexplorer_geerbte_attribute.jpg)
 
+- Links am Bildrand steht eine ganze Palette an Navigationswerkzeugen und Tools zur Verfügung
+
+![INTERLIS Modell Alles anzeigen](/images/iliexplorer_navigation_und_tools.jpg)
+
+![INTERLIS Modellinfo](/images/iliexplorer_modellinfo.jpg)
+
+![INTERLIS Modell Alles anzeigen](/images/iliexplorer_allesanzeigen.jpg)
+
+![INTERLIS Modell Alles anzeigen](/images/iliexplorer_allesanzeigen.jpg)
+
 - Export als PNG und SVG (über `html-to-image`).
+
+![INTERLIS Modell Alles anzeigen](/images/iliexplorer_exportieren.jpg)
+
+Weitere Ideen sind in Entwicklung - bitte erfassen Sie eigene Ideen oder Feedback zu Ideen in den [Issues](https://github.com/mvnkoo/modvis/issues).
+
 
 ### EXP Explorer (Experimentell)
 
