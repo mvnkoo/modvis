@@ -27,35 +27,16 @@ export function jsdelivrUrl(mirror: GithubMirror, relPath: string): string {
   return `${JSDELIVR_GH_BASE}/${mirror.repo}@${branch}/${sub}${rel}`;
 }
 
+/*
+ * Standard-Repo-Liste — bewusst minimal gehalten.
+ *
+ */
 export const DEFAULT_REPO_SEEDS: RepoSpec[] = [
-  // claeis/models = offizielles INTERLIS-Modell-Repo von C. Eisenhut.
-  // models.interlis.ch ist nur ein DNS-Alias darauf; via jsDelivr umgehen wir CORS.
   {
-    id: 'interlis-ch',
-    baseUrl: 'https://models.interlis.ch',
-    label: 'INTERLIS.ch (offiziell)',
-    github: { repo: 'claeis/models', branch: 'master' },
+    id: 'geo-admin',
+    baseUrl: 'https://models.geo.admin.ch',
+    label: 'Bund (geo.admin.ch)',
   },
-  { id: 'geo-admin',   baseUrl: 'https://models.geo.admin.ch', label: 'Bund (geo.admin.ch)' },
-  { id: 'kgk-cgc',     baseUrl: 'https://models.kgk-cgc.ch',   label: 'KGK CGC' },
-  { id: 'so',          baseUrl: 'https://models.geo.so.ch',    label: 'Kanton Solothurn' },
-  { id: 'zh',          baseUrl: 'https://models.geo.zh.ch',    label: 'Kanton Zürich' },
-  { id: 'be',          baseUrl: 'https://models.geo.be.ch',    label: 'Kanton Bern' },
-  { id: 'bl',          baseUrl: 'https://models.geo.bl.ch',    label: 'Kanton Basel-Landschaft' },
-  { id: 'bs',          baseUrl: 'https://models.geo.bs.ch',    label: 'Kanton Basel-Stadt' },
-  { id: 'sg',          baseUrl: 'https://models.geo.sg.ch',    label: 'Kanton St. Gallen' },
-  { id: 'tg',          baseUrl: 'https://models.geo.tg.ch',    label: 'Kanton Thurgau' },
-  { id: 'ag',          baseUrl: 'https://models.geo.ag.ch',    label: 'Kanton Aargau' },
-  { id: 'lu',          baseUrl: 'https://models.geo.lu.ch',    label: 'Kanton Luzern' },
-  { id: 'gr',          baseUrl: 'https://models.geo.gr.ch',    label: 'Kanton Graubünden' },
-  { id: 'vd',          baseUrl: 'https://models.geo.vd.ch',    label: 'Canton de Vaud' },
-  { id: 'ge',          baseUrl: 'https://models.ge.ch',        label: 'République de Genève' },
-  { id: 'ne',          baseUrl: 'https://models.ne.ch',        label: 'République de Neuchâtel' },
-  { id: 'fr',          baseUrl: 'https://models.geo.fr.ch',    label: 'Canton de Fribourg' },
-  { id: 'vs',          baseUrl: 'https://models.geo.vs.ch',    label: 'Canton du Valais' },
-  { id: 'ti',          baseUrl: 'https://models.geo.ti.ch',    label: 'Cantone Ticino' },
-  { id: 'vsa',         baseUrl: 'https://models.vsa.ch',       label: 'VSA' },
-  { id: 'lisag',       baseUrl: 'https://models.lisag.ch',     label: 'Lisag' },
 ];
 
 const CUSTOM_REPOS_KEY = 'modvis.customRepos.v1';

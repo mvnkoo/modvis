@@ -25,6 +25,7 @@ export interface ImportLoaderOptions {
   forceRefresh?: boolean;
   maxDepth?: number;
   repos?: RepoSpec[];
+  skipNames?: Set<string>;
 }
 
 const DEFAULT_MAX_DEPTH = 5;
@@ -45,17 +46,23 @@ export async function loadWithDependencies(
   let queue: { name: string; depth: number }[] = extractImportsLight(primary.content)
     .map(name => ({ name, depth: 0 }));
 
+  const skipNames = options.skipNames ?? new Set<string>();
+
   while (queue.length > 0) {
     const batch = queue;
     queue = [];
+    const toResolve: { name: string; depth: number }[] = [];
+    for (const b of batch) {
+      if (seen.has(b.name)) continue;
+      seen.add(b.name);
+      if (skipNames.has(b.name)) {
+        missing.push(b.name);
+        continue;
+      }
+      toResolve.push(b);
+    }
     const results = await Promise.all(
-      batch
-        .filter(b => {
-          if (seen.has(b.name)) return false;
-          seen.add(b.name);
-          return true;
-        })
-        .map(async (b) => ({ depth: b.depth, res: await resolveModel(b.name, ctx) })),
+      toResolve.map(async (b) => ({ depth: b.depth, res: await resolveModel(b.name, ctx) })),
     );
 
     for (const { depth, res } of results) {

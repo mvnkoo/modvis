@@ -159,7 +159,7 @@ describe('resolveModel', () => {
       repo: { id: 'cors-r', baseUrl: 'https://x.example', label: 'X' },
       entries: [{ name: 'Foo', file: 'foo.ili' }],
       fetchedAt: Date.now(),
-      status: 'cors-blocked',
+      status: 'unreachable',
       error: 'CORS',
     };
     const r = await resolveModel('Foo', { overrides: new Map(), indexes: [idx] });

@@ -41,14 +41,20 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
   const [newLabel, setNewLabel] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [customRepos, setCustomRepos] = useState<RepoSpec[]>(() => loadCustomRepos());
+  const [probingId, setProbingId] = useState<string | null>(null);
 
   const handleToggleAuto = (_e: unknown, checked: boolean) => {
     importResolver.setAutoImportEnabled(checked);
   };
 
-  const handleRefresh = async () => {
-    await importResolver.refreshRepoIndex();
-    if (onReload) await onReload();
+  const handleProbeRepo = async (repo: RepoSpec) => {
+    setProbingId(repo.id);
+    try {
+      await importResolver.probeSingleRepo(repo);
+      if (onReload) await onReload();
+    } finally {
+      setProbingId(null);
+    }
   };
 
   const handleAddRepo = () => {
@@ -72,14 +78,18 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
     importResolver.setRepos([...next, ...DEFAULT_REPO_SEEDS]);
   };
 
-  const renderRepoStatus = (repo: RepoSpec) => {
+  const renderRepoStatusChip = (repo: RepoSpec) => {
     const cached = readCachedIndex(repo);
     if (!cached) return <Chip size="small" label="—" />;
     switch (cached.status) {
       case 'ok':
         return <Chip size="small" color="success" label={`OK · ${cached.entries.length}`} />;
-      case 'cors-blocked':
-        return <Chip size="small" color="warning" label="CORS" />;
+      case 'unreachable':
+        return (
+          <Tooltip title="Nicht erreichbar (CORS-Blockade, DNS-Fehler, TLS- oder Netzwerkproblem)">
+            <Chip size="small" color="warning" label="nicht erreichbar" />
+          </Tooltip>
+        );
       case 'not-found':
         return <Chip size="small" label="404" />;
       case 'error':
@@ -88,6 +98,27 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
         return <Chip size="small" label="pending" />;
     }
   };
+
+  const renderRepoActions = (repo: RepoSpec, extraAction?: React.ReactNode) => (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      {renderRepoStatusChip(repo)}
+      <Tooltip title="Erreichbarkeit prüfen und Modell-Anzahl aktualisieren">
+        <span>
+          <IconButton
+            size="small"
+            onClick={() => handleProbeRepo(repo)}
+            disabled={probingId === repo.id}
+            sx={{ opacity: 0.7 }}
+          >
+            {probingId === repo.id
+              ? <CircularProgress size={14} />
+              : <Refresh fontSize="small" />}
+          </IconButton>
+        </span>
+      </Tooltip>
+      {extraAction}
+    </Box>
+  );
 
   return (
     <Box sx={{ p: 2, width: 460, maxHeight: 640, overflowY: 'auto' }}>
@@ -106,24 +137,8 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
         label="Importe automatisch aus Repositories nachladen"
       />
       <Typography variant="caption" sx={{ display: 'block', mt: 0.5, ml: 5, opacity: 0.65 }}>
-        Aus = Imports nur via manuellen Datei-Upload. Manual-Uploads und
-        INTERLIS-Standard-Libraries funktionieren in beiden Modi.
+        Aus = Imports aus den Repositorys werden nicht automatisch beim Laden der Modelle hinzugefügt.
       </Typography>
-
-      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Button
-          size="small"
-          startIcon={importResolver.isResolving ? <CircularProgress size={14} /> : <Refresh fontSize="small" />}
-          onClick={handleRefresh}
-          disabled={importResolver.isResolving}
-          variant="outlined"
-        >
-          Repository-Index aktualisieren
-        </Button>
-        <Typography variant="caption" sx={{ opacity: 0.6 }}>
-          Cache: 24h
-        </Typography>
-      </Box>
 
       <Divider sx={{ my: 1.5 }} />
 
@@ -167,11 +182,12 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
               <ListItem
                 key={repo.id}
                 disableGutters
-                secondaryAction={
+                secondaryAction={renderRepoActions(
+                  repo,
                   <IconButton size="small" onClick={() => handleRemoveCustom(repo.id)}>
                     <Delete fontSize="small" />
-                  </IconButton>
-                }
+                  </IconButton>,
+                )}
               >
                 <ListItemText
                   primary={<Typography variant="body2">{repo.label}</Typography>}
@@ -194,7 +210,7 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
       </Typography>
       <List dense disablePadding>
         {DEFAULT_REPO_SEEDS.map(repo => (
-          <ListItem key={repo.id} disableGutters sx={{ py: 0.25 }} secondaryAction={renderRepoStatus(repo)}>
+          <ListItem key={repo.id} disableGutters sx={{ py: 0.25 }} secondaryAction={renderRepoActions(repo)}>
             <ListItemText
               primary={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -218,9 +234,7 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
 
       <Divider sx={{ my: 1.5 }} />
       <Typography variant="caption" sx={{ color: colors.text, opacity: 0.55, display: 'block' }}>
-        Repos mit GitHub-Mirror werden via jsDelivr-CDN abgefragt — das umgeht
-        CORS-Blockaden und funktioniert auch von localhost aus. Für die übrigen
-        Repos bleibt ein CORS-Fehler 24h im Cache.
+        Repos mit GitHub-Mirror werden via jsDelivr-CDN abgefragt.
       </Typography>
     </Box>
   );

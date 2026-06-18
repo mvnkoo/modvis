@@ -2,7 +2,13 @@ import type { RepoSpec } from './repoSeeds';
 import { jsdelivrUrl } from './repoSeeds';
 import { parseIlimodelsXml, type ModelEntry } from './ilimodelsXml';
 
-export type RepoStatus = 'ok' | 'cors-blocked' | 'not-found' | 'error' | 'pending';
+/**
+ * Status eines Repo-Index-Fetches.
+ * - `unreachable`: TypeError vom Browser → kann CORS, DNS-Fail, TLS-Fehler,
+ *   Mixed-Content oder Connection-Refused bedeuten; der Browser sagt's nicht
+ *   genauer, also benennen wir's nicht genauer.
+ */
+export type RepoStatus = 'ok' | 'unreachable' | 'not-found' | 'error' | 'pending';
 
 export interface RepositoryIndex {
   repo: RepoSpec;
@@ -116,7 +122,7 @@ export async function fetchRepositoryIndex(
     entries: [],
     fetchedAt: Date.now(),
     status: isCors
-      ? 'cors-blocked'
+      ? 'unreachable'
       : lastStatus === 404
         ? 'not-found'
         : 'error',

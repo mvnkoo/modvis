@@ -131,7 +131,7 @@ export class IliParser {
           });
         }
       }
-      if (res.imports) {
+      if (res.imports && isPrimary) {
         for (const imp of res.imports) {
           if (!mergedImports.has(imp.name)) mergedImports.set(imp.name, imp);
         }
@@ -180,8 +180,12 @@ export class IliParser {
     // (a) Relation-Targets/Sources umschreiben, wenn ein Alias greift.
     const rewrittenRelations = new Map<string, IliRelation>();
     for (const rel of mergedRelations.values()) {
-      const target = aliasToCanonical.get(rel.targetId) ?? rel.targetId;
-      const source = aliasToCanonical.get(rel.sourceId) ?? rel.sourceId;
+      let target = aliasToCanonical.get(rel.targetId) ?? rel.targetId;
+      let source = aliasToCanonical.get(rel.sourceId) ?? rel.sourceId;
+      if (target === source && rel.sourceId !== rel.targetId) {
+        target = rel.targetId;
+        source = rel.sourceId;
+      }
       const next: IliRelation =
         target === rel.targetId && source === rel.sourceId
           ? rel
@@ -208,10 +212,14 @@ export class IliParser {
       }
     }
 
-    // (c) Externe Platzhalter, deren ID via Alias auf einen echten Knoten zeigt,
-    //     droppen — die kanonische Definition ist jetzt vorhanden.
+    const stillReferenced = new Set<string>();
+    for (const rel of rewrittenRelations.values()) {
+      stillReferenced.add(rel.sourceId);
+      stillReferenced.add(rel.targetId);
+    }
     for (const [id, node] of mergedNodes) {
       if (node.data?.isExternal !== true) continue;
+      if (stillReferenced.has(id)) continue;
       const canonical = aliasToCanonical.get(id);
       if (canonical && mergedNodes.has(canonical)) {
         mergedNodes.delete(id);

@@ -63,10 +63,10 @@ describe('IliParser.parseContents (multi-file merge)', () => {
     expect(inh?.targetId).toBe('BaseTopic.BaseClass');
   });
 
-  it('aggregates imports across files and dedupes', () => {
+  it('exposes only the primary file IMPORTS at the top level', () => {
     const parser = new IliParser();
     const result = parser.parseContents([
-      { name: 'Demo.ili', content: PRIMARY_ILI },
+      { name: 'Demo.ili', isPrimary: true, content: PRIMARY_ILI },
       { name: 'Base.ili', content: BASE_ILI },
     ]);
     const names = (result.imports ?? []).map(i => i.name).sort();

@@ -15,6 +15,7 @@ import type { IliParseError, IliImportRef } from '../services/parser/types';
 import type { IliFileInput } from '../services/parser/IliParser';
 import type { UseImportResolverReturn } from './useImportResolver';
 import type { ImportSummary, ImportLoadResult } from '../services/imports/importLoader';
+import { extractImportsLight } from '../services/imports/modelResolver';
 
 export interface LoadResult {
   flowNodes: Node[];
@@ -139,9 +140,25 @@ export function useIliLoader(options: UseIliLoaderOptions): UseIliLoaderReturn {
         { name: fileName, modelName: primaryModelName, isPrimary: true, content },
       ];
       if (importResult) {
-        const hidden = resolverRef.current?.hiddenImports ?? new Set<string>();
+        const hidden = resolverRef.current?.getHiddenImports() ?? new Set<string>();
+        const depMap = new Map<string, string[]>();
         for (const r of importResult.resolved) {
-          if (hidden.has(r.modelName)) continue;
+          depMap.set(r.modelName, r.dependsOn ?? []);
+        }
+        const reachable = new Set<string>();
+        const queue: string[] = extractImportsLight(content, primaryModelName)
+          .filter(n => !hidden.has(n));
+        for (const n of queue) reachable.add(n);
+        while (queue.length > 0) {
+          const next = queue.shift()!;
+          for (const dep of depMap.get(next) ?? []) {
+            if (hidden.has(dep) || reachable.has(dep)) continue;
+            reachable.add(dep);
+            queue.push(dep);
+          }
+        }
+        for (const r of importResult.resolved) {
+          if (!reachable.has(r.modelName)) continue;
           if (r.content && r.content.length > 0) {
             files.push({
               name: r.fileName ?? `${r.modelName}.ili`,

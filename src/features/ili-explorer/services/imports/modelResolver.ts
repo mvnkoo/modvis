@@ -49,7 +49,7 @@ export async function resolveModel(
       status: 'manual',
       fileName: override.fileName,
       content: override.content,
-      dependsOn: extractImportsLight(override.content),
+      dependsOn: extractImportsLight(override.content, modelName),
     };
   }
 
@@ -64,7 +64,7 @@ export async function resolveModel(
       modelName,
       status: 'stdlib',
       content,
-      dependsOn: content ? extractImportsLight(content) : [],
+      dependsOn: content ? extractImportsLight(content, modelName) : [],
     };
   }
 
@@ -112,7 +112,7 @@ export async function resolveModel(
       fileUrl: usedUrl,
       fileName: filePath.split('/').pop() ?? `${modelName}.ili`,
       content,
-      dependsOn: extractImportsLight(content),
+      dependsOn: extractImportsLight(content, modelName),
     };
   }
 
@@ -121,7 +121,7 @@ export async function resolveModel(
 
 const IMPORTS_RE = /\bIMPORTS\b\s+(?:UNQUALIFIED\s+)?([\w\s,.]+?)\s*;/gi;
 
-export function extractImportsLight(content: string): string[] {
+export function extractImportsLight(content: string, selfName?: string): string[] {
   if (!content) return [];
   const stripped = content
     .replace(/!![^\n]*/g, '')
@@ -136,5 +136,6 @@ export function extractImportsLight(content: string): string[] {
       if (name && name.length > 0) out.add(name);
     });
   }
+  if (selfName) out.delete(selfName);
   return Array.from(out);
 }
