@@ -49,7 +49,9 @@ function writeCache(idx: RepositoryIndex): void {
 }
 
 function isFresh(idx: RepositoryIndex | null): boolean {
-  return !!idx && (Date.now() - idx.fetchedAt) < CACHE_TTL_MS;
+  if (!idx) return false;
+  if (idx.status !== 'ok') return false;
+  return (Date.now() - idx.fetchedAt) < CACHE_TTL_MS;
 }
 
 async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
