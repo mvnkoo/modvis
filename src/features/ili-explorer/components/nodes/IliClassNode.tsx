@@ -37,6 +37,8 @@ interface IliClassNodeProps {
     onExpandChange?: (expanded: boolean) => void;
     width?: number;
     onResize?: (width: number) => void;
+    isFromImport?: boolean;
+    sourceModel?: string;
   };
 }
 
@@ -458,8 +460,17 @@ export const IliClassNode = memo<IliClassNodeProps>(({ data }) => {
               {data.label}
             </Typography>
             {data.topic && (
-              <Typography variant="caption">
+              <Typography variant="caption" component="div">
                 {data.topic}
+              </Typography>
+            )}
+            {data.isFromImport && data.sourceModel && (
+              <Typography
+                variant="caption"
+                component="div"
+                sx={{ fontStyle: 'italic', opacity: 0.8, fontSize: '0.7rem' }}
+              >
+                aus {data.sourceModel}
               </Typography>
             )}
           </Box>

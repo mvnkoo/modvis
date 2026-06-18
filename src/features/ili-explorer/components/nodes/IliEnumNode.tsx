@@ -34,6 +34,8 @@ interface IliEnumNodeProps {
     onExpandChange?: (expanded: boolean) => void;
     width?: number;
     onResize?: (width: number) => void;
+    isFromImport?: boolean;
+    sourceModel?: string;
   };
 }
 
@@ -282,6 +284,15 @@ export const IliEnumNode: React.FC<IliEnumNodeProps> = memo(({ data }) => {
           <Typography variant="subtitle1" fontWeight="bold">
             {data.label}
           </Typography>
+          {data.isFromImport && data.sourceModel && (
+            <Typography
+              variant="caption"
+              component="div"
+              sx={{ fontStyle: 'italic', opacity: 0.8, fontSize: '0.7rem' }}
+            >
+              aus {data.sourceModel}
+            </Typography>
+          )}
         </Box>
       </Tooltip>
 

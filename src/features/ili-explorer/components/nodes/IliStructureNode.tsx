@@ -22,6 +22,8 @@ interface StructureNodeProps {
     expanded?: boolean;
     isExpanded?: boolean;
     onExpandChange?: (expanded: boolean) => void;
+    isFromImport?: boolean;
+    sourceModel?: string;
   };
 }
 
@@ -324,8 +326,17 @@ export const IliStructureNode: React.FC<StructureNodeProps> = memo(({ data }) =>
             {data.label}
           </Typography>
           {topicLabel && (
-            <Typography variant="caption">
+            <Typography variant="caption" component="div">
               {topicLabel}
+            </Typography>
+          )}
+          {data.isFromImport && data.sourceModel && (
+            <Typography
+              variant="caption"
+              component="div"
+              sx={{ fontStyle: 'italic', opacity: 0.8, fontSize: '0.7rem' }}
+            >
+              aus {data.sourceModel}
             </Typography>
           )}
         </Box>

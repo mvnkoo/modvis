@@ -47,6 +47,7 @@ import { useIliSchema } from '../hooks/useIliSchema';
 import { useDiagramExport } from '../hooks/useDiagramExport';
 import { LayoutSettings } from './sidebar/LayoutSettings';
 import { ModelInfoPanel } from './sidebar/ModelInfoPanel';
+import { computeImportImpact } from '../services/imports/importImpact';
 import { layoutHoverPreview } from '../services/layout/previewStrategy';
 
 import '@xyflow/react/dist/style.css';
@@ -165,6 +166,9 @@ const Flow: React.FC = () => {
     isFullSchemaView,
     handleMaxSubTypesChange,
     fitViewRequest,
+    importResolver,
+    lastImportSummary,
+    reloadWithImports,
   } = useIliSchema(
     nodes,
     setNodes,
@@ -807,6 +811,11 @@ const Flow: React.FC = () => {
     };
   }, [allNodes]);
 
+  const importImpacts = useMemo(
+    () => computeImportImpact(imports.map(i => i.name), allNodes, allEdges),
+    [imports, allNodes, allEdges],
+  );
+
   const lastLoadedFileRef = useRef<string | null>(null);
   useEffect(() => {
     if (isLoading || error) return;
@@ -814,12 +823,40 @@ const Flow: React.FC = () => {
     if (allNodes.length === 0) return;
     lastLoadedFileRef.current = currentFileName;
     const classCount = allNodes.filter(n => n.type === 'classNode').length;
-    const warnCount = parseWarnings.length;
-    const summary = warnCount > 0
-      ? `${currentFileName} geladen — ${classCount} Klassen, ${warnCount} ${warnCount === 1 ? 'Warnung' : 'Warnungen'}`
-      : `${currentFileName} geladen — ${classCount} Klassen`;
-    showToast(summary, warnCount > 0 ? 'warning' : 'success');
-  }, [isLoading, error, currentFileName, allNodes, parseWarnings, showToast]);
+    const primaryWarnCount = parseWarnings.filter(w => !w.fromImport).length;
+    const importWarnCount = parseWarnings.length - primaryWarnCount;
+    const summary = lastImportSummary;
+    const parts: string[] = [`${currentFileName} geladen — ${classCount} Klassen`];
+    if (primaryWarnCount > 0) {
+      parts.push(`${primaryWarnCount} ${primaryWarnCount === 1 ? 'Warnung' : 'Warnungen'}`);
+    }
+    if (summary) {
+      const resolvedTotal = summary.autoCount + summary.manualCount + summary.stdlibCount;
+      const autoEnabled = importResolver.autoImportEnabled;
+      if (summary.autoCount > 0) {
+        const repos = summary.sourceRepos.slice(0, 2).join(', ');
+        parts.push(`${summary.autoCount} Imports auto-geladen${repos ? ` (${repos})` : ''}`);
+      } else if (resolvedTotal > 0) {
+        parts.push(`${resolvedTotal} Imports aufgelöst`);
+      }
+      if (summary.missingCount > 0) {
+        const suffix = !autoEnabled && summary.autoCount === 0
+          ? ' (Auto-Import aus)'
+          : '';
+        parts.push(`${summary.missingCount} fehlt${summary.missingCount === 1 ? '' : 'en'}: ${summary.missingNames.slice(0, 3).join(', ')}${suffix}`);
+      }
+      if (importWarnCount > 0) {
+        parts.push(`${importWarnCount} Import-Parse-Hinweise`);
+      }
+    }
+    const severity =
+      summary && summary.missingCount > 0
+        ? 'warning'
+        : primaryWarnCount > 0
+          ? 'warning'
+          : 'success';
+    showToast(parts.join(' · '), severity);
+  }, [isLoading, error, currentFileName, allNodes, parseWarnings, showToast, lastImportSummary]);
 
   useEffect(() => {
     if (!currentFileName) lastLoadedFileRef.current = null;
@@ -855,20 +892,27 @@ const Flow: React.FC = () => {
         </Box>
       )}
 
-      {parseWarnings.length > 0 && (
-        <Box sx={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
-          <Alert
-            severity="warning"
-            onClose={dismissParseWarnings}
-            sx={{ '& .MuiAlert-message': { maxWidth: '100%' } }}
-          >
-            <strong>{parseWarnings.length} Parser-{parseWarnings.length === 1 ? 'Warnung' : 'Warnungen'}</strong>
-            {' — einige Stellen konnten von ModVis nicht vollständig interpretiert werden, das angezeigte Diagramm ist daher möglicherweise lückenhaft. '}
-            {parseWarnings[0].line ? `Erste Stelle: Zeile ${parseWarnings[0].line}. ` : ''}
-            <span style={{ opacity: 0.85 }}>{parseWarnings[0].message}</span>
-          </Alert>
-        </Box>
-      )}
+      {(() => {
+        const primaryWarnings = parseWarnings.filter(w => !w.fromImport);
+        if (primaryWarnings.length === 0) return null;
+        const first = primaryWarnings[0];
+        return (
+          <Box sx={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
+            <Alert
+              severity="warning"
+              onClose={dismissParseWarnings}
+              sx={{ '& .MuiAlert-message': { maxWidth: '100%' } }}
+            >
+              <strong>
+                {primaryWarnings.length} Parser-{primaryWarnings.length === 1 ? 'Warnung' : 'Warnungen'} in dieser Datei
+              </strong>
+              {' — einige Stellen konnten von ModVis nicht vollständig interpretiert werden, das angezeigte Diagramm ist daher möglicherweise lückenhaft. '}
+              {first?.line ? `Erste Stelle: Zeile ${first.line}. ` : ''}
+              <span style={{ opacity: 0.85 }}>{first?.message}</span>
+            </Alert>
+          </Box>
+        );
+      })()}
 
       <IliToolbar
         searchValue={searchValue}
@@ -953,8 +997,12 @@ const Flow: React.FC = () => {
             inlineEnumCount={modelStats.inlineEnumCount}
             unitCount={modelStats.unitCount}
             imports={imports}
-            warningCount={parseWarnings.length}
+            warningCount={parseWarnings.filter(w => !w.fromImport).length}
+            importWarningCount={parseWarnings.filter(w => w.fromImport).length}
             interlisVersion={interlisVersion}
+            importResolver={importResolver}
+            onReload={reloadWithImports}
+            importImpacts={importImpacts}
           />
           <LayoutSettings
             maxSubTypesPerRow={maxSubTypesPerRow}
@@ -963,6 +1011,8 @@ const Flow: React.FC = () => {
             onHoverPreviewChange={setHoverPreviewEnabled}
             fullHierarchy={showFullHierarchy}
             onFullHierarchyChange={setFullHierarchyAndReset}
+            importResolver={importResolver}
+            onReloadImports={reloadWithImports}
           />
           <IliSideToolbar
             currentFileName={currentFileName}
@@ -1041,12 +1091,15 @@ const Flow: React.FC = () => {
       {/* Toast-Benachrichtigung hinzufügen */}
       <Snackbar
         open={toastOpen}
-        autoHideDuration={3000}
-        onClose={() => setToastOpen(false)}
+        autoHideDuration={toastSeverity === 'success' || toastSeverity === 'info' ? 3000 : null}
+        onClose={(_e, reason) => {
+          if (reason === 'clickaway') return;
+          setToastOpen(false);
+        }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={() => setToastOpen(false)} 
+        <Alert
+          onClose={() => setToastOpen(false)}
           severity={toastSeverity}
           sx={{ width: '100%' }}
         >
