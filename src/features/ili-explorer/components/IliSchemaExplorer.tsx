@@ -186,15 +186,11 @@ const Flow: React.FC = () => {
   const [lastFitDone, setLastFitDone] = useState(0);
   const canvasReady = fitViewRequest === 0 || lastFitDone > 0;
 
-  // Dedizierter Toast für "Datei geladen" — separat von showToast, weil wir hier
-  // einen Action-Button "Imports verwalten" brauchen.
   const [loadNotification, setLoadNotification] = useState<{
     message: string;
     severity: 'success' | 'info' | 'warning';
     withManageAction: boolean;
   } | null>(null);
-  // Signal das beim Klick auf "Imports verwalten" inkrementiert wird;
-  // der ModelInfoPanel öffnet sich daraufhin.
   const [modelInfoOpenSignal, setModelInfoOpenSignal] = useState(0);
 
   useEffect(() => {
@@ -804,8 +800,6 @@ const Flow: React.FC = () => {
           break;
         case 'structureNode': structureCount++; break;
       }
-      // Inline-Enums leben als Attribut-Property auf CLASS/STRUCTURE-Knoten,
-      // nicht als eigene Knoten — separat zählen für ehrliche Statistik.
       if (n.type === 'classNode' || n.type === 'structureNode') {
         const attrs = (data?.attributes ?? []) as { isInlineEnum?: boolean }[];
         for (const a of attrs) if (a.isInlineEnum) inlineEnumCount++;
