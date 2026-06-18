@@ -17,7 +17,7 @@ import {
   StepEdge,
   NodeMouseHandler,
 } from '@xyflow/react';
-import { Box, Alert, CircularProgress, Snackbar, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Alert, CircularProgress, Snackbar, Menu, MenuItem, ListItemIcon, ListItemText, Button } from '@mui/material';
 import OpenInNew from '@mui/icons-material/OpenInNew';
 import AccountTree from '@mui/icons-material/AccountTree';
 import { useTheme } from '../../../common/theme/ThemeContext';
@@ -185,6 +185,13 @@ const Flow: React.FC = () => {
 
   const [lastFitDone, setLastFitDone] = useState(0);
   const canvasReady = fitViewRequest === 0 || lastFitDone > 0;
+
+  const [loadNotification, setLoadNotification] = useState<{
+    message: string;
+    severity: 'success' | 'info' | 'warning';
+    withManageAction: boolean;
+  } | null>(null);
+  const [modelInfoOpenSignal, setModelInfoOpenSignal] = useState(0);
 
   useEffect(() => {
     setLastFitDone(0);
@@ -793,8 +800,6 @@ const Flow: React.FC = () => {
           break;
         case 'structureNode': structureCount++; break;
       }
-      // Inline-Enums leben als Attribut-Property auf CLASS/STRUCTURE-Knoten,
-      // nicht als eigene Knoten — separat zählen für ehrliche Statistik.
       if (n.type === 'classNode' || n.type === 'structureNode') {
         const attrs = (data?.attributes ?? []) as { isInlineEnum?: boolean }[];
         for (const a of attrs) if (a.isInlineEnum) inlineEnumCount++;
@@ -826,37 +831,46 @@ const Flow: React.FC = () => {
     const primaryWarnCount = parseWarnings.filter(w => !w.fromImport).length;
     const importWarnCount = parseWarnings.length - primaryWarnCount;
     const summary = lastImportSummary;
-    const parts: string[] = [`${currentFileName} geladen — ${classCount} Klassen`];
+    const mainParts: string[] = [`${currentFileName} geladen — ${classCount} Klassen`];
     if (primaryWarnCount > 0) {
-      parts.push(`${primaryWarnCount} ${primaryWarnCount === 1 ? 'Warnung' : 'Warnungen'}`);
+      mainParts.push(`${primaryWarnCount} ${primaryWarnCount === 1 ? 'Warnung' : 'Warnungen'}`);
     }
+    let detailLine: string | null = null;
     if (summary) {
       const resolvedTotal = summary.autoCount + summary.manualCount + summary.stdlibCount;
       const autoEnabled = importResolver.autoImportEnabled;
       if (summary.autoCount > 0) {
         const repos = summary.sourceRepos.slice(0, 2).join(', ');
-        parts.push(`${summary.autoCount} Imports auto-geladen${repos ? ` (${repos})` : ''}`);
+        mainParts.push(`${summary.autoCount} Imports auto-geladen${repos ? ` (${repos})` : ''}`);
       } else if (resolvedTotal > 0) {
-        parts.push(`${resolvedTotal} Imports aufgelöst`);
+        mainParts.push(`${resolvedTotal} Imports aufgelöst`);
+      }
+      if (importWarnCount > 0) {
+        mainParts.push(`${importWarnCount} Import-Parse-Hinweise`);
       }
       if (summary.missingCount > 0) {
         const suffix = !autoEnabled && summary.autoCount === 0
           ? ' (Auto-Import aus)'
           : '';
-        parts.push(`${summary.missingCount} fehlt${summary.missingCount === 1 ? '' : 'en'}: ${summary.missingNames.slice(0, 3).join(', ')}${suffix}`);
-      }
-      if (importWarnCount > 0) {
-        parts.push(`${importWarnCount} Import-Parse-Hinweise`);
+        const names = summary.missingNames.slice(0, 3).join(', ');
+        const more = summary.missingNames.length > 3 ? `, +${summary.missingNames.length - 3}` : '';
+        detailLine = `${summary.missingCount} Import${summary.missingCount === 1 ? '' : 's'} offen: ${names}${more}${suffix}`;
       }
     }
-    const severity =
-      summary && summary.missingCount > 0
+    const hasMissingImports = !!(summary && summary.missingCount > 0);
+    const severity: 'success' | 'info' | 'warning' =
+      primaryWarnCount > 0
         ? 'warning'
-        : primaryWarnCount > 0
-          ? 'warning'
+        : hasMissingImports
+          ? 'info'
           : 'success';
-    showToast(parts.join(' · '), severity);
-  }, [isLoading, error, currentFileName, allNodes, parseWarnings, showToast, lastImportSummary]);
+    const message = detailLine ? `${mainParts.join(' · ')}\n${detailLine}` : mainParts.join(' · ');
+    setLoadNotification({
+      message,
+      severity,
+      withManageAction: hasMissingImports,
+    });
+  }, [isLoading, error, currentFileName, allNodes, parseWarnings, lastImportSummary, importResolver.autoImportEnabled]);
 
   useEffect(() => {
     if (!currentFileName) lastLoadedFileRef.current = null;
@@ -1003,6 +1017,7 @@ const Flow: React.FC = () => {
             importResolver={importResolver}
             onReload={reloadWithImports}
             importImpacts={importImpacts}
+            openSignal={modelInfoOpenSignal}
           />
           <LayoutSettings
             maxSubTypesPerRow={maxSubTypesPerRow}
@@ -1105,6 +1120,41 @@ const Flow: React.FC = () => {
         >
           {toastMessage}
         </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={!!loadNotification}
+        autoHideDuration={loadNotification?.severity === 'warning' ? null : 6000}
+        onClose={(_e, reason) => {
+          if (reason === 'clickaway') return;
+          setLoadNotification(null);
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {loadNotification ? (
+          <Alert
+            severity={loadNotification.severity}
+            onClose={() => setLoadNotification(null)}
+            action={
+              loadNotification.withManageAction ? (
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    setLoadNotification(null);
+                    setModelInfoOpenSignal(s => s + 1);
+                  }}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  Imports verwalten
+                </Button>
+              ) : undefined
+            }
+            sx={{ width: '100%', whiteSpace: 'pre-line' }}
+          >
+            {loadNotification.message}
+          </Alert>
+        ) : undefined}
       </Snackbar>
 
       <IliSelectionOverlay

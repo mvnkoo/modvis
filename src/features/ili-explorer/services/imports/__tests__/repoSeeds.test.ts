@@ -24,8 +24,9 @@ describe('jsdelivrUrl', () => {
 });
 
 describe('DEFAULT_REPO_SEEDS', () => {
-  it('interlis-ch repo has github mirror configured', () => {
-    const interlis = DEFAULT_REPO_SEEDS.find(r => r.id === 'interlis-ch');
-    expect(interlis?.github?.repo).toBe('claeis/models');
+  it('contains the verified geo-admin seed', () => {
+    const geoAdmin = DEFAULT_REPO_SEEDS.find(r => r.id === 'geo-admin');
+    expect(geoAdmin).toBeDefined();
+    expect(geoAdmin?.baseUrl).toBe('https://models.geo.admin.ch');
   });
 });

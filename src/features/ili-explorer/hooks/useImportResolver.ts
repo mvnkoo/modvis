@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadWithDependencies, type ImportLoadResult, type ImportSummary } from '../services/imports/importLoader';
-import { fetchAllIndexes, clearRepositoryCache, type RepositoryIndex } from '../services/imports/repositoryIndex';
+import { fetchAllIndexes, fetchRepositoryIndex, clearRepositoryCache, readCachedIndex, type RepositoryIndex } from '../services/imports/repositoryIndex';
 import { getAllRepos, type RepoSpec } from '../services/imports/repoSeeds';
 import { loadOverrides, saveOverride, removeOverride as removeOverrideStore, type OverrideEntry } from '../services/imports/userOverrides';
 import { resolveModel, type ResolutionResult } from '../services/imports/modelResolver';
@@ -31,13 +31,17 @@ export interface UseImportResolverReturn {
   repos: RepoSpec[];
   indexes: RepositoryIndex[];
   resolveAll: (primary: { name: string; content: string }) => Promise<ImportLoadResult>;
-  fetchSingleModel: (modelName: string) => Promise<ResolutionResult>;
+  fetchSingleModel: (modelName: string, preferredRepoId?: string) => Promise<ResolutionResult>;
+  /** Cached: in welchen Repos liegt das Modell laut Index? Kein Netz-Verkehr. */
+  availabilityFor: (modelName: string) => RepoSpec[];
   removeSingleFetched: (modelName: string) => void;
   toggleHidden: (modelName: string) => void;
+  getHiddenImports: () => Set<string>;
   uploadOverride: (modelName: string, file: File) => Promise<void>;
   uploadOverrideContent: (modelName: string, fileName: string, content: string) => void;
   removeOverride: (modelName: string) => void;
   refreshRepoIndex: () => Promise<void>;
+  probeSingleRepo: (repo: RepoSpec) => Promise<RepositoryIndex>;
   setRepos: (repos: RepoSpec[]) => void;
 }
 
@@ -50,6 +54,7 @@ export function useImportResolver(): UseImportResolverReturn {
   const [indexes, setIndexes] = useState<RepositoryIndex[]>([]);
   const [singleFetched, setSingleFetched] = useState<Map<string, ResolutionResult>>(() => new Map());
   const [hiddenImports, setHiddenImports] = useState<Set<string>>(() => new Set());
+  const [userUnloaded, setUserUnloaded] = useState<Set<string>>(() => new Set());
 
   const overridesRef = useRef(overrides);
   useEffect(() => { overridesRef.current = overrides; }, [overrides]);
@@ -59,6 +64,9 @@ export function useImportResolver(): UseImportResolverReturn {
 
   const hiddenImportsRef = useRef(hiddenImports);
   useEffect(() => { hiddenImportsRef.current = hiddenImports; }, [hiddenImports]);
+
+  const userUnloadedRef = useRef(userUnloaded);
+  useEffect(() => { userUnloadedRef.current = userUnloaded; }, [userUnloaded]);
 
   const reposRef = useRef(repos);
   useEffect(() => { reposRef.current = repos; }, [repos]);
@@ -85,6 +93,7 @@ export function useImportResolver(): UseImportResolverReturn {
         overrides: ovMap,
         singleFetched: singleFetchedRef.current,
         repos: autoEnabled ? reposRef.current : [],
+        skipNames: userUnloadedRef.current,
       });
       setLastResult(result);
       return result;
@@ -93,7 +102,7 @@ export function useImportResolver(): UseImportResolverReturn {
     }
   }, [autoEnabled]);
 
-  const fetchSingleModel = useCallback(async (modelName: string): Promise<ResolutionResult> => {
+  const fetchSingleModel = useCallback(async (modelName: string, preferredRepoId?: string): Promise<ResolutionResult> => {
     setIsResolving(true);
     try {
       // Indexe sicherstellen — wenn der globale Auto-Import aus ist, sind sie
@@ -107,13 +116,16 @@ export function useImportResolver(): UseImportResolverReturn {
         if (k === modelName) continue;
         ovMap.set(k, { fileName: v.fileName, content: v.content });
       }
+      // Wenn der User einen Repo bevorzugt → nur dessen Index durchsuchen.
+      const indexesToUse = preferredRepoId
+        ? fresh.filter(i => i.repo.id === preferredRepoId)
+        : fresh;
       const result = await resolveModel(modelName, {
         overrides: ovMap,
         singleFetched: singleFetchedRef.current,
-        indexes: fresh,
+        indexes: indexesToUse,
       });
       if (result.status === 'auto' || result.status === 'stdlib') {
-        // Mutex: Override entfernen, falls vorhanden — sync (Ref) und persistent
         if (overridesRef.current.has(modelName)) {
           removeOverrideStore(modelName);
           const nextOv = new Map(overridesRef.current);
@@ -121,8 +133,12 @@ export function useImportResolver(): UseImportResolverReturn {
           overridesRef.current = nextOv;
           setOverrides(nextOv);
         }
-        // singleFetched aktualisieren — Ref synchron, damit ein sofortiger
-        // onReload() den neuen Eintrag direkt sieht.
+        if (userUnloadedRef.current.has(modelName)) {
+          const nextU = new Set(userUnloadedRef.current);
+          nextU.delete(modelName);
+          userUnloadedRef.current = nextU;
+          setUserUnloaded(nextU);
+        }
         const nextSingle = new Map(singleFetchedRef.current);
         nextSingle.set(modelName, result);
         singleFetchedRef.current = nextSingle;
@@ -139,6 +155,10 @@ export function useImportResolver(): UseImportResolverReturn {
     next.delete(modelName);
     singleFetchedRef.current = next;
     setSingleFetched(next);
+    const nextU = new Set(userUnloadedRef.current);
+    nextU.add(modelName);
+    userUnloadedRef.current = nextU;
+    setUserUnloaded(nextU);
   }, []);
 
   const toggleHidden = useCallback((modelName: string) => {
@@ -148,6 +168,8 @@ export function useImportResolver(): UseImportResolverReturn {
     hiddenImportsRef.current = next;
     setHiddenImports(next);
   }, []);
+
+  const getHiddenImports = useCallback(() => hiddenImportsRef.current, []);
 
   const uploadOverrideContent = useCallback((modelName: string, fileName: string, content: string) => {
     const entry: OverrideEntry = { fileName, content, uploadedAt: Date.now() };
@@ -189,6 +211,27 @@ export function useImportResolver(): UseImportResolverReturn {
     }
   }, []);
 
+  const probeSingleRepo = useCallback(async (repo: RepoSpec): Promise<RepositoryIndex> => {
+    const fresh = await fetchRepositoryIndex(repo, true);
+    setIndexes(prev => {
+      const others = prev.filter(i => i.repo.id !== repo.id);
+      return [...others, fresh];
+    });
+    return fresh;
+  }, []);
+
+  const availabilityFor = useCallback((modelName: string): RepoSpec[] => {
+    const matches: RepoSpec[] = [];
+    for (const repo of reposRef.current) {
+      // Erst frischen State, dann fallback auf Disk-Cache.
+      const fromState = indexes.find(i => i.repo.id === repo.id);
+      const idx = fromState ?? readCachedIndex(repo);
+      if (!idx || idx.status !== 'ok') continue;
+      if (idx.entries.some(e => e.name === modelName)) matches.push(repo);
+    }
+    return matches;
+  }, [indexes]);
+
   return {
     isResolving,
     lastResult,
@@ -204,10 +247,13 @@ export function useImportResolver(): UseImportResolverReturn {
     fetchSingleModel,
     removeSingleFetched,
     toggleHidden,
+    getHiddenImports,
     uploadOverride,
     uploadOverrideContent,
     removeOverride,
     refreshRepoIndex,
+    probeSingleRepo,
+    availabilityFor,
     setRepos,
   };
 }

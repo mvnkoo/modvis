@@ -10,6 +10,9 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
+  Menu,
+  MenuItem,
   Chip,
   Collapse,
   Link,
@@ -22,10 +25,11 @@ import {
   ExpandMore,
   ExpandLess,
   CloudDownload,
+  CloudDone,
+  CloudOff,
   UploadFile,
   MenuBook,
   ErrorOutline,
-  Refresh,
   Visibility,
   VisibilityOff,
 } from '@mui/icons-material';
@@ -51,68 +55,6 @@ const STATUS_LABEL: Record<string, string> = {
   pending: 'pending',
 };
 
-interface ImportSubTreeProps {
-  names: string[];
-  ancestors: string[];
-  buildRow: (name: string, unqualified?: boolean) => ImportRow;
-  subImportsOf: (name: string) => string[];
-  isHidden: (name: string) => boolean;
-}
-
-/**
- * Rekursiv: für jeden Namen eine kleine Zeile mit Status-Punkt + Name,
- * darunter ggf. eingerückte Sub-Imports. Schutz gegen Zyklen via ancestors[].
- */
-const ImportSubTree: React.FC<ImportSubTreeProps> = ({ names, ancestors, buildRow, subImportsOf, isHidden }) => {
-  return (
-    <Box component="ul" sx={{ m: 0, pl: 2, listStyle: 'none' }}>
-      {names.map(name => {
-        const cycle = ancestors.includes(name);
-        const sub = cycle ? [] : subImportsOf(name);
-        const row = buildRow(name);
-        const hidden = isHidden(name);
-        return (
-          <Box component="li" key={`${ancestors.join('>')}>${name}`} sx={{ py: 0.25 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-              <Box
-                sx={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  bgcolor: STATUS_COLOR[row.status] ?? '#999',
-                  opacity: hidden ? 0.4 : 1,
-                  flexShrink: 0,
-                }}
-              />
-              <Typography
-                variant="caption"
-                sx={{
-                  fontFamily: 'monospace',
-                  opacity: cycle ? 0.5 : 0.9,
-                  textDecoration: hidden ? 'line-through' : 'none',
-                }}
-              >
-                {name}
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.55, fontSize: '0.65rem' }}>
-                {cycle ? '↻ Zyklus' : STATUS_LABEL[row.status] ?? ''}
-              </Typography>
-            </Box>
-            {sub.length > 0 && (
-              <ImportSubTree
-                names={sub}
-                ancestors={[...ancestors, name]}
-                buildRow={buildRow}
-                subImportsOf={subImportsOf}
-                isHidden={isHidden}
-              />
-            )}
-          </Box>
-        );
-      })}
-    </Box>
-  );
-};
 
 interface ModelInfoPanelProps {
   fileName: string | null;
@@ -131,6 +73,8 @@ interface ModelInfoPanelProps {
   onReload?: () => void;
   /** Pro Import-Name: Übersicht über Klassen-Touchpoints */
   importImpacts?: Map<string, ImportImpact>;
+  /** Inkrementierende Zahl: bei Änderung wird das Info-Popover programmatisch geöffnet (für Toast-Action). */
+  openSignal?: number;
 }
 
 const STD_LIBS = new Set(['INTERLIS', 'Units', 'Time', 'CoordSys']);
@@ -161,19 +105,28 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
   importResolver,
   onReload,
   importImpacts,
+  openSignal,
 }) => {
   const { colors } = useTheme();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [stdOpen, setStdOpen] = useState(false);
-  const [expandedImpact, setExpandedImpact] = useState<Set<string>>(() => new Set());
+  const [openOverrides, setOpenOverrides] = useState<Map<string, boolean>>(() => new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetRef = useRef<string | null>(null);
+  const triggerButtonRef = useRef<HTMLButtonElement>(null);
 
-  const toggleImpact = (name: string) => {
-    setExpandedImpact(prev => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
+  // Programmatisches Öffnen via openSignal-Prop (für Toast-Action "Imports verwalten").
+  React.useEffect(() => {
+    if (openSignal && openSignal > 0 && triggerButtonRef.current) {
+      setAnchorEl(triggerButtonRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal]);
+
+  const toggleImpact = (name: string, currentOpen: boolean) => {
+    setOpenOverrides(prev => {
+      const next = new Map(prev);
+      next.set(name, !currentOpen);
       return next;
     });
   };
@@ -234,6 +187,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
   };
 
   const [fetchingName, setFetchingName] = useState<string | null>(null);
+  const [hoveredCloudName, setHoveredCloudName] = useState<string | null>(null);
   const [recentFailures, setRecentFailures] = useState<Set<string>>(() => new Set());
 
   const flashFailure = (modelName: string) => {
@@ -252,6 +206,40 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
   };
   const [fetchToast, setFetchToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
+  // Lädt rekursiv alle in den Repos verfügbaren Sub-Imports nach. Wird nach
+  // einem erfolgreichen Single-Fetch ausgeführt — auch wenn der globale
+  // Auto-Import-Toggle aus ist, soll ein bewusster Klick auf "laden" die
+  // gesamte ladbare Kette mitnehmen.
+  const cascadeDeps = useCallback(async (root: ResolutionResult): Promise<number> => {
+    if (!importResolver) return 0;
+    const initial = root.dependsOn ?? [];
+    if (initial.length === 0) return 0;
+    const seen = new Set<string>([root.modelName]);
+    const queue: string[] = [];
+    for (const d of initial) if (!seen.has(d)) { seen.add(d); queue.push(d); }
+    let fetched = 0;
+    while (queue.length > 0) {
+      const next = queue.shift()!;
+      if (STD_LIBS.has(next)) continue;
+      if (importResolver.overrides.has(next)) continue;
+      if (importResolver.singleFetched.has(next)) {
+        const exist = importResolver.singleFetched.get(next);
+        for (const d of exist?.dependsOn ?? []) if (!seen.has(d)) { seen.add(d); queue.push(d); }
+        continue;
+      }
+      const repos = importResolver.availabilityFor(next);
+      if (repos.length === 0) continue;
+      try {
+        const r = await importResolver.fetchSingleModel(next, repos[0].id);
+        if (r.status === 'auto') {
+          fetched++;
+          for (const d of r.dependsOn ?? []) if (!seen.has(d)) { seen.add(d); queue.push(d); }
+        }
+      } catch { /* einzelne Fehler ignorieren — Kette so weit wie möglich nachladen */ }
+    }
+    return fetched;
+  }, [importResolver]);
+
   const handleAutoFetchSingle = async (modelName: string) => {
     if (!importResolver) return;
     setFetchingName(modelName);
@@ -259,8 +247,10 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
     try {
       const result = await importResolver.fetchSingleModel(modelName);
       if (result.status === 'auto' || result.status === 'stdlib') {
+        const cascaded = await cascadeDeps(result);
+        const suffix = cascaded > 0 ? ` (+${cascaded} Sub-Import${cascaded === 1 ? '' : 's'})` : '';
         setFetchToast({
-          msg: `${modelName} via ${result.repoLabel ?? 'Standard-Library'} geladen.`,
+          msg: `${modelName} via ${result.repoLabel ?? 'Standard-Library'} geladen${suffix}.`,
           ok: true,
         });
         if (onReload) await onReload();
@@ -282,9 +272,38 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
     }
   };
 
-  // Toggle: wenn das Modell aktuell per Auto-Fetch geladen ist → entladen.
-  // Sonst → versuche Auto-Fetch aus den konfigurierten Repos.
-  const handleCloudClick = async (row: ImportRow) => {
+  const [repoMenuAnchor, setRepoMenuAnchor] = useState<HTMLElement | null>(null);
+  const [repoMenuTarget, setRepoMenuTarget] = useState<{ name: string; repos: import('../../services/imports/repoSeeds').RepoSpec[] } | null>(null);
+
+  const handleFetchFromRepo = async (modelName: string, repoId: string) => {
+    setRepoMenuAnchor(null);
+    setRepoMenuTarget(null);
+    if (!importResolver) return;
+    setFetchingName(modelName);
+    setFetchToast(null);
+    try {
+      const result = await importResolver.fetchSingleModel(modelName, repoId);
+      if (result.status === 'auto' || result.status === 'stdlib') {
+        const cascaded = await cascadeDeps(result);
+        const suffix = cascaded > 0 ? ` (+${cascaded} Sub-Import${cascaded === 1 ? '' : 's'})` : '';
+        setFetchToast({
+          msg: `${modelName} via ${result.repoLabel ?? 'Repository'} geladen${suffix}.`,
+          ok: true,
+        });
+        if (onReload) await onReload();
+      } else {
+        setFetchToast({
+          msg: `${modelName}: aus diesem Repo nicht ladbar.`,
+          ok: false,
+        });
+        flashFailure(modelName);
+      }
+    } finally {
+      setFetchingName(null);
+    }
+  };
+
+  const handleCloudClick = async (row: ImportRow, anchorEl?: HTMLElement) => {
     if (!importResolver) return;
     if (row.status === 'auto') {
       importResolver.removeSingleFetched(row.name);
@@ -292,11 +311,22 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
       setFetchToast({ msg: `${row.name} entladen.`, ok: true });
       return;
     }
+    if (row.status === 'missing' || row.status === 'manual') {
+      const repos = importResolver.availabilityFor(row.name);
+      if (repos.length === 0) return;
+      if (repos.length === 1) {
+        await handleFetchFromRepo(row.name, repos[0].id);
+        return;
+      }
+      if (anchorEl) {
+        setRepoMenuTarget({ name: row.name, repos });
+        setRepoMenuAnchor(anchorEl);
+      }
+      return;
+    }
     await handleAutoFetchSingle(row.name);
   };
 
-  // Toggle: wenn das Modell aktuell manuell überschrieben ist → entfernen.
-  // Sonst → Datei-Picker öffnen.
   const handleUploadClick = async (row: ImportRow) => {
     if (!importResolver) return;
     if (row.status === 'manual') {
@@ -348,7 +378,6 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
             onClick={(e) => { e.stopPropagation(); handleToggleHidden(row.name); }}
             sx={{
               p: 0.25,
-              // Hover-Hint: das Icon wird grau & deutet "Ausblenden" an
               '&:hover .ili-eye-visible': { display: 'none' },
               '&:hover .ili-eye-hover': { display: 'inline-flex' },
             }}
@@ -396,6 +425,193 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
     }
   };
 
+  const renderActionButtons = (row: ImportRow, canExpand: boolean, isOpen: boolean): React.ReactNode => {
+    if (row.status === 'stdlib' || row.status === 'pending') return null;
+    const availIn = (row.status === 'missing' || row.status === 'manual') && importResolver
+      ? importResolver.availabilityFor(row.name)
+      : [];
+    const cloudState: 'loaded' | 'available' | 'unavailable' =
+      row.status === 'auto'
+        ? 'loaded'
+        : availIn.length > 0
+          ? 'available'
+          : 'unavailable';
+    const cloudColor = recentFailures.has(row.name)
+      ? '#c62828'
+      : cloudState === 'loaded'
+        ? '#2e7d32'
+        : undefined;
+    const cloudOpacity = recentFailures.has(row.name) || cloudState === 'loaded'
+      ? 1
+      : cloudState === 'available'
+        ? 0.7
+        : 0.4;
+    const cloudTip =
+      cloudState === 'loaded'
+        ? `Auto-geladen aus ${row.resolution?.repoLabel ?? 'Repository'} — klicken zum Entladen`
+        : cloudState === 'available'
+          ? (row.status === 'manual'
+              ? (availIn.length === 1
+                  ? `Manuell geladen — klicken um auf Auto-Variante aus ${availIn[0].label} zu wechseln`
+                  : `Manuell geladen — klicken um auf Auto-Variante zu wechseln (${availIn.length} Repos verfügbar)`)
+              : (availIn.length === 1
+                  ? `Verfügbar in ${availIn[0].label} — klicken zum Laden`
+                  : `Verfügbar in ${availIn.length} Repositories — klicken zur Auswahl`))
+          : 'Nicht in den konfigurierten Repositories verfügbar';
+    const cloudTipIsDestructive = cloudState === 'loaded';
+    const isHoveringCloud = hoveredCloudName === row.name;
+    const cloudIcon =
+      fetchingName === row.name
+        ? <CircularProgress size={14} />
+        : cloudState === 'loaded'
+          ? (isHoveringCloud ? <CloudOff fontSize="small" /> : <CloudDone fontSize="small" />)
+          : cloudState === 'available'
+            ? <CloudDownload fontSize="small" />
+            : <CloudOff fontSize="small" />;
+    return (
+      <Box sx={{ display: 'flex', gap: 0.25 }}>
+        <Tooltip
+          title={cloudTip}
+          slotProps={cloudTipIsDestructive ? { tooltip: { sx: { color: '#ff8a80' } } } : undefined}
+        >
+          <span
+            onMouseEnter={() => { if (cloudState === 'loaded') setHoveredCloudName(row.name); }}
+            onMouseLeave={() => { if (cloudState === 'loaded') setHoveredCloudName(null); }}
+          >
+            <IconButton
+              size="small"
+              onClick={(e) => { e.stopPropagation(); handleCloudClick(row, e.currentTarget); }}
+              disabled={fetchingName === row.name || cloudState === 'unavailable'}
+              sx={{
+                color: cloudState === 'loaded' && isHoveringCloud ? '#c62828' : cloudColor,
+                opacity: cloudOpacity,
+                transition: 'color 150ms ease',
+              }}
+            >
+              {cloudIcon}
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip
+          title={
+            row.status === 'manual'
+              ? `Manueller Upload (${row.overrideFileName ?? row.name}) — klicken zum Entfernen`
+              : 'Eigene .ili-Datei manuell hochladen'
+          }
+          slotProps={row.status === 'manual' ? { tooltip: { sx: { color: '#ff8a80' } } } : undefined}
+        >
+          <IconButton
+            size="small"
+            onClick={(e) => { e.stopPropagation(); handleUploadClick(row); }}
+            sx={{
+              color: row.status === 'manual' ? '#2e7d32' : undefined,
+              opacity: row.status === 'manual' ? 1 : 0.55,
+              transition: 'color 150ms ease',
+              ...(row.status === 'manual' && {
+                '&:hover': { color: '#c62828 !important' },
+              }),
+            }}
+          >
+            <UploadFile fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <IconButton
+          size="small"
+          onClick={(e) => { e.stopPropagation(); if (canExpand) toggleImpact(row.name, isOpen); }}
+          disabled={!canExpand}
+          sx={{ opacity: canExpand ? 0.7 : 0.25 }}
+        >
+          {isOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+        </IconButton>
+      </Box>
+    );
+  };
+
+  const renderSubRow = (name: string, seen: Set<string>, keyPath: string): React.ReactNode => {
+    const firstTime = !seen.has(name);
+    seen.add(name);
+    const row = buildRow(name);
+
+    if (!firstTime) {
+      return (
+        <Box
+          key={keyPath}
+          sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.25, pl: 2, opacity: 0.5 }}
+        >
+          <Box
+            sx={{
+              width: 7, height: 7, borderRadius: '50%',
+              bgcolor: STATUS_COLOR[row.status] ?? '#999',
+              flexShrink: 0,
+            }}
+          />
+          <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{name}</Typography>
+          <Typography variant="caption" sx={{ opacity: 0.6, fontSize: '0.65rem' }}>
+            {STATUS_LABEL[row.status] ?? ''}
+          </Typography>
+        </Box>
+      );
+    }
+
+    const subs = subImportsOf(name).filter(s => s !== name);
+    const canExpand = subs.length > 0;
+    const isOpen = openOverrides.get(name) === true;
+
+    return (
+      <React.Fragment key={keyPath}>
+        <ListItem
+          disableGutters
+          sx={{
+            py: 0.5,
+            gap: 1,
+            alignItems: 'flex-start',
+            pl: 2,
+            cursor: canExpand ? 'pointer' : 'default',
+            '&:hover': canExpand ? { bgcolor: 'action.hover', borderRadius: 1 } : {},
+          }}
+          onClick={canExpand ? () => toggleImpact(name, isOpen) : undefined}
+          secondaryAction={renderActionButtons(row, canExpand, isOpen)}
+        >
+          <Box sx={{ mt: 0.5 }}>{renderStatusIcon(row)}</Box>
+          <ListItemText
+            disableTypography
+            primary={
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                {name}
+              </Typography>
+            }
+            secondary={
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.25 }}>
+                {row.status === 'auto' && row.resolution?.repoLabel && (
+                  <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                    {row.resolution.repoLabel}
+                  </Typography>
+                )}
+                {row.status === 'manual' && row.overrideFileName && (
+                  <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                    {row.overrideFileName}
+                  </Typography>
+                )}
+                {row.status === 'missing' && (
+                  <Typography variant="caption" sx={{ color: '#c62828' }}>
+                    Modell nicht geladen
+                  </Typography>
+                )}
+              </Box>
+            }
+          />
+        </ListItem>
+        {canExpand && (
+          <Collapse in={isOpen} timeout="auto" unmountOnExit>
+            <Box sx={{ pl: 2 }}>
+              {subs.map((s, i) => renderSubRow(s, seen, `${keyPath}>${s}#${i}`))}
+            </Box>
+          </Collapse>
+        )}
+      </React.Fragment>
+    );
+  };
+
   const isResolving = !!importResolver?.isResolving;
 
   return (
@@ -410,7 +626,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
     >
       <Tooltip title={hasModel ? 'Modell-Info & Imports' : 'Kein Modell geladen'}>
         <span>
-          <IconButton onClick={handleClick} size="small" disabled={!hasModel}>
+          <IconButton ref={triggerButtonRef} onClick={handleClick} size="small" disabled={!hasModel}>
             <InfoOutlined fontSize="small" />
           </IconButton>
         </span>
@@ -490,20 +706,9 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
 
           <Divider sx={{ my: 1.5 }} />
 
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="subtitle2">
-              Imports {realImports.length > 0 && `(${realImports.length})`}
-            </Typography>
-            {onReload && (
-              <Tooltip title="Imports neu auflösen">
-                <span>
-                  <IconButton size="small" onClick={onReload} disabled={isResolving}>
-                    <Refresh fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            )}
-          </Box>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            Imports {realImports.length > 0 && `(${realImports.length})`}
+          </Typography>
 
           {realImports.length === 0 ? (
             <Typography variant="caption" sx={{ color: colors.text, opacity: 0.6 }}>
@@ -518,7 +723,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
                   impact.extendsCount + impact.referencesCount + impact.containsCount
                   + impact.associationsCount + impact.unresolved.length > 0
                 )) || subImports.length > 0;
-                const isOpen = expandedImpact.has(row.name);
+                const isOpen = openOverrides.get(row.name) === true;
                 return (
                   <React.Fragment key={row.name}>
                     <ListItem
@@ -530,72 +735,8 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
                         cursor: hasImpactData ? 'pointer' : 'default',
                         '&:hover': hasImpactData ? { bgcolor: 'action.hover', borderRadius: 1 } : {},
                       }}
-                      onClick={hasImpactData ? () => toggleImpact(row.name) : undefined}
-                      secondaryAction={
-                        row.status === 'stdlib' || row.status === 'pending' ? null : (
-                          <Box sx={{ display: 'flex', gap: 0.25 }}>
-                            <Tooltip
-                              title={
-                                row.status === 'auto'
-                                  ? `Auto-geladen aus ${row.resolution?.repoLabel ?? 'Repository'} — klicken zum Entladen`
-                                  : 'Automatisch aus konfigurierten Repositories nachladen'
-                              }
-                            >
-                              <span>
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => { e.stopPropagation(); handleCloudClick(row); }}
-                                  disabled={fetchingName === row.name}
-                                  sx={{
-                                    color: recentFailures.has(row.name)
-                                      ? '#c62828'
-                                      : row.status === 'auto'
-                                        ? '#2e7d32'
-                                        : undefined,
-                                    opacity: recentFailures.has(row.name)
-                                      ? 1
-                                      : row.status === 'auto'
-                                        ? 1
-                                        : 0.55,
-                                    transition: 'color 200ms ease',
-                                  }}
-                                >
-                                  {fetchingName === row.name
-                                    ? <CircularProgress size={14} />
-                                    : <CloudDownload fontSize="small" />}
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                            <Tooltip
-                              title={
-                                row.status === 'manual'
-                                  ? `Manueller Upload (${row.overrideFileName ?? row.name}) — klicken zum Entfernen`
-                                  : 'Eigene .ili-Datei manuell hochladen'
-                              }
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={(e) => { e.stopPropagation(); handleUploadClick(row); }}
-                                sx={{
-                                  color: row.status === 'manual' ? '#2e7d32' : undefined,
-                                  opacity: row.status === 'manual' ? 1 : 0.55,
-                                }}
-                              >
-                                <UploadFile fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            {hasImpactData && (
-                              <IconButton
-                                size="small"
-                                onClick={(e) => { e.stopPropagation(); toggleImpact(row.name); }}
-                                sx={{ opacity: 0.7 }}
-                              >
-                                {isOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-                              </IconButton>
-                            )}
-                          </Box>
-                        )
-                      }
+                      onClick={hasImpactData ? () => toggleImpact(row.name, isOpen) : undefined}
+                      secondaryAction={renderActionButtons(row, hasImpactData, isOpen)}
                     >
                       <Box sx={{ mt: 0.5 }}>{renderStatusIcon(row)}</Box>
                       <ListItemText
@@ -651,20 +792,17 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
                     {hasImpactData && (
                       <Collapse in={isOpen} timeout="auto" unmountOnExit>
                         <Box sx={{ pl: 4, pr: 1, pb: 1 }}>
-                          {subImports.length > 0 && (
-                            <Box sx={{ mb: 1 }}>
-                              <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, mb: 0.25 }}>
-                                Imports von {row.name} ({subImports.length}):
-                              </Typography>
-                              <ImportSubTree
-                                names={subImports}
-                                ancestors={[row.name]}
-                                buildRow={buildRow}
-                                subImportsOf={subImportsOf}
-                                isHidden={isHidden}
-                              />
-                            </Box>
-                          )}
+                          {subImports.length > 0 && (() => {
+                            const seen = new Set<string>([row.name]);
+                            return (
+                              <Box sx={{ mb: 1 }}>
+                                <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, mb: 0.25 }}>
+                                  Imports von {row.name} ({subImports.length}):
+                                </Typography>
+                                {subImports.map((s, i) => renderSubRow(s, seen, `${row.name}>${s}#${i}`))}
+                              </Box>
+                            );
+                          })()}
                           {impact && impact.unresolved.length > 0 && (
                             <Box sx={{ mb: 1 }}>
                               <Typography variant="caption" sx={{ color: '#c62828', display: 'block', fontWeight: 600 }}>
@@ -819,6 +957,24 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
           </Alert>
         ) : undefined}
       </Snackbar>
+
+      <Menu
+        anchorEl={repoMenuAnchor}
+        open={Boolean(repoMenuAnchor)}
+        onClose={() => { setRepoMenuAnchor(null); setRepoMenuTarget(null); }}
+      >
+        {repoMenuTarget?.repos.map(repo => (
+          <MenuItem
+            key={repo.id}
+            onClick={() => handleFetchFromRepo(repoMenuTarget.name, repo.id)}
+          >
+            <ListItemIcon>
+              <CloudDownload fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary={repo.label} secondary={repo.baseUrl} />
+          </MenuItem>
+        ))}
+      </Menu>
     </Paper>
   );
 };
