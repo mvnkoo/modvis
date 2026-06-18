@@ -9,11 +9,14 @@ import {
   Tooltip,
   TextField,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  ButtonBase,
 } from '@mui/material';
-import { Settings } from '@mui/icons-material';
+import { Settings, ChevronRight, CloudDownload } from '@mui/icons-material';
 import { useTheme } from '../../../../common/theme/ThemeContext';
 import { useSettings } from '../../../../common/settings/SettingsContext';
+import { ImportSettingsBody } from './ImportSettings';
+import type { UseImportResolverReturn } from '../../hooks/useImportResolver';
 
 interface LayoutSettingsProps {
   maxSubTypesPerRow: number;
@@ -22,6 +25,8 @@ interface LayoutSettingsProps {
   onHoverPreviewChange: (value: boolean) => void;
   fullHierarchy: boolean;
   onFullHierarchyChange: (value: boolean) => void;
+  importResolver?: UseImportResolverReturn;
+  onReloadImports?: () => void;
 }
 
 export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
@@ -31,10 +36,13 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   onHoverPreviewChange,
   fullHierarchy,
   onFullHierarchyChange,
+  importResolver,
+  onReloadImports,
 }) => {
   useTheme();
   const { tooltipsEnabled, setTooltipsEnabled } = useSettings();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [importsAnchor, setImportsAnchor] = useState<HTMLElement | null>(null);
   const [limitSubTypes, setLimitSubTypes] = useState(true);
   const [textFieldValue, setTextFieldValue] = useState('4');
   const initialSetupDone = useRef(false);
@@ -67,6 +75,15 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
 
   const handleClose = () => {
     setAnchorEl(null);
+    setImportsAnchor(null);
+  };
+
+  const handleOpenImports = (e: React.MouseEvent<HTMLElement>) => {
+    setImportsAnchor(e.currentTarget);
+  };
+
+  const handleCloseImports = () => {
+    setImportsAnchor(null);
   };
 
   const handleSliderChange = (_: Event, value: number | number[]) => {
@@ -127,19 +144,48 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
         anchorEl={anchorEl}
         onClose={handleClose}
         anchorOrigin={{
-          vertical: 'bottom',
+          vertical: 'top',
           horizontal: 'right',
         }}
         transformOrigin={{
           vertical: 'top',
-          horizontal: 'right',
+          horizontal: 'left',
         }}
+        slotProps={{ paper: { sx: { ml: 1, mt: -1 } } }}
       >
         <Box sx={{ p: 2, width: 360 }}>
           <Typography variant="subtitle2" gutterBottom>
-            Layout-Einstellungen
+            Einstellungen
           </Typography>
-          
+
+          {importResolver && (
+            <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <ButtonBase
+                onClick={handleOpenImports}
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  px: 1,
+                  py: 1,
+                  borderRadius: 1,
+                  textAlign: 'left',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CloudDownload fontSize="small" />
+                  <Typography variant="body2">Import-Einstellungen</Typography>
+                </Box>
+                <ChevronRight fontSize="small" sx={{ opacity: 0.6 }} />
+              </ButtonBase>
+              <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+                Auto-Resolution, Repositories, Standard-Libraries.
+              </Typography>
+            </Box>
+          )}
+
           <FormControlLabel
             control={
               <Switch
@@ -244,8 +290,21 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
               Hinweis-Bubbles bei Klassen, Attributen und Aufzählungen.
             </Typography>
           </Box>
+
         </Box>
       </Popover>
+
+      {importResolver && (
+        <Popover
+          open={Boolean(importsAnchor)}
+          anchorEl={importsAnchor}
+          onClose={handleCloseImports}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        >
+          <ImportSettingsBody importResolver={importResolver} onReload={onReloadImports} />
+        </Popover>
+      )}
     </Paper>
   );
 };

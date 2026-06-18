@@ -9,7 +9,7 @@ import {
   IliClassNode
 } from './types/IliModelTypes';
 import type { IliParseError, IliImportRef } from './parser/types';
-import { IliParser } from './parser/IliParser';
+import { IliParser, type IliFileInput } from './parser/IliParser';
 import { v4 as uuid } from 'uuid';
 
 export class IliSchemaService {
@@ -39,18 +39,25 @@ export class IliSchemaService {
   }
 
   public parseSchema(content: string): void {
+    this.applyParseResult(this.parser.parseContent(content));
+  }
+
+  public parseSchemaMulti(files: IliFileInput[]): void {
+    this.applyParseResult(this.parser.parseContents(files));
+  }
+
+  private applyParseResult(result: ReturnType<IliParser['parseContent']>): void {
     try {
       this.clear();
       this.lastErrors = [];
       this.lastImports = [];
       this.lastInterlisVersion = undefined;
 
-      const { nodes, relations, errors, imports, interlisVersion } = this.parser.parseContent(content);
+      const { nodes, relations, errors, imports, interlisVersion } = result;
       this.lastErrors = errors ?? [];
       this.lastImports = imports ?? [];
       this.lastInterlisVersion = interlisVersion;
-      
-     
+
       const initialClass =
         nodes.find(node => node.type === 'CLASS' && node.isAbstract) ??
         nodes.find(node => node.type === 'CLASS');
@@ -69,7 +76,6 @@ export class IliSchemaService {
         const id = `${relation.sourceId}-${relation.targetId}`;
         this.relations.set(id, relation);
       });
-
     } catch (error) {
       console.error('Error parsing schema:', error);
       throw error;

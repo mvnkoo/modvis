@@ -89,6 +89,10 @@ export interface IliBaseNodeData {
   width?: number;
   onResize?: (width: number) => void;
   extends?: string;
+  /** True, wenn dieser Node aus einem auto-geladenen Import-Modell stammt */
+  isFromImport?: boolean;
+  /** Name des INTERLIS-Modells, aus dem der Node stammt (z.B. "CHAdminCodes_V1") */
+  sourceModel?: string;
   [key: string]: any;
 }
 

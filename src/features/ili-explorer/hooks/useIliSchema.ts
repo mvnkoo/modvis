@@ -7,7 +7,9 @@ import { isOverviewCandidate, layoutModelOverview } from '../services/layout/ove
 import { layoutFullSchemaCanvas } from '../services/layout/layoutFullSchemaCanvas';
 import { useNavigationHistory } from './useNavigationHistory';
 import { useIliLoader, type LoadResult } from './useIliLoader';
+import { useImportResolver, type UseImportResolverReturn } from './useImportResolver';
 import { useDisplayToggles } from './useDisplayToggles';
+import type { ImportSummary } from '../services/imports/importLoader';
 import {
   IliNode,
   SearchOption,
@@ -67,6 +69,9 @@ interface UseIliSchemaReturn {
   registerNodeMove: (nodeId: string, position: { x: number; y: number }) => void;
   registerNodeExpand: (nodeId: string, expanded: boolean) => void;
   snapshotNodes: (nodes: IliNode[]) => void;
+  importResolver: UseImportResolverReturn;
+  lastImportSummary: ImportSummary | null;
+  reloadWithImports: () => Promise<void>;
 }
 
 interface CachedNodeState {
@@ -216,7 +221,8 @@ export const useIliSchema = (
     (result: LoadResult) => handleLoadedRef.current(result),
     []
   );
-  const loader = useIliLoader({ colors, useCurvedLines, onLoaded });
+  const importResolver = useImportResolver();
+  const loader = useIliLoader({ colors, useCurvedLines, onLoaded, resolver: importResolver });
   const {
     isLoading,
     error,
@@ -230,6 +236,8 @@ export const useIliSchema = (
     relations: parsedRelations,
     searchOptions,
     loadFromFile,
+    reloadWithImports,
+    lastImportSummary,
   } = loader;
 
   const computeLayout = useCallback(
@@ -770,5 +778,8 @@ export const useIliSchema = (
     registerNodeMove,
     registerNodeExpand,
     snapshotNodes,
+    importResolver,
+    lastImportSummary,
+    reloadWithImports,
   };
 };
