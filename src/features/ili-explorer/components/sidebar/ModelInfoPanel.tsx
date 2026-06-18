@@ -378,7 +378,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
         ? `Modell ausgeblendet — klicken zum Einblenden${row.status === 'auto' && row.resolution?.repoLabel ? ` (via ${row.resolution.repoLabel})` : row.status === 'manual' && row.overrideFileName ? ` (${row.overrideFileName})` : ''}`
         : `Modell sichtbar — klicken zum Ausblenden${row.status === 'auto' && row.resolution?.repoLabel ? ` (via ${row.resolution.repoLabel})` : row.status === 'manual' && row.overrideFileName ? ` (${row.overrideFileName})` : ''}`;
       return (
-        <Tooltip title={tip}>
+        <Tooltip placement="right" title={tip}>
           <IconButton
             size="small"
             onClick={(e) => { e.stopPropagation(); handleToggleHidden(row.name); }}
@@ -411,20 +411,20 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
     switch (row.status) {
       case 'stdlib':
         return (
-          <Tooltip title="Standard-Library (eingebaut)">
+          <Tooltip placement="right" title="Standard-Library (eingebaut)">
             <MenuBook fontSize="small" sx={{ color: colors.text, opacity: 0.5 }} />
           </Tooltip>
         );
       case 'missing':
         return (
-          <Tooltip title="Modell nicht geladen — automatisch nachladen oder manuell hochladen">
+          <Tooltip placement="right" title="Modell nicht geladen — automatisch nachladen oder manuell hochladen">
             <ErrorOutline fontSize="small" sx={{ color: '#c62828' }} />
           </Tooltip>
         );
       case 'pending':
       default:
         return (
-          <Tooltip title="Auflösung läuft …">
+          <Tooltip placement="right" title="Auflösung läuft …">
             <CircularProgress size={14} />
           </Tooltip>
         );
@@ -477,6 +477,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
     return (
       <Box sx={{ display: 'flex', gap: 0.25 }}>
         <Tooltip
+          placement="right"
           title={cloudTip}
           slotProps={cloudTipIsDestructive ? { tooltip: { sx: { color: '#ff8a80' } } } : undefined}
         >
@@ -499,6 +500,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
           </span>
         </Tooltip>
         <Tooltip
+          placement="right"
           title={
             row.status === 'manual'
               ? `Manueller Upload (${row.overrideFileName ?? row.name}) — klicken zum Entfernen`
@@ -630,7 +632,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
         mb: 1,
       }}
     >
-      <Tooltip title={hasModel ? 'Modell-Info & Imports' : 'Kein Modell geladen'}>
+      <Tooltip placement="right" title={hasModel ? 'Modell-Info & Imports' : 'Kein Modell geladen'}>
         <span>
           <IconButton ref={triggerButtonRef} onClick={handleClick} size="small" disabled={!hasModel}>
             <InfoOutlined fontSize="small" />
@@ -673,25 +675,25 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
             )}
             <Chip size="small" label={`${classCount} Classes`} />
             {structureCount > 0 && (
-              <Tooltip title="Wertgebundene Datenstrukturen ohne eigene Identität (Refhb 3.5/3.6 Structure)">
+              <Tooltip placement="right" title="Wertgebundene Datenstrukturen ohne eigene Identität (Refhb 3.5/3.6 Structure)">
                 <Chip size="small" label={`${structureCount} Structures`} />
               </Tooltip>
             )}
             {topicCount > 0 && <Chip size="small" label={`${topicCount} Topics`} />}
             {associationCount > 0 && <Chip size="small" label={`${associationCount} Assoc.`} />}
             {enumCount > 0 && (
-              <Tooltip title="Wiederverwendbare Enumeration als Wertebereich (INTERLIS-Regel DomainDef, Refhb 3.8.2)">
+              <Tooltip placement="right" title="Wiederverwendbare Enumeration als Wertebereich (INTERLIS-Regel DomainDef, Refhb 3.8.2)">
                 <Chip size="small" label={`${enumCount} Enums`} />
               </Tooltip>
             )}
             {inlineEnumCount > 0 && (
-              <Tooltip title="Anonyme Enumeration direkt als Attribut-Typ (INTERLIS-Regel AttrTypeDef, Refhb 3.6)">
+              <Tooltip placement="right" title="Anonyme Enumeration direkt als Attribut-Typ (INTERLIS-Regel AttrTypeDef, Refhb 3.6)">
                 <Chip size="small" label={`${inlineEnumCount} Enums (Inline)`} />
               </Tooltip>
             )}
             {unitCount > 0 && <Chip size="small" label={`${unitCount} Units`} />}
             {warningCount > 0 && (
-              <Tooltip title="Parser-Warnungen aus dieser Datei">
+              <Tooltip placement="right" title="Parser-Warnungen aus dieser Datei">
                 <Chip
                   size="small"
                   color="warning"
@@ -700,7 +702,7 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
               </Tooltip>
             )}
             {importWarningCount > 0 && (
-              <Tooltip title="Parser-Hinweise aus auto-geladenen Import-Modellen (betreffen nicht deine Datei)">
+              <Tooltip placement="right" title="Parser-Hinweise aus auto-geladenen Import-Modellen (betreffen nicht deine Datei)">
                 <Chip
                   size="small"
                   variant="outlined"
