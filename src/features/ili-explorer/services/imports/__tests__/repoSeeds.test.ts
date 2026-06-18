@@ -24,9 +24,9 @@ describe('jsdelivrUrl', () => {
 });
 
 describe('DEFAULT_REPO_SEEDS', () => {
-  it('contains the verified geo-admin seed', () => {
+  it('contains the geo-admin seed routed through the CORS proxy', () => {
     const geoAdmin = DEFAULT_REPO_SEEDS.find(r => r.id === 'geo-admin');
     expect(geoAdmin).toBeDefined();
-    expect(geoAdmin?.baseUrl).toBe('https://models.geo.admin.ch');
+    expect(geoAdmin?.baseUrl).toBe('https://proxy.iliexplorer.ch/geo-admin');
   });
 });

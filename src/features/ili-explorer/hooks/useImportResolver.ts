@@ -41,6 +41,7 @@ export interface UseImportResolverReturn {
   uploadOverrideContent: (modelName: string, fileName: string, content: string) => void;
   removeOverride: (modelName: string) => void;
   refreshRepoIndex: () => Promise<void>;
+  ensureIndexes: () => Promise<void>;
   probeSingleRepo: (repo: RepoSpec) => Promise<RepositoryIndex>;
   setRepos: (repos: RepoSpec[]) => void;
 }
@@ -211,6 +212,11 @@ export function useImportResolver(): UseImportResolverReturn {
     }
   }, []);
 
+  const ensureIndexes = useCallback(async () => {
+    const fresh = await fetchAllIndexes(reposRef.current, false);
+    setIndexes(fresh);
+  }, []);
+
   const probeSingleRepo = useCallback(async (repo: RepoSpec): Promise<RepositoryIndex> => {
     const fresh = await fetchRepositoryIndex(repo, true);
     setIndexes(prev => {
@@ -252,6 +258,7 @@ export function useImportResolver(): UseImportResolverReturn {
     uploadOverrideContent,
     removeOverride,
     refreshRepoIndex,
+    ensureIndexes,
     probeSingleRepo,
     availabilityFor,
     setRepos,

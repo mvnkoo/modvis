@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IconButton,
   Box,
@@ -16,7 +16,6 @@ import {
   Chip,
 } from '@mui/material';
 import { Refresh, Delete, Add } from '@mui/icons-material';
-import { useTheme } from '../../../../common/theme/ThemeContext';
 import type { UseImportResolverReturn } from '../../hooks/useImportResolver';
 import {
   saveCustomRepos,
@@ -37,11 +36,15 @@ interface ImportSettingsBodyProps {
  * eingeblendet.
  */
 export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importResolver, onReload }) => {
-  const { colors } = useTheme();
   const [newLabel, setNewLabel] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [customRepos, setCustomRepos] = useState<RepoSpec[]>(() => loadCustomRepos());
   const [probingId, setProbingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    importResolver.ensureIndexes().catch(() => { /* render with cached/empty state */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleToggleAuto = (_e: unknown, checked: boolean) => {
     importResolver.setAutoImportEnabled(checked);
@@ -231,11 +234,6 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
           </ListItem>
         ))}
       </List>
-
-      <Divider sx={{ my: 1.5 }} />
-      <Typography variant="caption" sx={{ color: colors.text, opacity: 0.55, display: 'block' }}>
-        Repos mit GitHub-Mirror werden via jsDelivr-CDN abgefragt.
-      </Typography>
     </Box>
   );
 };
