@@ -33,9 +33,24 @@ export function jsdelivrUrl(mirror: GithubMirror, relPath: string): string {
  */
 export const DEFAULT_REPO_SEEDS: RepoSpec[] = [
   {
+    id: 'interlis-ch',
+    baseUrl: 'https://proxy.iliexplorer.ch/interlis',
+    label: 'INTERLIS Master (interlis.ch)',
+  },
+  {
     id: 'geo-admin',
-    baseUrl: 'https://models.geo.admin.ch',
+    baseUrl: 'https://proxy.iliexplorer.ch/geo-admin',
     label: 'Bund (geo.admin.ch)',
+  },
+  {
+    id: 'vsa-ch',
+    baseUrl: 'https://proxy.iliexplorer.ch/vsa',
+    label: 'VSA Abwasser (vsa.ch)',
+  },
+  {
+    id: 'geo-so',
+    baseUrl: 'https://geo.so.ch/models',
+    label: 'Kanton Solothurn (geo.so.ch)',
   },
 ];
 

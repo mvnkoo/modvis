@@ -115,13 +115,19 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
   const uploadTargetRef = useRef<string | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Programmatisches Öffnen via openSignal-Prop (für Toast-Action "Imports verwalten").
   React.useEffect(() => {
     if (openSignal && openSignal > 0 && triggerButtonRef.current) {
       setAnchorEl(triggerButtonRef.current);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openSignal]);
+
+  React.useEffect(() => {
+    if (anchorEl) {
+      importResolver?.ensureIndexes().catch(() => { /* still render with cached/empty state */ });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anchorEl]);
 
   const toggleImpact = (name: string, currentOpen: boolean) => {
     setOpenOverrides(prev => {
