@@ -123,6 +123,8 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
     </Box>
   );
 
+  const importsOn = importResolver.importsEnabled;
+
   return (
     <Box sx={{ p: 2, width: 460, maxHeight: 640, overflowY: 'auto' }}>
       <Typography variant="subtitle2" gutterBottom>
@@ -133,21 +135,40 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
         control={
           <Switch
             size="small"
-            checked={importResolver.autoImportEnabled}
-            onChange={handleToggleAuto}
+            checked={importsOn}
+            onChange={(_e, checked) => importResolver.setImportsEnabled(checked)}
           />
         }
-        label="Importe automatisch aus Repositories nachladen"
+        label={<Typography variant="body2" sx={{ fontWeight: 600 }}>Import aus Repositories</Typography>}
       />
       <Typography variant="caption" sx={{ display: 'block', mt: 0.5, ml: 5, opacity: 0.65 }}>
-        Aus = Imports aus den Repositorys werden nicht automatisch beim Laden der Modelle hinzugefügt.
+        Repositories werden genutzt um Imports nachzuladen.
       </Typography>
 
       <Divider sx={{ my: 1.5 }} />
 
-      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-        Eigene Repository-URL hinzufügen
-      </Typography>
+      <Box sx={{ opacity: importsOn ? 1 : 0.4, pointerEvents: importsOn ? 'auto' : 'none' }}>
+        <FormControlLabel
+          disabled={!importsOn}
+          control={
+            <Switch
+              size="small"
+              checked={importResolver.autoImportEnabled}
+              onChange={handleToggleAuto}
+              disabled={!importsOn}
+            />
+          }
+          label="Importe automatisch Anwenden"
+        />
+        <Typography variant="caption" sx={{ display: 'block', mt: 0.5, ml: 5, opacity: 0.65 }}>
+          Gefundene Imports werden automatisch geladen bei öffnen eines Modells.
+        </Typography>
+
+        <Divider sx={{ my: 1.5 }} />
+
+        <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+          Eigene Repository-URL hinzufügen
+        </Typography>
       <Box sx={{ display: 'flex', gap: 0.5, flexDirection: 'column' }}>
         <TextField
           size="small"
@@ -234,6 +255,7 @@ export const ImportSettingsBody: React.FC<ImportSettingsBodyProps> = ({ importRe
           </ListItem>
         ))}
       </List>
+      </Box>
     </Box>
   );
 };

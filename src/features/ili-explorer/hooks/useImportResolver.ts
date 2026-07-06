@@ -7,16 +7,17 @@ import { resolveModel, type ResolutionResult } from '../services/imports/modelRe
 import { readFileAsText } from '../../../common/utils/readFileAsText';
 
 const AUTO_ENABLED_KEY = 'modvis.autoImportEnabled';
+const IMPORTS_ENABLED_KEY = 'modvis.importsEnabled';
 
-function readAutoEnabled(): boolean {
-  if (typeof localStorage === 'undefined') return false;
-  const raw = localStorage.getItem(AUTO_ENABLED_KEY);
-  return raw === null ? false : raw === 'true';
+function readBool(key: string, fallback: boolean): boolean {
+  if (typeof localStorage === 'undefined') return fallback;
+  const raw = localStorage.getItem(key);
+  return raw === null ? fallback : raw === 'true';
 }
 
-function writeAutoEnabled(v: boolean): void {
+function writeBool(key: string, v: boolean): void {
   if (typeof localStorage === 'undefined') return;
-  try { localStorage.setItem(AUTO_ENABLED_KEY, v ? 'true' : 'false'); } catch { /* ignore */ }
+  try { localStorage.setItem(key, v ? 'true' : 'false'); } catch { /* ignore */ }
 }
 
 export interface UseImportResolverReturn {
@@ -26,6 +27,8 @@ export interface UseImportResolverReturn {
   overrides: Map<string, OverrideEntry>;
   singleFetched: Map<string, ResolutionResult>;
   hiddenImports: Set<string>;
+  importsEnabled: boolean;
+  setImportsEnabled: (v: boolean) => void;
   autoImportEnabled: boolean;
   setAutoImportEnabled: (v: boolean) => void;
   repos: RepoSpec[];
@@ -50,7 +53,8 @@ export function useImportResolver(): UseImportResolverReturn {
   const [isResolving, setIsResolving] = useState(false);
   const [lastResult, setLastResult] = useState<ImportLoadResult | null>(null);
   const [overrides, setOverrides] = useState<Map<string, OverrideEntry>>(() => loadOverrides());
-  const [autoEnabled, setAutoEnabledState] = useState<boolean>(() => readAutoEnabled());
+  const [autoEnabled, setAutoEnabledState] = useState<boolean>(() => readBool(AUTO_ENABLED_KEY, false));
+  const [importsEnabled, setImportsEnabledState] = useState<boolean>(() => readBool(IMPORTS_ENABLED_KEY, false));
   const [repos, setReposState] = useState<RepoSpec[]>(() => getAllRepos());
   const [indexes, setIndexes] = useState<RepositoryIndex[]>([]);
   const [singleFetched, setSingleFetched] = useState<Map<string, ResolutionResult>>(() => new Map());
@@ -74,8 +78,16 @@ export function useImportResolver(): UseImportResolverReturn {
 
   const setAutoImportEnabled = useCallback((v: boolean) => {
     setAutoEnabledState(v);
-    writeAutoEnabled(v);
+    writeBool(AUTO_ENABLED_KEY, v);
   }, []);
+
+  const setImportsEnabled = useCallback((v: boolean) => {
+    setImportsEnabledState(v);
+    writeBool(IMPORTS_ENABLED_KEY, v);
+  }, []);
+
+  const importsEnabledRef = useRef(importsEnabled);
+  useEffect(() => { importsEnabledRef.current = importsEnabled; }, [importsEnabled]);
 
   const setRepos = useCallback((next: RepoSpec[]) => {
     setReposState(next);
@@ -88,12 +100,11 @@ export function useImportResolver(): UseImportResolverReturn {
       for (const [k, v] of overridesRef.current) {
         ovMap.set(k, { fileName: v.fileName, content: v.content });
       }
-      // Wenn Auto-Import aus ist: keine Remote-Repos durchsuchen. Manual-Uploads
-      // (Overrides) und eingebettete Standard-Libraries werden trotzdem aufgelöst.
+      const reposActive = importsEnabledRef.current && autoEnabled;
       const result = await loadWithDependencies(primary, {
         overrides: ovMap,
         singleFetched: singleFetchedRef.current,
-        repos: autoEnabled ? reposRef.current : [],
+        repos: reposActive ? reposRef.current : [],
         skipNames: userUnloadedRef.current,
       });
       setLastResult(result);
@@ -104,10 +115,11 @@ export function useImportResolver(): UseImportResolverReturn {
   }, [autoEnabled]);
 
   const fetchSingleModel = useCallback(async (modelName: string, preferredRepoId?: string): Promise<ResolutionResult> => {
+    if (!importsEnabledRef.current) {
+      return { modelName, status: 'missing' };
+    }
     setIsResolving(true);
     try {
-      // Indexe sicherstellen — wenn der globale Auto-Import aus ist, sind sie
-      // beim Open noch nicht gefetcht worden.
       const fresh = await fetchAllIndexes(reposRef.current, false);
       setIndexes(fresh);
       // Auto-Fetch hat Vorrang vor einem ggf. existierenden Manual-Upload:
@@ -213,6 +225,7 @@ export function useImportResolver(): UseImportResolverReturn {
   }, []);
 
   const ensureIndexes = useCallback(async () => {
+    if (!importsEnabledRef.current) return;
     const fresh = await fetchAllIndexes(reposRef.current, false);
     setIndexes(fresh);
   }, []);
@@ -245,6 +258,8 @@ export function useImportResolver(): UseImportResolverReturn {
     overrides,
     singleFetched,
     hiddenImports,
+    importsEnabled,
+    setImportsEnabled,
     autoImportEnabled: autoEnabled,
     setAutoImportEnabled,
     repos,
