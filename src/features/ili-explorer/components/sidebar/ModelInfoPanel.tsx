@@ -476,29 +476,31 @@ export const ModelInfoPanel: React.FC<ModelInfoPanelProps> = ({
             : <CloudOff fontSize="small" />;
     return (
       <Box sx={{ display: 'flex', gap: 0.25 }}>
-        <Tooltip
-          placement="right"
-          title={cloudTip}
-          slotProps={cloudTipIsDestructive ? { tooltip: { sx: { color: '#ff8a80' } } } : undefined}
-        >
-          <span
-            onMouseEnter={() => { if (cloudState === 'loaded') setHoveredCloudName(row.name); }}
-            onMouseLeave={() => { if (cloudState === 'loaded') setHoveredCloudName(null); }}
+        {importResolver?.importsEnabled && (
+          <Tooltip
+            placement="right"
+            title={cloudTip}
+            slotProps={cloudTipIsDestructive ? { tooltip: { sx: { color: '#ff8a80' } } } : undefined}
           >
-            <IconButton
-              size="small"
-              onClick={(e) => { e.stopPropagation(); handleCloudClick(row, e.currentTarget); }}
-              disabled={fetchingName === row.name || cloudState === 'unavailable'}
-              sx={{
-                color: cloudState === 'loaded' && isHoveringCloud ? '#c62828' : cloudColor,
-                opacity: cloudOpacity,
-                transition: 'color 150ms ease',
-              }}
+            <span
+              onMouseEnter={() => { if (cloudState === 'loaded') setHoveredCloudName(row.name); }}
+              onMouseLeave={() => { if (cloudState === 'loaded') setHoveredCloudName(null); }}
             >
-              {cloudIcon}
-            </IconButton>
-          </span>
-        </Tooltip>
+              <IconButton
+                size="small"
+                onClick={(e) => { e.stopPropagation(); handleCloudClick(row, e.currentTarget); }}
+                disabled={fetchingName === row.name || cloudState === 'unavailable'}
+                sx={{
+                  color: cloudState === 'loaded' && isHoveringCloud ? '#c62828' : cloudColor,
+                  opacity: cloudOpacity,
+                  transition: 'color 150ms ease',
+                }}
+              >
+                {cloudIcon}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
         <Tooltip
           placement="right"
           title={
