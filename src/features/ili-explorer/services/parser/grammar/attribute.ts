@@ -110,6 +110,7 @@ export function registerAttributeRules(p: IliCstParserBuilder): void {
     p.CONSUME(Of);
     p.OR2([
       { ALT: () => p.CONSUME(AnyStructure) },
+      { ALT: () => p.SUBRULE(p.enumValueList) },
       { ALT: () => p.SUBRULE(p.qualifiedName) },
     ]);
     p.OPTION2(() => p.SUBRULE(p.restrictionClause));

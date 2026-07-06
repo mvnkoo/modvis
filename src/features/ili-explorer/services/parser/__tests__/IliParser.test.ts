@@ -525,6 +525,32 @@ END M.`;
     expect(attr?.type).toBe('LIST {1..5} OF Tag');
   });
 
+  it('parses BAG OF an inline enumeration without crashing', () => {
+    const r = parse(`
+      MODEL Demo =
+        TOPIC T =
+          CLASS Messstelle =
+            Messparameter : BAG OF (
+              Druck,
+              Temperatur,
+              andere
+            );
+          END Messstelle;
+        END T;
+      END Demo.
+    `);
+    expect(r.errors).toHaveLength(0);
+    const cls = r.nodes.find(n => n.name === 'Messstelle') as IliClassNode;
+    const attr = cls.attributes?.[0];
+    expect(attr?.type).toBe('BAG OF ENUMERATION');
+    expect(attr?.isEnum).toBe(true);
+    expect(attr?.enumValues?.map(v => v.value)).toEqual([
+      'Druck',
+      'Temperatur',
+      'andere',
+    ]);
+  });
+
   it('parses COORD geometry as black-box type', () => {
     const r = parse(`
       MODEL Demo =
