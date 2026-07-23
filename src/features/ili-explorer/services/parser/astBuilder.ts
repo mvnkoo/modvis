@@ -757,6 +757,10 @@ class IliCstToAstVisitor extends BaseVisitor {
       };
     }
     if (ctx.formatType) return { type: this.visit(ctx.formatType[0]) as string };
+    if (ctx.allOfClause) {
+      const target = this.visit(ctx.allOfClause[0]) as string;
+      return { type: `ALL OF ${target}` };
+    }
     if (ctx.qualifiedName) return { type: this.visit(ctx.qualifiedName[0]) as string };
     emitWarning(this.state, 'attributeType: keine Variante matched, Typ leer');
     return { type: '' };

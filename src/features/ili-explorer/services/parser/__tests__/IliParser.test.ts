@@ -420,6 +420,26 @@ END M.`;
     expect(state?.enumValues?.map(v => v.value)).toEqual(['active', 'inactive']);
   });
 
+  it('parses an attribute typed as ALL OF a DOMAIN without warnings', () => {
+    const r = parse(`
+      MODEL Demo =
+        DOMAIN
+          Material = (metal, plastic);
+        TOPIC T =
+          CLASS Foo =
+            kind : ALL OF Demo.Material;
+          END Foo;
+        END T;
+      END Demo.
+    `);
+    expect(r.warnings).toHaveLength(0);
+    const foo = r.nodes.find(n => n.name === 'Foo') as IliClassNode;
+    const kind = foo.attributes?.find(a => a.name === 'kind');
+    expect(kind?.type).toBe('ALL OF Demo.Material');
+    expect(kind?.isDomainEnum).toBe(true);
+    expect(kind?.enumValues?.map(v => v.value)).toEqual(['metal', 'plastic']);
+  });
+
   it('parses ASSOCIATION between two classes', () => {
     const r = parse(`
       MODEL Demo =
