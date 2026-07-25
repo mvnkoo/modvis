@@ -73,6 +73,7 @@ export function registerAttributeRules(p: IliCstParserBuilder): void {
       { ALT: () => p.SUBRULE(p.geometryType) },
       { ALT: () => p.SUBRULE(p.enumValueList) },
       { ALT: () => p.SUBRULE(p.formatType) },
+      { ALT: () => p.SUBRULE(p.allOfClause) },
       { ALT: () => p.SUBRULE(p.qualifiedName) },
     ]);
   });
