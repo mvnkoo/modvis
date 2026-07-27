@@ -152,15 +152,26 @@ export function decorateReferences(state: VisitState): void {
 }
 
 export function decorateInheritedAttributes(state: VisitState): void {
+  decorateInheritedAttributesOver(state.nodes, state.relations);
+}
+
+/**
+ * Stand-alone variante: lässt sich nach dem Multi-File-Merge nochmal über
+ * das gesamte zusammengeführte Node-/Relation-Set laufen.
+ */
+export function decorateInheritedAttributesOver(
+  nodes: IliBaseNode[],
+  relations: IliRelation[],
+): void {
   const classById = new Map<string, IliClassNode>();
-  for (const node of state.nodes) {
+  for (const node of nodes) {
     if (node.type === 'CLASS' || node.type === 'STRUCTURE') {
       classById.set(node.id, node as IliClassNode);
     }
   }
 
   const superTypeOf = new Map<string, string>();
-  for (const rel of state.relations) {
+  for (const rel of relations) {
     if (rel.type === 'EXTENDS') superTypeOf.set(rel.sourceId, rel.targetId);
   }
 

@@ -353,14 +353,31 @@ class IliCstToAstVisitor extends BaseVisitor {
   collectionType(ctx: any): Partial<IliAttribute> {
     const isBag = !!ctx.Bag;
     const card = ctx.cardinality ? this.visit(ctx.cardinality[0]) as string : undefined;
+    const kind = isBag ? 'BAG' : 'LIST';
+    const cardPart = card ? ` {${card}}` : '';
+
+    if (ctx.enumValueList) {
+      const enumValues = this.visit(ctx.enumValueList[0]) as IliEnumValue[];
+      return {
+        type: `${kind}${cardPart} OF ENUMERATION`,
+        isEnum: true,
+        isInlineEnum: true,
+        enumValues,
+        structKind: isBag ? 'bag' : 'list',
+      };
+    }
+
     const target = ctx.AnyStructure
       ? 'ANYSTRUCTURE'
-      : (this.visit(ctx.qualifiedName[0]) as string);
+      : ctx.qualifiedName?.[0]
+        ? (this.visit(ctx.qualifiedName[0]) as string)
+        : '';
+    if (!ctx.AnyStructure && !ctx.qualifiedName?.[0]) {
+      emitWarning(this.state, `${kind} OF ohne Zieltyp — Typ unvollständig`);
+    }
     const restriction = ctx.restrictionClause
       ? this.visit(ctx.restrictionClause[0]) as string[]
       : undefined;
-    const kind = isBag ? 'BAG' : 'LIST';
-    const cardPart = card ? ` {${card}}` : '';
     const restrPart = restriction && restriction.length > 0
       ? ` RESTRICTION (${restriction.join('; ')})`
       : '';
@@ -740,6 +757,10 @@ class IliCstToAstVisitor extends BaseVisitor {
       };
     }
     if (ctx.formatType) return { type: this.visit(ctx.formatType[0]) as string };
+    if (ctx.allOfClause) {
+      const target = this.visit(ctx.allOfClause[0]) as string;
+      return { type: `ALL OF ${target}` };
+    }
     if (ctx.qualifiedName) return { type: this.visit(ctx.qualifiedName[0]) as string };
     emitWarning(this.state, 'attributeType: keine Variante matched, Typ leer');
     return { type: '' };

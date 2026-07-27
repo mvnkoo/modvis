@@ -17,7 +17,7 @@ import {
   StepEdge,
   NodeMouseHandler,
 } from '@xyflow/react';
-import { Box, Alert, CircularProgress, Snackbar, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Alert, CircularProgress, Snackbar, Menu, MenuItem, ListItemIcon, ListItemText, Button } from '@mui/material';
 import OpenInNew from '@mui/icons-material/OpenInNew';
 import AccountTree from '@mui/icons-material/AccountTree';
 import { useTheme } from '../../../common/theme/ThemeContext';
@@ -47,6 +47,7 @@ import { useIliSchema } from '../hooks/useIliSchema';
 import { useDiagramExport } from '../hooks/useDiagramExport';
 import { LayoutSettings } from './sidebar/LayoutSettings';
 import { ModelInfoPanel } from './sidebar/ModelInfoPanel';
+import { computeImportImpact } from '../services/imports/importImpact';
 import { layoutHoverPreview } from '../services/layout/previewStrategy';
 
 import '@xyflow/react/dist/style.css';
@@ -165,6 +166,9 @@ const Flow: React.FC = () => {
     isFullSchemaView,
     handleMaxSubTypesChange,
     fitViewRequest,
+    importResolver,
+    lastImportSummary,
+    reloadWithImports,
   } = useIliSchema(
     nodes,
     setNodes,
@@ -181,6 +185,13 @@ const Flow: React.FC = () => {
 
   const [lastFitDone, setLastFitDone] = useState(0);
   const canvasReady = fitViewRequest === 0 || lastFitDone > 0;
+
+  const [loadNotification, setLoadNotification] = useState<{
+    message: string;
+    severity: 'success' | 'info' | 'warning';
+    withManageAction: boolean;
+  } | null>(null);
+  const [modelInfoOpenSignal, setModelInfoOpenSignal] = useState(0);
 
   useEffect(() => {
     setLastFitDone(0);
@@ -789,8 +800,6 @@ const Flow: React.FC = () => {
           break;
         case 'structureNode': structureCount++; break;
       }
-      // Inline-Enums leben als Attribut-Property auf CLASS/STRUCTURE-Knoten,
-      // nicht als eigene Knoten — separat zählen für ehrliche Statistik.
       if (n.type === 'classNode' || n.type === 'structureNode') {
         const attrs = (data?.attributes ?? []) as { isInlineEnum?: boolean }[];
         for (const a of attrs) if (a.isInlineEnum) inlineEnumCount++;
@@ -807,6 +816,11 @@ const Flow: React.FC = () => {
     };
   }, [allNodes]);
 
+  const importImpacts = useMemo(
+    () => computeImportImpact(imports.map(i => i.name), allNodes, allEdges),
+    [imports, allNodes, allEdges],
+  );
+
   const lastLoadedFileRef = useRef<string | null>(null);
   useEffect(() => {
     if (isLoading || error) return;
@@ -814,12 +828,49 @@ const Flow: React.FC = () => {
     if (allNodes.length === 0) return;
     lastLoadedFileRef.current = currentFileName;
     const classCount = allNodes.filter(n => n.type === 'classNode').length;
-    const warnCount = parseWarnings.length;
-    const summary = warnCount > 0
-      ? `${currentFileName} geladen — ${classCount} Klassen, ${warnCount} ${warnCount === 1 ? 'Warnung' : 'Warnungen'}`
-      : `${currentFileName} geladen — ${classCount} Klassen`;
-    showToast(summary, warnCount > 0 ? 'warning' : 'success');
-  }, [isLoading, error, currentFileName, allNodes, parseWarnings, showToast]);
+    const primaryWarnCount = parseWarnings.filter(w => !w.fromImport).length;
+    const importWarnCount = parseWarnings.length - primaryWarnCount;
+    const summary = lastImportSummary;
+    const mainParts: string[] = [`${currentFileName} geladen — ${classCount} Klassen`];
+    if (primaryWarnCount > 0) {
+      mainParts.push(`${primaryWarnCount} ${primaryWarnCount === 1 ? 'Warnung' : 'Warnungen'}`);
+    }
+    let detailLine: string | null = null;
+    if (summary) {
+      const resolvedTotal = summary.autoCount + summary.manualCount + summary.stdlibCount;
+      const autoEnabled = importResolver.autoImportEnabled;
+      if (summary.autoCount > 0) {
+        const repos = summary.sourceRepos.slice(0, 2).join(', ');
+        mainParts.push(`${summary.autoCount} Imports auto-geladen${repos ? ` (${repos})` : ''}`);
+      } else if (resolvedTotal > 0) {
+        mainParts.push(`${resolvedTotal} Imports aufgelöst`);
+      }
+      if (importWarnCount > 0) {
+        mainParts.push(`${importWarnCount} Import-Parse-Hinweise`);
+      }
+      if (summary.missingCount > 0) {
+        const suffix = !autoEnabled && summary.autoCount === 0
+          ? ' (Auto-Import aus)'
+          : '';
+        const names = summary.missingNames.slice(0, 3).join(', ');
+        const more = summary.missingNames.length > 3 ? `, +${summary.missingNames.length - 3}` : '';
+        detailLine = `${summary.missingCount} Import${summary.missingCount === 1 ? '' : 's'} offen: ${names}${more}${suffix}`;
+      }
+    }
+    const hasMissingImports = !!(summary && summary.missingCount > 0);
+    const severity: 'success' | 'info' | 'warning' =
+      primaryWarnCount > 0
+        ? 'warning'
+        : hasMissingImports
+          ? 'info'
+          : 'success';
+    const message = detailLine ? `${mainParts.join(' · ')}\n${detailLine}` : mainParts.join(' · ');
+    setLoadNotification({
+      message,
+      severity,
+      withManageAction: hasMissingImports,
+    });
+  }, [isLoading, error, currentFileName, allNodes, parseWarnings, lastImportSummary, importResolver.autoImportEnabled]);
 
   useEffect(() => {
     if (!currentFileName) lastLoadedFileRef.current = null;
@@ -855,20 +906,27 @@ const Flow: React.FC = () => {
         </Box>
       )}
 
-      {parseWarnings.length > 0 && (
-        <Box sx={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
-          <Alert
-            severity="warning"
-            onClose={dismissParseWarnings}
-            sx={{ '& .MuiAlert-message': { maxWidth: '100%' } }}
-          >
-            <strong>{parseWarnings.length} Parser-{parseWarnings.length === 1 ? 'Warnung' : 'Warnungen'}</strong>
-            {' — einige Stellen konnten von ModVis nicht vollständig interpretiert werden, das angezeigte Diagramm ist daher möglicherweise lückenhaft. '}
-            {parseWarnings[0].line ? `Erste Stelle: Zeile ${parseWarnings[0].line}. ` : ''}
-            <span style={{ opacity: 0.85 }}>{parseWarnings[0].message}</span>
-          </Alert>
-        </Box>
-      )}
+      {(() => {
+        const primaryWarnings = parseWarnings.filter(w => !w.fromImport);
+        if (primaryWarnings.length === 0) return null;
+        const first = primaryWarnings[0];
+        return (
+          <Box sx={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, maxWidth: '80%' }}>
+            <Alert
+              severity="warning"
+              onClose={dismissParseWarnings}
+              sx={{ '& .MuiAlert-message': { maxWidth: '100%' } }}
+            >
+              <strong>
+                {primaryWarnings.length} Parser-{primaryWarnings.length === 1 ? 'Warnung' : 'Warnungen'} in dieser Datei
+              </strong>
+              {' — einige Stellen konnten von ModVis nicht vollständig interpretiert werden, das angezeigte Diagramm ist daher möglicherweise lückenhaft. '}
+              {first?.line ? `Erste Stelle: Zeile ${first.line}. ` : ''}
+              <span style={{ opacity: 0.85 }}>{first?.message}</span>
+            </Alert>
+          </Box>
+        );
+      })()}
 
       <IliToolbar
         searchValue={searchValue}
@@ -953,8 +1011,13 @@ const Flow: React.FC = () => {
             inlineEnumCount={modelStats.inlineEnumCount}
             unitCount={modelStats.unitCount}
             imports={imports}
-            warningCount={parseWarnings.length}
+            warningCount={parseWarnings.filter(w => !w.fromImport).length}
+            importWarningCount={parseWarnings.filter(w => w.fromImport).length}
             interlisVersion={interlisVersion}
+            importResolver={importResolver}
+            onReload={reloadWithImports}
+            importImpacts={importImpacts}
+            openSignal={modelInfoOpenSignal}
           />
           <LayoutSettings
             maxSubTypesPerRow={maxSubTypesPerRow}
@@ -963,6 +1026,8 @@ const Flow: React.FC = () => {
             onHoverPreviewChange={setHoverPreviewEnabled}
             fullHierarchy={showFullHierarchy}
             onFullHierarchyChange={setFullHierarchyAndReset}
+            importResolver={importResolver}
+            onReloadImports={reloadWithImports}
           />
           <IliSideToolbar
             currentFileName={currentFileName}
@@ -1041,17 +1106,55 @@ const Flow: React.FC = () => {
       {/* Toast-Benachrichtigung hinzufügen */}
       <Snackbar
         open={toastOpen}
-        autoHideDuration={3000}
-        onClose={() => setToastOpen(false)}
+        autoHideDuration={toastSeverity === 'success' || toastSeverity === 'info' ? 3000 : null}
+        onClose={(_e, reason) => {
+          if (reason === 'clickaway') return;
+          setToastOpen(false);
+        }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={() => setToastOpen(false)} 
+        <Alert
+          onClose={() => setToastOpen(false)}
           severity={toastSeverity}
           sx={{ width: '100%' }}
         >
           {toastMessage}
         </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={!!loadNotification}
+        autoHideDuration={loadNotification?.severity === 'warning' ? null : 6000}
+        onClose={(_e, reason) => {
+          if (reason === 'clickaway') return;
+          setLoadNotification(null);
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {loadNotification ? (
+          <Alert
+            severity={loadNotification.severity}
+            onClose={() => setLoadNotification(null)}
+            action={
+              loadNotification.withManageAction ? (
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    setLoadNotification(null);
+                    setModelInfoOpenSignal(s => s + 1);
+                  }}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  Imports verwalten
+                </Button>
+              ) : undefined
+            }
+            sx={{ width: '100%', whiteSpace: 'pre-line' }}
+          >
+            {loadNotification.message}
+          </Alert>
+        ) : undefined}
       </Snackbar>
 
       <IliSelectionOverlay
